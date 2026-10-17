@@ -1,0 +1,29 @@
+Kairn is an EPUB reader for Android, built for the books you already own.
+
+No account, no network permission, no analytics. Your library, reading positions, highlights and settings
+live in plain JSON files inside the app, and a single zip backup moves them to another device.
+
+LIBRARY
+Grid or list, search, sort, collections, tags and reading status. Watch the folders you choose, or let
+Kairn find the EPUBs already on your device.
+
+READING
+Page or scroll mode. Per-book text size, line and paragraph spacing, margins, justification and
+hyphenation. Light, dark, sepia and true-black themes, a warm-light filter, and brightness that affects
+this app only.
+
+NAVIGATION
+Tap zones that follow the book's reading direction, optional volume-key page turns, a table of contents,
+and a chapter progress slider with a time-left estimate based on the chapter's real word count.
+
+HIGHLIGHTS AND NOTES
+Four highlight colours, bookmarks, a per-book list you can jump from, and Markdown export.
+
+SEARCH
+Full-text search inside a book.
+
+BACKUP
+One zip containing everything, with a safety copy taken before anything is replaced, so a restore cannot
+leave you with less than you started with.
+
+Requires Android 8.0 or newer.

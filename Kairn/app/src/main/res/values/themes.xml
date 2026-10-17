@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Readium's navigator needs an AppCompat theme. DEC-4: dark by default. -->
+    <style name="Theme.Kairn" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#0E1114</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+</resources>

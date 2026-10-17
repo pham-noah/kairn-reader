@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- The Macrobenchmark runner drives the app through UiAutomator.
+
+         Do NOT declare READ/WRITE_EXTERNAL_STORAGE here: the benchmark libraries pull them in, and on
+         Android 11+ the runner's GrantPermissionRule tries to grant every dangerous permission in this
+         manifest and THROWS ("Failed to grant permissions") because those two are hard-denied when the
+         test APK targets SDK 30+. Strip them from the merged manifest instead. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+</manifest>

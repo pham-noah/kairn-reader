@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kairn UI, round 5 (Liquid Glass)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Literata:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e1114; --surf:#161a1e; --surf2:#1e2328; --line:#2a3036;
+  --txt:#eef1f3; --mut:#a2acb3; --dim:#838d94;
+  --mint:#7ee0c3; --mint-ink:#0b2a22; --amber:#e8b45c; --rose:#e68b9b; --sky:#80b5ea;
+  --danger:#f0848a;
+  --sans:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+  color-scheme:dark;
+}
+:root[data-page="light"]{ --pg:#eceae4; --pgtxt:#1d1e20; --pgmut:#5d5f63; --pgcard:#fff; --pgline:#d6d3ca; }
+:root{ --pg:#16191c; --pgtxt:#e8ecee; --pgmut:#9aa4ab; --pgcard:#1d2226; --pgline:#2a3036; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--pg);color:var(--pgtxt);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+svg{display:block}
+
+/* page chrome (not part of the app) */
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--pgline)}
+.top h1{font-size:15px;font-weight:700;margin-right:auto}
+.top label{font-size:12px;color:var(--pgmut)}
+.top select{background:var(--pgcard);border:1px solid var(--pgline);border-radius:10px;padding:8px 10px;min-height:38px}
+.stage{display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 20px 48px}
+.panel{width:340px;max-width:100%;background:var(--pgcard);border:1px solid var(--pgline);border-radius:18px;padding:20px}
+.panel h2{font-size:15px;margin-bottom:4px}
+.panel p.sub{color:var(--pgmut);font-size:12.5px;margin-bottom:14px}
+.panel ul{list-style:none;display:grid;gap:10px}
+.panel li{font-size:13px;line-height:1.45;padding-left:14px;position:relative}
+.panel li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:#2fae8a}
+.panel li b{font-weight:700}
+.panel .id{color:var(--pgmut);font-weight:600;font-size:12px}
+.panel .demo{margin-top:16px;padding-top:14px;border-top:1px solid var(--pgline);display:flex;gap:8px;flex-wrap:wrap}
+.panel .demo button{border:1px solid var(--pgline);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600;min-height:34px}
+.panel .demo button:hover{background:var(--pgline)}
+
+/* phone */
+.phone{position:relative;width:390px;height:844px;background:var(--bg);color:var(--txt);border-radius:38px;overflow:hidden;box-shadow:0 0 0 1px #000,0 0 0 9px #0a0c0e,0 24px 60px rgba(0,0,0,.45);flex:none;isolation:isolate}
+.view{position:absolute;inset:0;display:none;flex-direction:column}
+.view.on{display:flex}
+.scroll{flex:1;overflow-y:auto;padding:20px 20px 24px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.overlay{position:absolute;inset:0;z-index:20;background:var(--bg);display:none;flex-direction:column;transform:translateX(24px);opacity:0}
+.overlay.on{display:flex;transform:none;opacity:1;transition:transform .22s ease,opacity .22s ease}
+@starting-style{.overlay.on{transform:translateX(24px);opacity:0}}
+
+/* typography */
+.h1{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.h2{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.mut{color:var(--mut)} .dim{color:var(--dim)}
+.small{font-size:12.5px}
+
+/* controls */
+.iconbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--txt)}
+.iconbtn.bordered{background:var(--surf);border:1px solid var(--line)}
+.iconbtn:active{background:var(--surf2)}
+.btn{min-height:50px;border-radius:999px;padding:0 22px;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.primary{background:var(--mint);color:var(--mint-ink)}
+.btn.sec{background:var(--surf2);border:1px solid var(--line)}
+.btn.danger{background:rgba(240,132,138,.1);color:var(--danger);border:1px solid rgba(240,132,138,.3)}
+.btn.sm{min-height:40px;font-size:13.5px;padding:0 16px;width:auto}
+.chips{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);padding-right:20px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.chip{flex:none;min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surf);color:var(--mut);font-weight:600;display:flex;align-items:center;gap:7px}
+.chip .n{font-size:12px;color:var(--dim);font-weight:600}
+.chip[aria-pressed="true"]{background:var(--txt);color:#101316;border-color:var(--txt)}
+.chip[aria-pressed="true"] .n{color:#4a5258}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{flex:1;min-height:38px;border-radius:999px;font-weight:600;color:var(--mut);font-size:13.5px;padding:0 10px}
+.seg button[aria-checked="true"]{background:var(--mint);color:var(--mint-ink)}
+.switch{width:52px;height:32px;border-radius:999px;background:#2c333a;position:relative;flex:none;transition:background .15s}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#e8ecee;transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--mint)}
+.switch[aria-checked="true"]::after{transform:translateX(20px);background:#0b2a22}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:20px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 16px;width:100%;text-align:left}
+.row + .row{border-top:1px solid var(--line)}
+.row .grow{flex:1;min-width:0}
+.row .t{font-weight:600;font-size:15px}
+.row .s{color:var(--mut);font-size:12.5px;margin-top:1px}
+.group{margin-top:22px}
+.group > .gl{font-weight:700;font-size:13px;color:var(--mut);margin:0 4px 8px}
+input.field,textarea.field{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:46px}
+input.field:focus,textarea.field:focus{outline:2px solid var(--mint);border-color:transparent}
+label.fl{display:block;font-size:12.5px;font-weight:600;color:var(--mut);margin:12px 4px 6px}
+
+/* range */
+.rng{-webkit-appearance:none;appearance:none;width:100%;height:32px;background:transparent;cursor:pointer;--v:50%}
+.rng::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--mint) var(--v),#2f363d var(--v))}
+.rng::-moz-range-track{height:6px;border-radius:6px;background:#2f363d}
+.rng::-moz-range-progress{height:6px;border-radius:6px;background:var(--mint)}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#f1f4f5;margin-top:-9px;border:0;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.rng::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#f1f4f5;border:0}
+.rng.warm::-webkit-slider-runnable-track{background:linear-gradient(90deg,var(--amber) var(--v),#2f363d var(--v))}
+
+/* nav */
+.nav{display:flex;padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line);gap:4px}
+.nav button{flex:1;min-height:56px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--dim);font-size:11.5px;font-weight:700}
+.nav button[aria-current="page"]{color:var(--mint)}
+.nav button[aria-current="page"] .ic{background:rgba(126,224,195,.14)}
+.nav .ic{width:56px;height:30px;border-radius:999px;display:grid;place-items:center}
+
+/* library */
+.lhead{display:flex;align-items:center;gap:8px}
+.lhead .h1{flex:1}
+.searchrow{display:none;margin-top:12px;position:relative}
+.searchrow.on{display:block}
+.searchrow svg{position:absolute;left:14px;top:13px;color:var(--dim)}
+.searchrow input{padding-left:42px;border-radius:999px}
+.meta{display:flex;justify-content:space-between;align-items:center;margin:14px 2px 10px}
+.sortbtn{display:flex;align-items:center;gap:4px;font-weight:600;color:var(--mut);min-height:44px;padding:0 8px}
+.cont{display:flex;gap:16px;padding:14px;margin-top:16px;text-align:left;width:100%}
+.cont .cover{width:64px;flex:none}
+.cont .info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.cont .k{font-size:12.5px;color:var(--mint);font-weight:700}
+.cont .tt{font-size:19px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.bar{height:6px;border-radius:6px;background:#2b3238;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--mint);border-radius:6px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 12px}
+.bk{text-align:left;display:block;position:relative}
+.cover{position:relative;aspect-ratio:2/3;border-radius:8px 12px 12px 8px;overflow:hidden;padding:10px 9px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:inset 3px 0 0 rgba(255,255,255,.12),0 6px 14px rgba(0,0,0,.35)}
+.cover b{font-family:var(--serif);font-weight:600;font-size:12px;line-height:1.2;color:rgba(255,255,255,.94);letter-spacing:0}
+.cover span{font-size:8.5px;color:rgba(255,255,255,.7);font-weight:600}
+.cover .pb{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(0,0,0,.35)}
+.cover .pb i{display:block;height:100%;background:var(--mint)}
+.badge{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--mint);color:var(--mint-ink)}
+.badge.warn{background:var(--amber);color:#2b1c00}
+.bk .t{font-weight:700;font-size:13px;margin-top:9px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bk .a{color:var(--dim);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk .mb{position:absolute;right:-6px;bottom:-8px}
+.lrow{display:flex;align-items:center;gap:14px;padding:6px 0;width:100%;text-align:left}
+.lrow .cover{width:46px;flex:none;padding:5px;border-radius:5px 8px 8px 5px}
+.lrow .cover b{font-size:7px}.lrow .cover span{display:none}
+.lrow .tx{flex:1;min-width:0}
+.lrow .t{font-weight:700;font-size:15px}
+.lrow .a{color:var(--mut);font-size:13px}
+.lrow .st{font-size:12.5px;color:var(--dim);margin-top:3px}
+.lrow .st.warn{color:var(--amber)}
+.empty{text-align:center;padding:56px 12px 0;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty p{color:var(--mut);max-width:280px}
+.empty .btns{display:grid;gap:10px;width:100%;margin-top:14px}
+.pop{position:absolute;right:20px;z-index:30;background:var(--surf2);border:1px solid var(--line);border-radius:16px;padding:6px;min-width:170px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.pop button{display:flex;width:100%;align-items:center;justify-content:space-between;min-height:44px;padding:0 12px;border-radius:10px;font-weight:600}
+.pop button:hover{background:var(--surf)}
+.pop button[aria-checked="true"]{color:var(--mint)}
+
+/* collections */
+.stack{display:flex;margin-left:auto}
+.stack i{display:block;width:28px;height:42px;border-radius:5px;margin-left:-10px;border:2px solid var(--surf)}
+.tagwrap{display:flex;flex-wrap:wrap;gap:8px}
+.tag{min-height:40px;padding:0 14px;border-radius:999px;background:var(--surf);border:1px solid var(--line);font-weight:600;display:flex;align-items:center;gap:6px}
+.tag.add{border-style:dashed;color:var(--mut);background:transparent}
+
+/* add */
+.url{font-family:var(--sans);font-weight:800;font-size:19px;color:var(--mint);word-break:break-all}
+.live{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--mint)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 0 rgba(126,224,195,.6);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(126,224,195,0)}100%{box-shadow:0 0 0 0 rgba(126,224,195,0)}}
+.recv{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);animation:in .3s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}}
+.pin{display:inline-flex;gap:6px}
+.pin span{width:34px;height:42px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:18px}
+
+/* header for subpages */
+.sub{display:flex;align-items:center;gap:6px;padding:12px 12px 0}
+.sub .h2{flex:1}
+
+/* sheets */
+.layer{position:absolute;inset:0;z-index:50;pointer-events:none}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);pointer-events:auto;animation:fade .2s}
+.scrim.clear{background:transparent}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surf);border-radius:26px 26px 0 0;border-top:1px solid var(--line);padding:10px 20px calc(22px + env(safe-area-inset-bottom,0px));pointer-events:auto;max-height:86%;overflow-y:auto;scrollbar-width:none;animation:up .24s ease}
+.sheet::-webkit-scrollbar{display:none}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.grab{width:40px;height:4px;border-radius:4px;background:#3b434a;margin:0 auto 14px}
+.sheet .h2{margin-bottom:12px}
+.act{display:flex;align-items:center;gap:14px;width:100%;min-height:52px;text-align:left;font-weight:600;font-size:15px;border-radius:12px}
+.act + .act{border-top:1px solid var(--line)}
+.act.danger{color:var(--danger)}
+.act svg{color:var(--mut)}
+.more{margin-top:14px}.more summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;font-weight:700;color:var(--mint)}.more summary::-webkit-details-marker{display:none}.more summary::after{content:"+";font-size:20px}.more[open] summary::after{content:"\2013"}
+.toast{position:absolute;left:20px;right:20px;bottom:96px;z-index:60;background:#e9eef0;color:#12171a;border-radius:16px;padding:13px 16px;font-weight:600;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s}
+.toast.on{opacity:1;transform:none}
+
+/* reader */
+.reader{--rbg:#111418;--rfg:#d9dde0;--rmut:#8c969d;--rui:rgba(17,20,24,.96);--ruifg:#e6eaed;--ruiline:rgba(255,255,255,.12);--hl-mint:rgba(126,224,195,.28);--hl-amber:rgba(232,180,92,.32);--hl-rose:rgba(230,139,155,.3);--hl-sky:rgba(128,181,234,.3);
+  background:var(--rbg);color:var(--rfg);--fs:19px;--lh:1.65;--mx:24px;--ff:var(--serif)}
+.reader[data-theme="light"]{--rbg:#f6f5f1;--rfg:#1d1e20;--rmut:#6a6c70;--rui:rgba(246,245,241,.97);--ruifg:#1d1e20;--ruiline:rgba(0,0,0,.14);--hl-mint:rgba(30,170,130,.28);--hl-amber:rgba(220,150,20,.32);--hl-rose:rgba(215,80,110,.25);--hl-sky:rgba(50,120,210,.25)}
+.reader[data-theme="sepia"]{--rbg:#f1e4cf;--rfg:#3a2e21;--rmut:#7a6a56;--rui:rgba(241,228,207,.97);--ruifg:#3a2e21;--ruiline:rgba(60,40,10,.18);--hl-mint:rgba(30,150,110,.28);--hl-amber:rgba(210,140,20,.35);--hl-rose:rgba(200,70,100,.25);--hl-sky:rgba(50,110,190,.25)}
+.reader[data-theme="black"]{--rbg:#000;--rfg:#c9ced2;--rmut:#7f898f;--rui:rgba(0,0,0,.97)}
+.rtext{position:absolute;inset:0;overflow-y:auto;padding:76px var(--mx) 120px;font-family:var(--ff);font-size:var(--fs);line-height:var(--lh);scrollbar-width:none;-webkit-user-select:none;user-select:none}
+.rtext::-webkit-scrollbar{display:none}
+.rtext.just{text-align:justify}
+.rtext.hyph{hyphens:auto;-webkit-hyphens:auto}
+.rtext h3{font-family:var(--sans);font-size:.8em;font-weight:800;color:var(--rmut);margin:1.8em 0 1em}
+.rtext h3:first-child{margin-top:0}
+.rtext p{margin-bottom:1em;max-width:34em}
+.rtext .s{border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.s.hl-mint{background:var(--hl-mint)}.s.hl-amber{background:var(--hl-amber)}.s.hl-rose{background:var(--hl-rose)}.s.hl-sky{background:var(--hl-sky)}
+.s.sel{outline:2px solid var(--mint);outline-offset:1px}
+.s.flash{animation:flash 1.6s}
+@keyframes flash{0%,60%{background:rgba(126,224,195,.5)}}
+.rtext .fn{font:700 .62em var(--sans);vertical-align:super;color:var(--mint);padding:8px 4px;margin:-8px -1px}
+.reader[data-theme="light"] .fn,.reader[data-theme="sepia"] .fn{color:#0e7f61}
+.noteflag{display:inline-block;width:.5em;height:.5em;border-radius:50%;background:var(--amber);margin-left:3px;vertical-align:middle}
+.rtop,.rbot{position:absolute;left:0;right:0;z-index:5;background:var(--rui);color:var(--ruifg);transition:transform .2s ease,opacity .2s ease}
+.rtop{top:0;display:flex;align-items:center;gap:2px;padding:10px 10px 8px;border-bottom:1px solid var(--ruiline)}
+.rtop .ttl{flex:1;text-align:center;font-weight:700;font-size:13.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.rbot{bottom:0;padding:12px 18px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--ruiline)}
+.reader.nochrome .rtop{transform:translateY(-100%);opacity:0;pointer-events:none}
+.reader.nochrome .rbot{transform:translateY(100%);opacity:0;pointer-events:none}
+.rbot .l1{display:flex;justify-content:space-between;font-size:12.5px;color:var(--rmut);font-weight:600}
+.rbot .tools{display:flex;justify-content:space-between;margin-top:2px}
+.rbot .tools button{flex:1;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11.5px;font-weight:700;border-radius:14px}
+.rbot .tools button:active{background:var(--ruiline)}
+.rbot .rng{--v:0%}
+.reader[data-theme="light"] .rng::-webkit-slider-runnable-track,.reader[data-theme="sepia"] .rng::-webkit-slider-runnable-track{background:linear-gradient(90deg,#14876a var(--v),rgba(0,0,0,.18) var(--v))}
+.reader[data-theme="light"] .rng::-webkit-slider-thumb,.reader[data-theme="sepia"] .rng::-webkit-slider-thumb{background:#1d1e20}
+.rtop .iconbtn:active{background:var(--ruiline)}
+.rtop .iconbtn{color:var(--ruifg)}
+.shade{position:absolute;inset:0;z-index:4;pointer-events:none}
+.fncard{position:absolute;left:16px;right:16px;bottom:150px;z-index:8;background:var(--surf2);color:var(--txt);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.5);display:none;font-family:var(--sans)}
+.fncard.on{display:block;animation:up .2s}
+.fncard .k{font-weight:700;color:var(--mint);margin-bottom:4px}
+.seltb{position:absolute;left:50%;transform:translateX(-50%);bottom:132px;z-index:9;background:var(--surf2);color:var(--txt);border:1px solid var(--line);border-radius:999px;padding:6px;display:none;align-items:center;gap:2px;box-shadow:0 12px 30px rgba(0,0,0,.55);font-family:var(--sans);white-space:nowrap}
+.seltb.on{display:flex;animation:up .18s}
+.seltb .c{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+.seltb .c i{display:block;width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.7)}
+.seltb .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.seltb .tb{min-height:40px;padding:0 12px;border-radius:999px;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:6px}
+.seltb .tb:active,.seltb .c:active{background:var(--surf)}
+.backpill{position:absolute;left:50%;transform:translateX(-50%);top:70px;z-index:8;background:var(--mint);color:var(--mint-ink);font-weight:800;border-radius:999px;min-height:44px;padding:0 18px;display:none;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);font-family:var(--sans)}
+.backpill.on{display:flex;animation:up .2s}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:12.5px;color:var(--mut);min-height:44px}
+.sw i{width:52px;height:52px;border-radius:50%;border:2px solid #3b434a;display:grid;place-items:center;color:var(--mint)}
+.sw[aria-checked="true"]{color:var(--txt)}
+.sw[aria-checked="true"] i{border-color:var(--mint);box-shadow:0 0 0 3px rgba(126,224,195,.25)}
+.ctl{margin-top:16px}
+.ctl .lb{display:flex;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:2px}
+.ctl .lb span:last-child{color:var(--mut);font-weight:600}
+.mark{background:rgba(126,224,195,.3);color:inherit;border-radius:3px}
+
+/* annotations */
+.ann{display:flex;gap:12px;padding:14px 8px 14px 14px;text-align:left;width:100%;align-items:flex-start}
+.ann .cb{width:4px;align-self:stretch;border-radius:4px;flex:none}
+.ann .tx{flex:1;min-width:0}
+.ann q{display:block;quotes:none;font-family:var(--serif);font-size:15px;line-height:1.5}
+.ann .nt{margin-top:8px;background:var(--bg);border-radius:12px;padding:9px 12px;font-size:13.5px;color:var(--mut)}
+.ann .mt{margin-top:8px;font-size:12.5px;color:var(--dim)}
+pre.md{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;color:var(--mut);max-height:220px;overflow:auto}
+
+/* onboarding */
+.onb{padding:56px 28px 28px;flex:1;display:flex;flex-direction:column}
+.pg{display:none;flex:1;flex-direction:column}
+.pg.on{display:flex}
+.dots{display:flex;gap:8px;margin:0 0 22px}
+.dots i{width:8px;height:8px;border-radius:8px;background:#313940}
+.dots i.on{width:26px;background:var(--mint)}
+.onb h1{font-size:36px;line-height:1.08;font-weight:800;letter-spacing:-.03em;margin:26px 0 14px}
+.onb p.lead{color:var(--mut);font-size:16px;max-width:300px}
+.opt{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:18px;background:var(--surf);border:1px solid var(--line);margin-top:10px;width:100%;text-align:left}
+.opt .ico{width:42px;height:42px;border-radius:14px;background:rgba(126,224,195,.12);color:var(--mint);display:grid;place-items:center;flex:none}
+.opt b{display:block;font-size:15px}
+.opt span.d{color:var(--mut);font-size:13px}
+.prog{height:8px;border-radius:8px;background:#2b3238;overflow:hidden;margin-top:14px}
+.prog i{display:block;height:100%;width:0;background:var(--mint);transition:width .12s linear}
+.radio{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;width:100%;text-align:left;min-height:56px}
+.radio i{width:22px;height:22px;border-radius:50%;border:2px solid #4a535b;flex:none;margin-top:1px;display:grid;place-items:center}
+.radio[aria-checked="true"] i{border-color:var(--mint)}
+.radio[aria-checked="true"] i::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--mint)}
+
+@media (max-width:900px){
+  .stage{flex-direction:column;align-items:center;gap:24px}
+  .panel{width:390px}
+}
+@media (max-width:480px){
+  .top{padding:10px 14px}
+  .stage{padding:0 0 32px}
+  .phone{width:100vw;height:calc(100dvh - 62px);border-radius:0;box-shadow:none}
+  .panel{margin:0 14px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ================= Liquid Glass surface (round 5) =================
+   Everything below is scoped to .phone[data-style=glass], so "Solid" restores round 4. */
+.phone[data-style=glass]{
+  --bf:blur(14px) saturate(180%);            /* small controls */
+  --bfh:blur(28px) saturate(190%);           /* large panels: tab bar, sheets, menus */
+  --gf:rgba(255,255,255,.085);               /* regular glass fill */
+  --gf-hi:rgba(255,255,255,.18);             /* selected or pressed */
+  --gf-sheet:rgba(30,36,42,.58);
+  --gf-in:rgba(0,0,0,.26);                   /* inset wells: fields, tracks */
+  --gsheen:linear-gradient(155deg,rgba(255,255,255,.20),rgba(255,255,255,.03) 38%,rgba(255,255,255,0) 62%,rgba(255,255,255,.07));
+  --gspec:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.62),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.34),inset 0 0 0 1px rgba(255,255,255,.07),inset 0 0 22px rgba(255,255,255,.05);
+  --gdrop:0 12px 30px -10px rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.2);
+  --gdrop-s:0 5px 14px -5px rgba(0,0,0,.5);
+  --amb:radial-gradient(85% 38% at 6% 2%,rgba(126,224,195,.20),transparent 70%),radial-gradient(75% 36% at 100% 34%,rgba(128,181,234,.17),transparent 70%),radial-gradient(90% 42% at 14% 78%,rgba(230,139,155,.14),transparent 72%),radial-gradient(70% 30% at 96% 100%,rgba(232,180,92,.13),transparent 72%);
+  --surf:rgba(255,255,255,.075);--surf2:rgba(255,255,255,.13);--line:rgba(255,255,255,.12);
+  background:var(--amb),var(--bg);
+}
+.phone[data-style=glass] .overlay:not(.reader){background:var(--amb),var(--bg)}
+
+/* shared glass recipe: small controls */
+.phone[data-style=glass] :is(.iconbtn.bordered,.sub .iconbtn,.rtop .iconbtn,.chip,.tag:not(.add),.btn.sec,.opt,.card){
+  background:var(--gsheen),var(--gf);-webkit-backdrop-filter:var(--bf);backdrop-filter:var(--bf);
+  border:0;box-shadow:var(--gspec),var(--gdrop-s)}
+.phone[data-style=glass] .card{box-shadow:var(--gspec),0 10px 26px -14px rgba(0,0,0,.55)}
+.phone[data-style=glass] .row + .row{border-top-color:rgba(255,255,255,.08)}
+.phone[data-style=glass] :is(.iconbtn,.btn,.chip,.tag){transition:transform .3s cubic-bezier(.3,1.5,.5,1),background .2s}
+.phone[data-style=glass] :is(.iconbtn.bordered,.sub .iconbtn,.rtop .iconbtn):active{background:var(--gsheen),var(--gf-hi);transform:scale(.92)}
+.phone[data-style=glass] :is(.btn,.chip,.tag):active{transform:scale(.97)}
+
+/* chips */
+.phone[data-style=glass] .chip{color:var(--mut)}
+.phone[data-style=glass] .chip[aria-pressed="true"]{background:var(--gsheen),rgba(240,244,246,.92);color:#101316;box-shadow:var(--gspec),0 5px 16px -6px rgba(255,255,255,.3)}
+.phone[data-style=glass] .tag.add{background:transparent;border:1px dashed rgba(255,255,255,.26);box-shadow:none}
+
+/* buttons */
+.phone[data-style=glass] .btn.primary{background:linear-gradient(180deg,rgba(158,243,219,.96),rgba(106,212,181,.92));color:var(--mint-ink);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 -2px 4px rgba(0,70,50,.22),0 8px 22px -6px rgba(126,224,195,.5)}
+.phone[data-style=glass] .btn.danger{background:var(--gsheen),rgba(240,132,138,.14);border:0;-webkit-backdrop-filter:var(--bf);backdrop-filter:var(--bf);box-shadow:var(--gspec),inset 0 0 0 1px rgba(240,132,138,.3)}
+
+/* floating tab bar: one glass capsule, the current tab sits in a lighter lens */
+.phone[data-style=glass] .nav{position:absolute;left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:10;
+  padding:6px;gap:4px;border:0;border-radius:999px;background:var(--gsheen),var(--gf);
+  -webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);box-shadow:var(--gspec),var(--gdrop);--bf:none}
+.phone[data-style=glass] .nav button{position:relative;isolation:isolate;border-radius:999px;color:var(--mut);transition:transform .35s cubic-bezier(.3,1.6,.5,1),color .2s}
+.phone[data-style=glass] .nav button:active{transform:scale(1.07)}
+.phone[data-style=glass] .nav button::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;opacity:0;
+  background:var(--gsheen),rgba(255,255,255,.15);box-shadow:var(--gspec),0 3px 10px -3px rgba(0,0,0,.4)}
+.phone[data-style=glass] .nav button[aria-current="page"]{color:var(--mint)}
+.phone[data-style=glass] .nav button[aria-current="page"]::before{opacity:1;animation:lens .5s cubic-bezier(.3,1.5,.5,1)}
+.phone[data-style=glass] .nav button[aria-current="page"] .ic{background:none}
+@keyframes lens{from{transform:scale(.8);opacity:0}}
+
+/* scroll edges: content softens under the top and bottom instead of meeting a hard bar */
+.phone[data-style=glass] .view > .scroll{padding-bottom:118px}
+.phone[data-style=glass] .view::before,.phone[data-style=glass] .view::after{content:"";position:absolute;left:0;right:0;pointer-events:none}
+.phone[data-style=glass] .view::before{top:0;height:62px;z-index:4;opacity:0;transition:opacity .25s;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:linear-gradient(rgba(14,17,20,.55),transparent);
+  -webkit-mask:linear-gradient(#000 35%,transparent);mask:linear-gradient(#000 35%,transparent)}
+.phone[data-style=glass] .view.scrolled::before{opacity:1}
+.phone[data-style=glass] .view::after{bottom:0;height:124px;z-index:3;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);background:linear-gradient(transparent,rgba(14,17,20,.6));
+  -webkit-mask:linear-gradient(transparent,#000 65%);mask:linear-gradient(transparent,#000 65%)}
+
+/* wells: fields, segmented controls, tracks */
+.phone[data-style=glass] input.field,.phone[data-style=glass] textarea.field{background:var(--gf-in);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 3px rgba(0,0,0,.45)}
+.phone[data-style=glass] input.field:focus,.phone[data-style=glass] textarea.field:focus{border-color:rgba(126,224,195,.5)}
+.phone[data-style=glass] .seg{background:var(--gf-in);border:0;box-shadow:inset 0 1px 3px rgba(0,0,0,.5),inset 0 -1px 0 rgba(255,255,255,.07)}
+.phone[data-style=glass] .seg button[aria-checked="true"]{background:var(--gsheen),rgba(255,255,255,.2);color:var(--txt);box-shadow:var(--gspec),0 3px 10px -2px rgba(0,0,0,.4)}
+.phone[data-style=glass] :is(.ann .nt,pre.md,.pin span){background:var(--gf-in);border-color:rgba(255,255,255,.08)}
+.phone[data-style=glass] .stack i{border-color:rgba(255,255,255,.2)}
+
+/* switch: elongated glass thumb, tints mint when on, stretches while pressed */
+.phone[data-style=glass] .switch{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 3px rgba(0,0,0,.5),inset 0 -1px 0 rgba(255,255,255,.1)}
+.phone[data-style=glass] .switch::after{width:30px;height:24px;border-radius:999px;background:linear-gradient(#fff,#e3e9ec);box-shadow:0 2px 6px rgba(0,0,0,.4),inset 0 1px 0 #fff;transition:transform .3s cubic-bezier(.3,1.4,.5,1),width .2s}
+.phone[data-style=glass] .switch[aria-checked="true"]{background:linear-gradient(var(--mint),#62cdae);box-shadow:inset 0 1px 3px rgba(0,60,40,.35),0 0 14px rgba(126,224,195,.35)}
+.phone[data-style=glass] .switch[aria-checked="true"]::after{transform:translateX(14px);background:linear-gradient(#fff,#e6f3ef)}
+.phone[data-style=glass] .switch:active::after{width:38px}
+.phone[data-style=glass] .switch[aria-checked="true"]:active::after{transform:translateX(6px)}
+
+/* sheets: inset floating glass */
+.phone[data-style=glass] .scrim{background:rgba(0,0,0,.34)}
+.phone[data-style=glass] .sheet{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border:0;border-radius:38px;max-height:84%;padding:10px 20px 22px;
+  background:var(--gsheen),var(--gf-sheet);-webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);
+  box-shadow:var(--gspec),0 26px 60px -12px rgba(0,0,0,.75);--bf:none}
+.phone[data-style=glass] .grab{background:rgba(255,255,255,.32)}
+.phone[data-style=glass] .act + .act{border-top-color:rgba(255,255,255,.09)}
+
+/* menus, cards and toolbars that float above content */
+.phone[data-style=glass] :is(.pop,.fncard,.seltb){background:var(--gsheen),rgba(40,46,52,.56);border:0;
+  -webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);box-shadow:var(--gspec),var(--gdrop);--bf:none}
+.phone[data-style=glass] .pop{border-radius:24px}
+.phone[data-style=glass] .pop button{border-radius:16px}
+.phone[data-style=glass] .pop button:hover{background:rgba(255,255,255,.1)}
+.phone[data-style=glass] .fncard{border-radius:28px}
+.phone[data-style=glass] .seltb .sep{background:rgba(255,255,255,.18)}
+.phone[data-style=glass] .seltb .tb:active,.phone[data-style=glass] .seltb .c:active{background:rgba(255,255,255,.14)}
+.phone[data-style=glass] .backpill{background:linear-gradient(rgba(158,243,219,.9),rgba(106,212,181,.86));-webkit-backdrop-filter:var(--bf);backdrop-filter:var(--bf);
+  box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 -2px 4px rgba(0,70,50,.2),0 10px 26px -8px rgba(0,0,0,.55)}
+.phone[data-style=glass] .toast{background:var(--gsheen),rgba(34,40,46,.62);color:var(--txt);border-radius:22px;
+  -webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);box-shadow:var(--gspec),var(--gdrop)}
+.phone[data-style=glass] .foot{background:var(--gsheen),var(--gf);-webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);border-top-color:rgba(255,255,255,.1)!important}
+
+/* reader: toolbar buttons and the bottom bar float over the page */
+.phone[data-style=glass] .reader{--gf:rgba(255,255,255,.1)}
+.phone[data-style=glass] .reader[data-theme="light"]{--gf:rgba(255,255,255,.55);--gf-hi:rgba(255,255,255,.85);
+  --gsheen:linear-gradient(155deg,rgba(255,255,255,.55),rgba(255,255,255,.1) 45%,rgba(255,255,255,.25));
+  --gspec:inset 1.5px 1.5px 1px -1px rgba(255,255,255,.95),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.8),inset 0 0 0 1px rgba(0,0,0,.06),inset 0 0 20px rgba(255,255,255,.25);
+  --gdrop:0 12px 28px -10px rgba(40,34,20,.35);--gdrop-s:0 5px 14px -6px rgba(40,34,20,.3)}
+.phone[data-style=glass] .reader[data-theme="sepia"]{--gf:rgba(255,246,228,.5);--gf-hi:rgba(255,246,228,.85);
+  --gsheen:linear-gradient(155deg,rgba(255,250,238,.55),rgba(255,250,238,.1) 45%,rgba(255,250,238,.25));
+  --gspec:inset 1.5px 1.5px 1px -1px rgba(255,252,242,.95),inset -1.5px -1.5px 1px -1px rgba(255,252,242,.8),inset 0 0 0 1px rgba(80,50,10,.08),inset 0 0 20px rgba(255,250,238,.25);
+  --gdrop:0 12px 28px -10px rgba(70,45,10,.4);--gdrop-s:0 5px 14px -6px rgba(70,45,10,.3)}
+.phone[data-style=glass] .rtop{background:none;border:0;gap:8px;padding:10px 12px 8px}
+.phone[data-style=glass] .rtop::before{content:"";position:absolute;inset:0 0 -14px;z-index:-1;pointer-events:none;background:linear-gradient(var(--rbg) 55%,transparent)}
+.phone[data-style=glass] .rtop .ttl{height:44px;line-height:44px;padding:0 16px;border-radius:999px;
+  background:var(--gsheen),var(--gf);-webkit-backdrop-filter:var(--bf);backdrop-filter:var(--bf);box-shadow:var(--gspec),var(--gdrop-s)}
+.phone[data-style=glass] .rbot{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border:0;border-radius:34px;padding:12px 14px 8px;
+  background:var(--gsheen),var(--gf);-webkit-backdrop-filter:var(--bfh);backdrop-filter:var(--bfh);box-shadow:var(--gspec),var(--gdrop);--bf:none}
+.phone[data-style=glass] .rbot .l1{padding:0 6px}
+.phone[data-style=glass] .rtext{padding-bottom:176px}
+.phone[data-style=glass] .seltb{bottom:150px}
+.phone[data-style=glass] .fncard{bottom:164px}
+
+/* fallbacks: no backdrop-filter support, or the system asks for less transparency */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .phone[data-style=glass]{--bf:none;--bfh:none;--gf:#232a30;--gf-hi:#2f373e;--gf-sheet:#1b2024;--gsheen:linear-gradient(transparent,transparent);--surf:#1b2025;--surf2:#232a30;--line:#2a3036}
+  .phone[data-style=glass] :is(.pop,.fncard,.seltb,.toast){background:#232a30}
+}
+@media (prefers-reduced-transparency:reduce){
+  .phone[data-style=glass]{--bf:none;--bfh:none;--gf:#232a30;--gf-hi:#2f373e;--gf-sheet:#1b2024;--gsheen:linear-gradient(transparent,transparent);--surf:#1b2025;--surf2:#232a30;--line:#2a3036}
+  .phone[data-style=glass] :is(.pop,.fncard,.seltb,.toast){background:#232a30}
+  .phone[data-style=glass] .reader[data-theme="light"]{--gf:#fbfaf6}.phone[data-style=glass] .reader[data-theme="sepia"]{--gf:#f7ebd7}
+  .phone[data-style=glass] :is(.view::before,.view::after){display:none}
+}
+.panel .gnote{margin-top:18px;padding-top:16px;border-top:1px solid var(--pgline)}
+.panel .gnote h3{font-size:13.5px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Kairn, UI round 5, Liquid Glass (interactive)</h1>
+  <label for="surface">Surface</label>
+  <select id="surface" aria-label="Surface style"><option value="glass" selected>Liquid Glass</option><option value="solid">Solid (round 4)</option></select>
+  <label for="jump">Jump to</label>
+  <select id="jump" aria-label="Jump to screen">
+    <option value="onboarding">First run</option>
+    <option value="library" selected>Library</option>
+    <option value="library-list">Library, list view</option>
+    <option value="library-empty">Library, empty</option><option value="bad-file">Library, bad file message</option>
+    <option value="collections">Collections</option>
+    <option value="add">Add books</option>
+    <option value="add-live">Add books, transfer running</option>
+    <option value="reader">Reader</option>
+    <option value="reader-settings">Reader settings</option>
+    <option value="toc">Contents</option>
+    <option value="define">Dictionary pop-up</option><option value="search">Search in book</option>
+    <option value="annotations">Notes and highlights</option>
+    <option value="backup">Backup and restore</option>
+    <option value="settings">Settings</option>
+  </select>
+</header>
+
+<main class="stage">
+  <div class="phone" id="phone" data-style="glass">
+
+    <!-- LIBRARY -->
+    <section class="view on" id="v-library" aria-label="Library">
+      <div class="scroll" id="libscroll">
+        <div class="lhead">
+          <svg id="cairn0" width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"></svg>
+          <h1 class="h1">Library</h1>
+          <button class="iconbtn bordered" id="btnPlus" aria-label="Add books"></button>
+          <button class="iconbtn bordered" id="btnSearch" aria-label="Search library"></button>
+          <button class="iconbtn bordered" id="btnLayout" aria-label="Switch to list view"></button>
+        </div>
+        <div class="searchrow" id="searchrow"><span id="ic-s"></span><input class="field" id="q" type="search" placeholder="Search title or author" aria-label="Search title or author"></div>
+        <div class="chips" id="chips" style="margin-top:16px" role="group" aria-label="Filter by status"></div>
+        <div id="cont"></div>
+        <div class="meta" id="meta"></div>
+        <div id="books"></div>
+      </div>
+      <nav class="nav" aria-label="Main"></nav>
+    </section>
+
+    <!-- COLLECTIONS -->
+    <section class="view" id="v-collections" aria-label="Collections">
+      <div class="scroll">
+        <div class="lhead"><h1 class="h1">Collections</h1><button class="btn sec sm" id="btnNew">New</button></div>
+        <div class="group"><div class="gl">Your collections</div><div class="card" id="colList"></div></div>
+        <div class="group"><div class="gl">Tags</div><div class="tagwrap" id="tagList"></div></div>
+      </div>
+      <nav class="nav" aria-label="Main"></nav>
+    </section>
+
+    <!-- ADD -->
+    <section class="view" id="v-add" aria-label="Add books">
+      <div class="scroll">
+        <h1 class="h1">Add books</h1>
+        <p class="mut" style="margin-top:6px">Everything here works without internet.</p>
+        <div class="card" style="padding:20px;margin-top:18px" id="wifi"></div>
+        <div class="group"><div class="gl">Folders Kairn watches</div>
+          <div class="card" id="folders"></div>
+          <button class="btn sec" style="margin-top:10px" id="btnAddFolder">Add folder or files</button>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Main"></nav>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="v-settings" aria-label="Settings">
+      <div class="scroll" id="setscroll"></div>
+      <nav class="nav" aria-label="Main"></nav>
+    </section>
+
+    <!-- READER -->
+    <section class="overlay reader" id="v-reader" aria-label="Reader" data-theme="dark">
+      <div class="rtext" id="rtext" tabindex="0"></div>
+      <div class="shade" id="shade"></div>
+      <div class="shade" id="warm" style="mix-blend-mode:multiply;background:rgba(255,160,50,0)"></div>
+      <div class="rtop" id="rtop">
+        <button class="iconbtn" id="rBack" aria-label="Back to library"></button>
+        <div class="ttl" id="rTitle">Moby-Dick</div>
+        <button class="iconbtn" id="rBm" aria-label="Add bookmark" aria-pressed="false"></button>
+        <button class="iconbtn" id="rMore" aria-label="More options"></button>
+      </div>
+      <div class="backpill" id="backpill"><span id="ic-undo"></span>Back to where you were</div>
+      <div class="fncard" id="fncard">
+        <div class="k">Footnote 1</div>
+        <div class="small" style="margin-bottom:12px;color:var(--mut)">The watery part of the world is Ishmael's way of saying the sea. Notes open here, so you do not lose your page.</div>
+        <div style="display:flex;gap:8px"><button class="btn sec sm" id="fnJump">Go to note</button><button class="btn sm" id="fnClose" style="color:var(--mut)">Close</button></div>
+      </div>
+      <div class="seltb" id="seltb" role="toolbar" aria-label="Highlight"></div>
+      <div class="rbot" id="rbot">
+        <div class="l1"><span id="rChap">Loomings</span><span id="rLeft">12 min left in chapter</span></div>
+        <input class="rng" id="scrub" type="range" min="0" max="100" value="0" aria-label="Position in book">
+        <div class="tools">
+          <button id="tToc"><span></span>Contents</button>
+          <button id="tSearch"><span></span>Search</button>
+          <button id="tNotes"><span></span>Notes</button>
+          <button id="tAa"><span></span>Display</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANNOTATIONS -->
+    <section class="overlay" id="v-annotations" aria-label="Notes and highlights">
+      <div class="sub"><button class="iconbtn" data-back aria-label="Back"></button><div><div class="h2" style="margin:0">Notes and highlights</div><div class="mut small" id="annBook">Moby-Dick</div></div></div>
+      <div style="padding:14px 20px 0"><div class="chips" id="annTabs" role="group" aria-label="Filter"></div></div>
+      <div class="scroll" style="padding-top:14px"><div class="card" id="annList"></div></div>
+      <div class="foot" style="padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)"><button class="btn sec" id="annExport">Export notes</button></div>
+    </section>
+
+    <!-- BACKUP -->
+    <section class="overlay" id="v-backup" aria-label="Backup and restore">
+      <div class="sub"><button class="iconbtn" data-back aria-label="Back"></button><div class="h2">Backup and restore</div></div>
+      <div class="scroll" id="bkscroll"></div>
+    </section>
+
+    <!-- ONBOARDING -->
+    <section class="overlay" id="v-onboarding" aria-label="Welcome">
+      <div class="onb" id="onb"></div>
+    </section>
+
+    <div class="layer" id="layer"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <aside class="panel" aria-live="polite">
+    <h2 id="pTitle">Library</h2>
+    <p class="sub" id="pSub">What changed from round 3, and why.</p>
+    <ul id="pList"></ul>
+    <div class="demo" id="pDemo"></div>
+    <div class="gnote">
+      <h3>Liquid Glass surface</h3>
+      <ul>
+        <li>The tab bar floats as one glass capsule. The current tab sits in a lighter glass pill.</li>
+        <li>Buttons, chips and cards are translucent. Book covers and the soft colour behind them show through as you scroll.</li>
+        <li>Sheets and menus float with rounded corners and a heavier blur.</li>
+        <li>In the reader, the top buttons, title and bottom bar float over the page. Light and sepia pages get light glass.</li>
+        <li>Panels turn opaque when your phone has reduce transparency on, or when Surface is set to Solid.</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<script>
+/* ---------- icons ---------- */
+const P={
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+ grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+ list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+ back:'<path d="m14.5 5-7 7 7 7"/>',
+ more:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+ bm:'<path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"/>',
+ toc:'<path d="M4 6h16M4 12h10M4 18h13"/>',
+ aa:'<path d="M3 18 8 6l5 12M5 14h6"/><path d="M15 18l3-7 3 7M16 16h4"/>',
+ lib:'<path d="M5 4v16M10 4v16M15 5l4 15"/>',
+ col:'<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 10h16"/>',
+ add:'<path d="M12 5v14M5 12h14"/>',
+ set:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+ check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+ wifi:'<path d="M3 9a14 14 0 0 1 18 0M6 12.5a9.5 9.5 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19" r=".8"/>',
+ folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+ file:'<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/>',
+ x:'<path d="m6 6 12 12M18 6 6 18"/>',
+ chev:'<path d="m9 5 7 7-7 7"/>',
+ down:'<path d="m6 9 6 6 6-6"/>',
+ warn:'<path d="M12 4 2.5 20h19z"/><path d="M12 10v5M12 17.5v.5"/>',
+ note:'<path d="M5 4h14v12l-5 5H5z"/><path d="M14 21v-5h5"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+ undo:'<path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 6 6"/>',
+ trash:'<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
+ sort:'<path d="M7 5v14M7 19l-3-3M7 19l3-3M17 19V5M17 5l-3 3M17 5l3 3"/>',
+ share:'<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v6h14v-6"/>',
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+ hl:'<path d="m4 20 4-1 10-10-3-3L5 16zM14 6l3 3"/>',
+ lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+};
+function ic(n,s=24,w=1.9){return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`}
+const CAIRN='<rect x="6" y="30" width="28" height="6" rx="3" fill="#e9edef"/><rect x="10" y="22" width="20" height="6" rx="3" fill="#aab2b8" transform="rotate(-3 20 25)"/><rect x="14" y="15" width="12" height="6" rx="3" fill="#7ee0c3" transform="rotate(4 20 18)"/><rect x="8" y="37" width="24" height="1.6" rx=".8" fill="#3a4148"/>';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- state ---------- */
+const S={
+ books:[
+  {id:1,t:'Frankenstein',a:'Mary Shelley',c:['#7a4660','#3d2132'],p:42,st:'Reading',last:8},
+  {id:2,t:'Moby-Dick',a:'Herman Melville',c:['#31676d','#1b3538'],p:4,st:'Reading',last:7},
+  {id:3,t:'Pride and Prejudice',a:'Jane Austen',c:['#94722f','#4d3a18'],p:0,st:'Want to read',last:0},
+  {id:4,t:'Meditations',a:'Marcus Aurelius',c:['#52528a','#27274a'],p:100,st:'Finished',last:3},
+  {id:5,t:'Walden',a:'Henry David Thoreau',c:['#41704f','#223b2a'],p:67,st:'Reading',last:6},
+  {id:6,t:'Dracula',a:'Bram Stoker',c:['#8a3434','#401818'],p:0,st:'Want to read',last:0},
+  {id:7,t:'The Odyssey',a:'Homer, trans. Samuel Butler',c:['#336a96','#1a3550'],p:100,st:'Finished',last:2},
+  {id:8,t:'Jane Eyre',a:'Charlotte Brontë',c:['#6a5f47','#322c20'],p:12,st:'Reading',last:5,missing:true},
+ ],
+ filter:'All',layout:'grid',sort:'Recent',q:'',cur:null,
+ collections:[{n:'Winter reads',ids:[1,2,5]}],
+ tags:[['classics',6],['sea',2],['philosophy',2]],
+ folders:[{n:'Books',p:'Internal storage / Books',k:12,on:true},{n:'Novels',p:'SD card / Novels',k:29,on:true},{n:'Downloads',p:'Internal storage / Download',k:3,on:false}],
+ R:{size:19,lh:1.65,mx:24,theme:'dark',font:'serif',mode:'pages',just:false,hyph:false,bright:100,warm:12,scope:'book',keepOn:true,full:false,vol:true},
+ auto:'Off',live:false,recv:[],ann:[],bmOn:false,
+};
+S.cur=S.books[0];
+
+/* ---------- book text ---------- */
+const CH=[{id:'c1',t:'Loomings'},{id:'c2',t:'The Carpet-Bag'},{id:'cn',t:'Notes'}];
+const TEXT=[
+ [0,'Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world[[fn]]. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people\'s hats off—then, I account it high time to get to sea as soon as I can.'],
+ [0,'This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.'],
+ [0,'There now is your insular city of the Manhattoes, belted round by wharves as Indian isles by coral reefs—commerce surrounds it with her surf. Right and left, the streets take you waterward. Its extreme downtown is the battery, where that noble mole is washed by waves, and cooled by breezes, which a few hours previous were out of sight of land.'],
+ [1,'I stuffed a shirt or two into my old carpet-bag, tucked it under my arm, and started for Cape Horn and the Pacific. Quitting the good city of old Manhatto, I duly arrived in New Bedford. It was a Saturday night in December.'],
+ [1,'Much was I disappointed upon learning that the little packet for Nantucket had already sailed, and that no way of reaching that place would offer, till the following Monday.'],
+ [2,'1. The narrator addresses the reader directly from the first line. Everything that follows is told as a memory.'],
+];
+const SENT=[]; // {id,text,ch}
+let HTML='';
+(function build(){
+  let lastCh=-1;
+  TEXT.forEach(([ch,txt],pi)=>{
+    if(ch!==lastCh){HTML+=`<h3 id="${CH[ch].id}">${ch<2?'Chapter '+(ch+1)+'. ':''}${CH[ch].t}</h3>`;lastCh=ch}
+    const parts=txt.match(/[^.!?]+[.!?]+["”]?\s*/g)||[txt];
+    HTML+='<p>'+parts.map((s,i)=>{
+      const id=`s${pi}-${i}`; const clean=s.replace('[[fn]]','');
+      SENT.push({id,text:clean.trim(),ch});
+      return `<span class="s" data-sid="${id}">${esc(s).replace('[[fn]]','</span><button class="fn" data-fn aria-label="Footnote 1">1</button><span class="s" data-sid="'+id+'">')}</span>`;
+    }).join('')+'</p>';
+  });
+})();
+const sidOf=start=>SENT.find(s=>s.text.startsWith(start)).id;
+S.ann=[
+ {id:1,type:'hl',sid:sidOf('It is a way'),text:'It is a way I have of driving off the spleen and regulating the circulation.',color:'mint',note:'',pct:Math.round(SENT.findIndex(s=>s.text.startsWith('It is a way'))/SENT.length*100),ch:0},
+ {id:2,type:'hl',sid:sidOf('This is my substitute'),text:'This is my substitute for pistol and ball.',color:'amber',note:'He treats the sea as a cure, not an adventure.',pct:Math.round(SENT.findIndex(s=>s.text.startsWith('This is my'))/SENT.length*100),ch:0},
+ {id:3,type:'bm',pct:38,text:'Bookmark',ch:0},
+];
+let annId=10;
+
+/* ---------- helpers ---------- */
+function mkCover(b,extra=''){
+  return `<div class="cover" style="background:linear-gradient(160deg,${b.c[0]},${b.c[1]})"><b>${esc(b.t)}</b><span>${esc(b.a.split(',')[0])}</span>${b.p>0&&b.p<100?`<div class="pb"><i style="width:${b.p}%"></i></div>`:''}${b.st==='Finished'?`<div class="badge">${ic('check',14,2.6)}</div>`:''}${b.missing?`<div class="badge warn">${ic('warn',13,2.4)}</div>`:''}${extra}</div>`;
+}
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400)}
+function bindRange(el,fn){const upd=()=>{const mn=+el.min||0,mx=+el.max||100;el.style.setProperty('--v',((el.value-mn)/(mx-mn)*100)+'%')};upd();el.addEventListener('input',()=>{upd();fn&&fn(+el.value)});el._upd=upd}
+function closeLayer(){$('#layer').innerHTML=''}
+function sheet(html,{clear=false,onmount}={}){
+  const L=$('#layer');
+  L.innerHTML=`<div class="scrim ${clear?'clear':''}" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  L.querySelector('[data-close]').onclick=closeLayer;
+  onmount&&onmount(L.querySelector('.sheet'));
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLayer()});
+
+/* nav */
+const NAV=[['library','Library','lib'],['collections','Collections','col'],['settings','Settings','set']];
+$$('.nav').forEach(n=>{n.innerHTML=NAV.map(([k,l,i])=>`<button data-tab="${k}"><span class="ic">${ic(i,22)}</span>${l}</button>`).join('')});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t)show(t.dataset.tab)});
+$$('[data-back]').forEach(b=>{b.innerHTML=ic('back');b.onclick=()=>closeOverlay(b.closest('.overlay').id.slice(2))});
+$('#cairn0').innerHTML=CAIRN;
+$('#btnPlus').innerHTML=ic('add',22);$('#btnPlus').onclick=()=>show('add');
+
+/* view routing */
+let VIEW='library';
+function show(v){
+  closeLayer();$('#toast').classList.remove('on');
+  $$('.overlay').forEach(o=>o.classList.remove('on'));
+  $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+  $$('.nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===v?'page':'false'));
+  VIEW=v; render(v); notes(v);
+}
+function openOverlay(v){closeLayer();$$('.overlay').forEach(o=>o.classList.remove('on'));$('#v-'+v).classList.add('on');renderOv(v);notes(v)}
+let RETURN='library';
+function closeOverlay(v){closeLayer();$('#v-'+v).classList.remove('on');const t=(v==='backup')?'settings':(v==='reader'?'library':'library');if(v==='annotations'){openOverlay('reader');return}show(t)}
+function render(v){({library:renderLib,collections:renderCol,add:renderAdd,settings:renderSettings})[v]()}
+function renderOv(v){({reader:renderReader,annotations:renderAnn,backup:renderBackup,onboarding:renderOnb})[v]()}
+
+/* ---------- LIBRARY ---------- */
+$('#btnSearch').innerHTML=ic('search');$('#ic-s').innerHTML=ic('search',18);
+$('#btnSearch').onclick=()=>{const r=$('#searchrow');r.classList.toggle('on');if(r.classList.contains('on'))$('#q').focus();else{S.q='';$('#q').value='';renderLib()}};
+$('#q').oninput=e=>{S.q=e.target.value;renderLib()};
+$('#btnLayout').onclick=()=>{S.layout=S.layout==='grid'?'list':'grid';renderLib()};
+function sorted(arr){const a=[...arr];const f={Recent:(x,y)=>y.last-x.last,Title:(x,y)=>x.t.localeCompare(y.t),Author:(x,y)=>x.a.localeCompare(y.a),Progress:(x,y)=>y.p-x.p}[S.sort];return a.sort(f)}
+function renderLib(){
+  const all=S.books, cnt=s=>s==='All'?all.length:all.filter(b=>b.st===s).length;
+  $('#chips').innerHTML=['All','Reading','Want to read','Finished'].map(s=>`<button class="chip" aria-pressed="${S.filter===s}" data-f="${s}">${s==='Want to read'?'To read':s}<span class="n">${cnt(s)}</span></button>`).join('');
+  $$('#chips .chip').forEach(c=>c.onclick=()=>{S.filter=c.dataset.f;renderLib()});
+  $('#btnLayout').innerHTML=ic(S.layout==='grid'?'list':'grid');$('#btnLayout').setAttribute('aria-label',S.layout==='grid'?'Switch to list view':'Switch to grid view');
+  const q=S.q.trim().toLowerCase();
+  let list=all.filter(b=>(S.filter==='All'||b.st===S.filter)&&(!q||(b.t+' '+b.a).toLowerCase().includes(q)));
+  list=sorted(list);
+  const cont=$('#cont');const reading=[...all].filter(b=>b.p>0&&b.p<100).sort((x,y)=>y.last-x.last)[0];
+  if(reading&&S.filter==='All'&&!q&&all.length){
+    cont.innerHTML=`<button class="card cont" id="contBtn" aria-label="Continue reading ${esc(reading.t)}">${mkCover(reading)}<div class="info"><div class="k">Continue reading</div><div class="tt">${esc(reading.t)}</div><div class="bar" role="progressbar" aria-valuenow="${reading.p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${reading.p}%"></i></div><div class="small mut">${reading.p}% read, about ${Math.round((100-reading.p)*.17)} hours left</div></div></button>`;
+    $('#contBtn').onclick=()=>openBook(reading);
+  } else cont.innerHTML='';
+  const meta=$('#meta'),box=$('#books');
+  if(!all.length){
+    meta.innerHTML='';
+    box.innerHTML=`<div class="empty"><svg width="72" height="72" viewBox="0 0 40 40">${CAIRN}</svg><div class="h2">Your shelf is empty</div><p>Add EPUB books from your phone, an SD card, or a computer on the same Wi-Fi.</p><div class="btns"><button class="btn primary" id="e1">Add books</button><button class="btn sec" id="e2">Pick a folder to watch</button></div></div>`;
+    $('#e1').onclick=()=>show('add');$('#e2').onclick=()=>{show('add');toast('Android\'s folder picker opens here')};
+    $('#chips').style.display='none';return;
+  }
+  $('#chips').style.display='';
+  meta.innerHTML=`<span class="mut small">${list.length} ${list.length===1?'book':'books'}</span><button class="sortbtn" id="sortbtn" aria-haspopup="menu">${ic('sort',18)}Sort: ${S.sort}${ic('down',16)}</button>`;
+  $('#sortbtn').onclick=e=>{e.stopPropagation();sortMenu()};
+  if(cont.innerHTML&&list.length>1)list=list.filter(b=>b.id!==reading.id);
+  if(!list.length){box.innerHTML=`<div class="empty" style="padding-top:36px"><div class="h2">No books found</div><p>${q?`Nothing matches “${esc(S.q)}”. Try an author or part of the title.`:'Nothing here yet. Change a book\'s status to see it in this list.'}</p></div>`;return}
+  if(S.layout==='grid'){
+    box.innerHTML=`<div class="grid">${list.map(b=>`<div class="bk"><button data-open="${b.id}" style="display:block;width:100%;text-align:left" aria-label="${esc(b.t)} by ${esc(b.a)}${b.missing?', file missing':''}">${mkCover(b)}<div class="t">${esc(b.t)}</div><div class="a">${esc(b.a)}</div></button></div>`).join('')}</div>`;
+  }else{
+    box.innerHTML=list.map(b=>`<div style="display:flex;align-items:center;border-top:1px solid var(--line);padding:8px 0"><button class="lrow" data-open="${b.id}">${mkCover(b)}<div class="tx"><div class="t">${esc(b.t)}</div><div class="a">${esc(b.a)}</div><div class="st ${b.missing?'warn':''}">${b.missing?'File moved. Tap to fix.':b.st==='Finished'?'Finished':b.p>0?b.p+'% read':'Not started'}</div></div></button><button class="iconbtn" data-more="${b.id}" aria-label="More for ${esc(b.t)}">${ic('more')}</button></div>`).join('');
+  }
+  $$('[data-open]').forEach(el=>{
+    const b=S.books.find(x=>x.id==el.dataset.open);let t,lp=false;
+    el.onpointerdown=()=>{lp=false;t=setTimeout(()=>{lp=true;bookSheet(b)},480)};
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
+    el.onclick=()=>{if(lp)return;b.missing?bookSheet(b):openBook(b)};
+  });
+  $$('[data-more]').forEach(el=>el.onclick=()=>bookSheet(S.books.find(x=>x.id==el.dataset.more)));
+}
+function sortMenu(){
+  closePop();const sc=$('#libscroll');const r=$('#sortbtn').getBoundingClientRect(),pr=$('#phone').getBoundingClientRect();
+  const m=document.createElement('div');m.className='pop';m.id='pop';m.setAttribute('role','menu');
+  m.style.top=(r.bottom-pr.top+4)+'px';
+  m.innerHTML=['Recent','Title','Author','Progress'].map(s=>`<button role="menuitemradio" aria-checked="${S.sort===s}" data-s="${s}">${s}${S.sort===s?ic('check',18,2.4):''}</button>`).join('');
+  $('#phone').appendChild(m);
+  m.onclick=e=>{const b=e.target.closest('[data-s]');if(b){S.sort=b.dataset.s;closePop();renderLib()}};
+  setTimeout(()=>document.addEventListener('click',closePop,{once:true}),0);
+}
+function closePop(){const p=$('#pop');p&&p.remove()}
+function openBook(b){S.cur=b;b.last=Math.max(...S.books.map(x=>x.last))+1;openOverlay('reader')}
+function bookSheet(b){
+  sheet(`<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px"><div style="width:52px">${mkCover(b)}</div><div><div class="h2" style="margin:0">${esc(b.t)}</div><div class="mut small">${esc(b.a)}</div></div></div>
+  ${b.missing?`<div style="background:rgba(232,180,92,.12);border:1px solid rgba(232,180,92,.35);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13.5px"><b style="color:var(--amber)">We cannot find this file.</b> It may have been moved or deleted. Your place and notes are kept.<div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec sm" id="locate">Locate file</button><button class="btn sm" id="dropb" style="color:var(--mut)">Remove from library</button></div></div>`:''}
+  <div class="seg" role="radiogroup" aria-label="Status" style="margin-bottom:8px">${['Want to read','Reading','Finished'].map(s=>`<button role="radio" aria-checked="${b.st===s}" data-st="${s}">${s}</button>`).join('')}</div>
+  <button class="act" id="aCol">${ic('col')}Add to a collection</button>
+  <button class="act" id="aEdit">${ic('edit')}Edit title, author and cover</button>
+  <button class="act danger" id="aDel">${ic('trash')}Remove from library</button>
+  <p class="dim small" style="margin-top:6px">Removing a book keeps the file on your phone.</p>`,{onmount:s=>{
+    s.querySelectorAll('[data-st]').forEach(x=>x.onclick=()=>{b.st=x.dataset.st;if(b.st==='Finished')b.p=100;closeLayer();renderLib();toast('Moved to '+b.st)});
+    s.querySelector('#aCol').onclick=()=>{closeLayer();toast('Added to Winter reads');S.collections[0].ids.includes(b.id)||S.collections[0].ids.push(b.id)};
+    s.querySelector('#aEdit').onclick=()=>editSheet(b);
+    const rm=()=>{S.books=S.books.filter(x=>x!==b);closeLayer();renderLib();toast('Removed. The file is still on your phone.')};
+    s.querySelector('#aDel').onclick=rm;
+    const l=s.querySelector('#locate');if(l){l.onclick=()=>{b.missing=false;closeLayer();renderLib();toast('File found again')};s.querySelector('#dropb').onclick=rm}
+  }});
+}
+function editSheet(b){
+  sheet(`<div class="h2">Edit details</div><label class="fl" for="eT">Title</label><input class="field" id="eT" value="${esc(b.t)}"><label class="fl" for="eA">Author</label><input class="field" id="eA" value="${esc(b.a)}"><label class="fl">Cover</label><div style="display:flex;gap:8px"><button class="btn sec sm" id="eC">Choose image</button><button class="btn sm" style="color:var(--mut)">Use the one in the file</button></div><div style="margin-top:20px"><button class="btn primary" id="eS">Save changes</button></div>`,{onmount:s=>{s.querySelector('#eC').onclick=()=>toast('Android\'s image picker opens here');s.querySelector('#eS').onclick=()=>{b.t=s.querySelector('#eT').value||b.t;b.a=s.querySelector('#eA').value||b.a;closeLayer();renderLib();toast('Saved changes')}}});
+}
+
+/* ---------- COLLECTIONS ---------- */
+function stack(ids){return `<div class="stack">${ids.slice(0,3).map(i=>{const b=S.books.find(x=>x.id===i);return b?`<i style="background:linear-gradient(160deg,${b.c[0]},${b.c[1]})"></i>`:''}).join('')}</div>`}
+function renderCol(){
+  $('#colList').innerHTML=S.collections.map((c,i)=>`<button class="row" data-c="${i}"><div class="grow"><div class="t">${esc(c.n)}</div><div class="s">${c.ids.length} books</div></div>${stack(c.ids)}</button>`).join('')||`<div class="row"><div class="s">No collections yet.</div></div>`;
+  $$('#colList .row[data-c]').forEach(r=>r.onclick=()=>toast('Collection page opens here'));
+  $('#tagList').innerHTML=S.tags.map(([n,k])=>`<button class="tag" data-tag>${esc(n)}<span class="dim small">${k}</span></button>`).join('')+`<button class="tag add" id="tagAdd">${ic('add',16,2.2)}New tag</button>`;
+  $$('[data-tag]').forEach(t=>t.onclick=()=>toast('Showing books tagged “'+t.firstChild.textContent+'”'));
+  $('#tagAdd').onclick=()=>newSheet('Tag');
+}
+$('#btnNew').onclick=()=>newSheet('Collection');
+function newSheet(kind){
+  sheet(`<div class="h2">New ${kind.toLowerCase()}</div><div class="seg" role="radiogroup" aria-label="Type" id="nk"><button role="radio" aria-checked="${kind==='Collection'}" data-k="Collection">Collection</button><button role="radio" aria-checked="${kind==='Tag'}" data-k="Tag">Tag</button></div><p class="dim small" style="margin:10px 4px 0" id="nh"></p><label class="fl" for="nn">Name</label><input class="field" id="nn" placeholder="For example, Summer trip"><div style="margin-top:20px"><button class="btn primary" id="ns">Create</button></div>`,{onmount:s=>{
+    let k=kind;const hint=()=>s.querySelector('#nh').textContent=k==='Collection'?'A collection groups books you choose, like a shelf.':'A tag is a quick label. A book can have many.';hint();
+    s.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{k=b.dataset.k;s.querySelectorAll('[data-k]').forEach(x=>x.setAttribute('aria-checked',x===b));hint()});
+    s.querySelector('#ns').onclick=()=>{const n=s.querySelector('#nn').value.trim();if(!n){s.querySelector('#nn').focus();return}k==='Tag'?S.tags.push([n,0]):S.collections.push({n,ids:[]});closeLayer();renderCol();toast('Created '+n)};
+  }});
+}
+
+/* ---------- ADD ---------- */
+$('#btnAddFolder').onclick=()=>sheet(`<div class="h2">Add books</div><div class="card"><button class="row" id="aF"><div class="grow"><div class="t">Watch a folder or SD card</div><div class="s">New books appear on their own</div></div>${ic('chev',20)}</button><button class="row" id="aP"><div class="grow"><div class="t">Choose files</div><div class="s">Pick EPUB files once</div></div>${ic('chev',20)}</button></div>`,{onmount:m=>{m.querySelector('#aF').onclick=()=>{closeLayer();toast('Android\'s folder picker opens here')};m.querySelector('#aP').onclick=()=>{closeLayer();toast('Android\'s file picker opens here')}}});
+let recvT=[];
+function renderAdd(){
+  const w=$('#wifi');
+  if(!S.live){
+    w.innerHTML=`<div class="h2" style="display:flex;gap:10px;align-items:center"><span style="color:var(--mint)">${ic('wifi',22)}</span>Send from a computer</div><p class="mut" style="margin:6px 0 16px">Kairn shows an address. Open it on a computer on the same Wi-Fi and drop your EPUB files on the page.</p><button class="btn primary" id="wStart">Start Wi-Fi transfer</button>`;
+    $('#wStart').onclick=startLive;
+  }else{
+    w.innerHTML=`<div class="live"><span class="dot"></span>Ready for files</div>
+    <div class="small mut" style="margin:12px 0 4px">On your computer, open</div><div class="url">http://192.168.1.24:8080</div>
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0 4px"><span class="small mut">Then enter this code</span><span class="pin" aria-label="Code 4 8 2 1"><span>4</span><span>8</span><span>2</span><span>1</span></span></div>
+    <p class="dim small" style="margin-top:10px">Only devices on this Wi-Fi can reach it. Kairn closes the page when you stop.</p>
+    <div id="recv" style="margin-top:12px">${S.recv.map(r=>`<div class="recv"><span style="color:var(--mint)">${ic('check',20,2.4)}</span><div><b>${esc(r)}</b><div class="dim small">Added to your library</div></div></div>`).join('')}</div>
+    <button class="btn sec" style="margin-top:14px" id="wStop">Stop transfer</button>`;
+    $('#wStop').onclick=stopLive;
+  }
+  $('#folders').innerHTML=S.folders.map((f,i)=>`<div class="row"><span style="color:var(--mut)">${ic('folder',22)}</span><div class="grow"><div class="t">${esc(f.n)}</div><div class="s">${esc(f.p)}, ${f.k} books</div></div><button class="switch" role="switch" aria-checked="${f.on}" aria-label="Watch ${esc(f.n)}" data-fi="${i}"></button></div>`).join('');
+  $$('[data-fi]').forEach(s=>s.onclick=()=>{const f=S.folders[s.dataset.fi];f.on=!f.on;s.setAttribute('aria-checked',f.on);toast(f.on?'Watching '+f.n:'Stopped watching '+f.n)});
+}
+function startLive(){
+  S.live=true;S.recv=[];renderAdd();
+  const files=['Treasure Island.epub','The Time Machine.epub'];
+  files.forEach((f,i)=>recvT.push(setTimeout(()=>{if(!S.live)return;S.recv.push(f);S.books.push({id:100+i,t:f.replace('.epub',''),a:i?'H. G. Wells':'R. L. Stevenson',c:i?['#4f6a3a','#2a3a1f']:['#6a4a2a','#392612'],p:0,st:'Want to read',last:0});if(VIEW==='add')renderAdd()},1800*(i+1))));
+}
+function stopLive(){S.live=false;recvT.forEach(clearTimeout);recvT=[];const n=S.recv.length;renderAdd();toast(n?`Stopped. ${n} ${n===1?'book':'books'} added.`:'Transfer stopped')}
+
+/* ---------- SETTINGS ---------- */
+function seg(name,opts,val){return `<div class="seg" role="radiogroup" aria-label="${name}" data-seg="${name}">${opts.map(o=>`<button role="radio" aria-checked="${o===val}" data-v="${o}">${o}</button>`).join('')}</div>`}
+function renderSettings(){
+  const themeName={dark:'Dark',light:'Light',sepia:'Sepia',black:'Black'}[S.R.theme];
+  $('#setscroll').innerHTML=`<h1 class="h1">Settings</h1>
+  <div class="group"><div class="gl">Appearance</div><div class="card" style="padding:16px">
+    <div class="t" style="font-weight:700;margin-bottom:10px">Reading theme</div>${seg('Theme',['Dark','Light','Sepia','Black'],themeName)}
+    <div class="t" style="font-weight:700;margin:18px 0 10px">Switch automatically</div>${seg('Auto',['Off','System','Schedule'],S.auto)}
+    <div id="sched" style="display:${S.auto==='Schedule'?'flex':'none'};gap:10px;margin-top:12px"><div style="flex:1"><label class="fl" style="margin-top:0">Light from</label><input class="field" type="time" value="07:00"></div><div style="flex:1"><label class="fl" style="margin-top:0">Dark from</label><input class="field" type="time" value="20:00"></div></div>
+    <p class="dim small" style="margin-top:12px">${S.auto==='System'?'Follows your phone\'s light and dark setting.':S.auto==='Schedule'?'Changes at the times above.':'Kairn starts in Dark.'}</p></div></div>
+  <div class="group"><div class="gl">Library</div><div class="card">
+    <button class="row" id="sFold"><div class="grow"><div class="t">Watched folders</div><div class="s">${S.folders.filter(f=>f.on).length} folders, new books appear on their own</div></div>${ic('chev',20)}</button> </div></div>
+  <div class="group"><div class="gl">Your data</div><div class="card">
+    <button class="row" id="sBk"><div class="grow"><div class="t">Backup and restore</div><div class="s">Last backup 28 Sep 2026</div></div>${ic('chev',20)}</button>
+    <button class="row" id="sEx"><div class="grow"><div class="t">Export all notes</div><div class="s">One Markdown file per book</div></div>${ic('chev',20)}</button></div></div>
+  <div class="group"><div class="gl">About</div><div class="card">
+    <div class="row"><div class="grow"><div class="t">Language</div></div><span class="mut">English</span></div>
+    <button class="row" id="sLic"><div class="grow"><div class="t">Open-source licences</div></div>${ic('chev',20)}</button></div>
+    <p class="dim small" style="margin:14px 6px 0;text-align:center">Kairn, draft build. No account, no ads, no tracking.</p></div>`;
+  $$('#setscroll [data-seg]').forEach(g=>g.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{
+    const n=g.dataset.seg,v=b.dataset.v;
+    if(n==='Theme'){S.R.theme=v.toLowerCase();toast('Reading theme: '+v)}
+    if(n==='Auto'){S.auto=v}
+    if(n==='View'){S.layout=v.toLowerCase()}
+    renderSettings();
+  }));
+  $$('#setscroll [data-sw]').forEach(s=>s.onclick=()=>{const k=s.dataset.sw;if(k in S.R)S.R[k]=!S.R[k];s.setAttribute('aria-checked',s.getAttribute('aria-checked')!=='true')});
+  $('#sFold').onclick=()=>show('add');$('#sBk').onclick=()=>openOverlay('backup');$('#sEx').onclick=()=>toast('Saved 6 Markdown files to Documents/Kairn');
+  $('#sLic').onclick=()=>sheet(`<div class="h2">Open-source licences</div><div class="card"><div class="row"><div class="grow"><div class="t">Readium Kotlin Toolkit</div><div class="s">BSD-3-Clause. Renders your books.</div></div></div><div class="row"><div class="grow"><div class="t">Manrope and Literata</div><div class="s">SIL Open Font License</div></div></div></div><p class="dim small" style="margin-top:12px">Dictionary and font licences are still being checked.</p>`);
+}
+
+/* ---------- BACKUP ---------- */
+let bk={state:'idle',inc:false,last:'28 Sep 2026, 21:14',file:''};
+function renderBackup(){
+  const el=$('#bkscroll');
+  const size=bk.inc?'about 186 MB':'about 4 MB';
+  el.innerHTML=`<p class="mut" style="margin:2px 4px 18px">One file holds your library, notes, highlights and settings. Open formats only, so you can always read it.</p>
+  <div class="card" style="padding:16px 18px"><div class="small mut">Last backup</div><div class="h2" style="margin-top:2px">${bk.last}</div></div>
+  <div class="card" style="margin-top:12px"><div class="row"><div class="grow"><div class="t">Include book files</div><div class="s">Makes the backup larger, ${size}</div></div><button class="switch" role="switch" aria-checked="${bk.inc}" id="bkInc" aria-label="Include book files"></button></div></div>
+  <div id="bkAct" style="margin-top:18px;display:grid;gap:10px"></div>`;
+  $('#bkInc').onclick=()=>{bk.inc=!bk.inc;renderBackup()};
+  const a=$('#bkAct');
+  if(bk.state==='idle')a.innerHTML=`<button class="btn primary" id="bkGo">Back up now</button><button class="btn sec" id="bkRes">Restore from a file</button>`;
+  if(bk.state==='run')a.innerHTML=`<div class="card" style="padding:16px 18px"><b>Backing up…</b><div class="prog"><i id="bkP"></i></div><div class="dim small" style="margin-top:8px">Your books stay usable while this runs.</div></div>`;
+  if(bk.state==='done')a.innerHTML=`<div class="card" style="padding:16px 18px;display:flex;gap:12px;align-items:flex-start"><span style="color:var(--mint)">${ic('check',24,2.4)}</span><div><b>Backup saved</b><div class="small mut" style="margin-top:2px">${bk.file}</div><div class="small dim">Documents / Kairn, ${size.replace('about ','')}</div></div></div><button class="btn primary" id="bkShare">${ic('share',20)}Share or copy to another place</button><button class="btn sec" id="bkOk">Done</button>`;
+  const g=$('#bkGo');if(g)g.onclick=runBackup;
+  const r=$('#bkRes');if(r)r.onclick=restoreSheet;
+  const sh=$('#bkShare');if(sh)sh.onclick=()=>toast('Android share sheet opens here');
+  const ok=$('#bkOk');if(ok)ok.onclick=()=>{bk.state='idle';renderBackup()};
+}
+function runBackup(){
+  bk.state='run';renderBackup();let p=0;const t=setInterval(()=>{p+=bk.inc?4:9;const b=$('#bkP');if(b)b.style.width=Math.min(p,100)+'%';if(p>=100){clearInterval(t);bk.state='done';bk.last='6 Oct 2026, '+new Date().toTimeString().slice(0,5);bk.file='kairn-backup-2026-10-06.zip';if($('#v-backup').classList.contains('on'))renderBackup()}},120);
+}
+function restoreSheet(){
+  let mode='merge';
+  sheet(`<div class="h2">Restore from a backup</div>
+  <div class="card" style="padding:14px 16px;display:flex;gap:12px;align-items:center"><span style="color:var(--mut)">${ic('file',24)}</span><div><b>kairn-backup-2026-09-28.zip</b><div class="small mut">41 books, 126 notes and highlights</div></div></div>
+  <div style="margin-top:8px"><button class="radio" role="radio" aria-checked="true" data-m="merge"><i></i><span><b>Merge with what is here</b><br><span class="mut small">Keeps both. If a book is in both, the later position wins.</span></span></button>
+  <button class="radio" role="radio" aria-checked="false" data-m="replace"><i></i><span><b>Replace everything</b><br><span class="mut small">Makes this phone match the backup.</span></span></button></div>
+  <p class="dim small" style="margin:4px 4px 16px">Kairn saves a safety copy of your current data first, so you can undo.</p>
+  <button class="btn primary" id="rsGo">Restore</button>`,{onmount:s=>{
+    s.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{mode=b.dataset.m;s.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-checked',x===b))});
+    s.querySelector('#rsGo').onclick=()=>{closeLayer();toast(mode==='merge'?'Merged 41 books and 126 notes':'Restored 41 books and 126 notes. Undo is in Settings.')};
+  }});
+}
+
+/* ---------- ONBOARDING ---------- */
+let onbStep=0;
+function renderOnb(){
+  const steps=[
+   `<svg width="64" height="64" viewBox="0 0 40 40">${CAIRN}</svg><h1>Read anywhere.<br>No signal needed.</h1><p class="lead">A quiet EPUB reader. Your books, notes and settings stay on your phone.</p><ul style="list-style:none;margin-top:26px;display:grid;gap:12px;font-weight:600">${['No account, no ads, no tracking','Works with airplane mode on','Free, with nothing locked away'].map(t=>`<li style="display:flex;gap:12px;align-items:center"><span style="color:var(--mint)">${ic('check',20,2.4)}</span>${t}</li>`).join('')}</ul>`,
+   `<h1>Bring your books</h1><p class="lead">Three ways to add EPUB files. You can use any of them later too.</p><div style="margin-top:14px"><div class="opt"><span class="ico">${ic('folder',22)}</span><div><b>Watch a folder</b><span class="d">New books show up on their own</span></div></div><div class="opt"><span class="ico">${ic('wifi',22)}</span><div><b>Send over Wi-Fi</b><span class="d">From a computer, no cable</span></div></div><div class="opt"><span class="ico">${ic('file',22)}</span><div><b>Open a file</b><span class="d">Tap an EPUB in any app</span></div></div></div>`,
+   `<h1>Pick your look</h1><p class="lead">Dark is the default. You can change it in the reader any time.</p><div class="swatches" style="margin-top:26px" role="radiogroup" aria-label="Theme">${themeSw(S.R.theme)}</div><div class="card" id="onbPrev" style="margin-top:22px;padding:18px;font-family:var(--serif);font-size:17px;line-height:1.6"></div>`
+  ];
+  $('#onb').innerHTML=`<div class="dots">${steps.map((_,i)=>`<i class="${i===onbStep?'on':''}"></i>`).join('')}</div><div class="pg on" style="flex:1">${steps[onbStep]}</div><div style="display:grid;gap:10px;margin-top:20px"><button class="btn primary" id="oNext">${onbStep<2?'Next':'Add your first books'}</button><button class="btn" id="oSkip" style="color:var(--mut);min-height:44px">${onbStep<2?'Skip':'Skip for now'}</button></div>`;
+  $('#oNext').onclick=()=>{if(onbStep<2){onbStep++;renderOnb()}else{onbStep=0;show('add')}};
+  $('#oSkip').onclick=()=>{onbStep=0;show('library')};
+  const sw=$$('#onb .sw');sw.forEach(b=>b.onclick=()=>{S.R.theme=b.dataset.t;renderOnb()});
+  const pv=$('#onbPrev');if(pv){const T={dark:['#111418','#d9dde0'],light:['#f6f5f1','#1d1e20'],sepia:['#f1e4cf','#3a2e21'],black:['#000','#c9ced2']}[S.R.theme];pv.style.background=T[0];pv.style.color=T[1];pv.style.borderColor='#2a3036';pv.textContent='Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.'}
+}
+function themeSw(cur){const T=[['light','Light','#f6f5f1'],['sepia','Sepia','#f1e4cf'],['dark','Dark','#111418'],['black','Black','#000']];return T.map(([k,l,c])=>`<button class="sw" role="radio" aria-checked="${cur===k}" data-t="${k}"><i style="background:${c};${k==='black'?'box-shadow:inset 0 0 0 1px #5a636b':''}">${cur===k?ic('check',22,2.6):''}</i>${l}</button>`).join('')}
+
+/* ---------- READER ---------- */
+const R=$('#v-reader'),RT=$('#rtext');
+$('#rBack').innerHTML=ic('back');$('#rBm').innerHTML=ic('bm');$('#rMore').innerHTML=ic('more');$('#ic-undo').innerHTML=ic('undo',20,2.4);
+[['tToc','toc'],['tSearch','search'],['tNotes','hl'],['tAa','aa']].forEach(([id,i])=>$('#'+id+' span').innerHTML=ic(i,22));
+let chromeOn=true,backPos=null,curSid=null,lpFlag=false;
+function renderReader(){
+  $('#rTitle').textContent=S.cur.t;
+  RT.innerHTML=HTML;
+  applyR();paintAnn();
+  RT.scrollTop=Math.round((RT.scrollHeight-RT.clientHeight)*(S.cur.p||0)/100);
+  RT.focus({preventScroll:true});
+  updPos();
+  if(!renderReader.hinted){renderReader.hinted=true;setTimeout(()=>{if(!$('#layer').children.length)toast('Tap the middle to hide controls. Press and hold a sentence to highlight.')},500)}
+}
+function applyR(){
+  const r=S.R;R.dataset.theme=r.theme;
+  R.style.setProperty('--fs',r.size+'px');R.style.setProperty('--lh',r.lh);R.style.setProperty('--mx',r.mx+'px');
+  R.style.setProperty('--ff',r.font==='serif'?'var(--serif)':'var(--sans)');
+  RT.classList.toggle('just',r.just);RT.classList.toggle('hyph',r.hyph);
+  $('#shade').style.background=`rgba(0,0,0,${(100-r.bright)/100*.7})`;
+  $('#warm').style.background=`rgba(255,${170-r.warm},${70-r.warm/2},${r.warm/100*.55})`;
+}
+function paintAnn(){
+  RT.querySelectorAll('.s').forEach(s=>{s.className='s';s.querySelectorAll('.noteflag').forEach(n=>n.remove())});
+  S.ann.filter(a=>a.sid).forEach(a=>{
+    RT.querySelectorAll(`[data-sid="${a.sid}"]`).forEach((s,i,all)=>{s.classList.add('hl-'+a.color);if(a.note&&i===all.length-1&&!s.querySelector('.noteflag'))s.insertAdjacentHTML('beforeend','<span class="noteflag" title="Has a note"></span>')});
+  });
+  const pct=curPct();S.bmOn=S.ann.some(a=>a.type==='bm'&&Math.abs(a.pct-pct)<2);
+  $('#rBm').setAttribute('aria-pressed',S.bmOn);$('#rBm').style.color=S.bmOn?'var(--mint)':'';
+  $('#rBm svg').setAttribute('fill',S.bmOn?'currentColor':'none');
+}
+function curPct(){const m=RT.scrollHeight-RT.clientHeight;return m>0?RT.scrollTop/m*100:0}
+function curChap(){let c=0;CH.forEach((x,i)=>{const e=RT.querySelector('#'+x.id);if(e&&e.offsetTop-90<=RT.scrollTop+4)c=i});return c}
+function updPos(){
+  const p=curPct(),sc=$('#scrub');sc.value=p;sc._upd();
+  const c=curChap();$('#rChap').textContent=CH[c].t;
+  $('#rLeft').textContent=Math.max(1,Math.round((100-p)/100*14))+' min left in chapter';
+  S.cur.p=Math.max(S.cur.p>=100?100:0,Math.round(p));
+  paintAnnBm();
+}
+function paintAnnBm(){const pct=curPct();S.bmOn=S.ann.some(a=>a.type==='bm'&&Math.abs(a.pct-pct)<2);$('#rBm').setAttribute('aria-pressed',S.bmOn);$('#rBm').style.color=S.bmOn?'var(--mint)':'';$('#rBm svg').setAttribute('fill',S.bmOn?'currentColor':'none')}
+bindRange($('#scrub'),v=>{RT.scrollTop=(RT.scrollHeight-RT.clientHeight)*v/100});
+RT.addEventListener('scroll',updPos,{passive:true});
+$('#rBack').onclick=()=>{closeLayer();R.classList.remove('on');show('library')};
+$('#rBm').onclick=()=>{const p=curPct();const ex=S.ann.find(a=>a.type==='bm'&&Math.abs(a.pct-p)<2);if(ex){S.ann=S.ann.filter(a=>a!==ex);toast('Bookmark removed')}else{S.ann.push({id:annId++,type:'bm',pct:Math.round(p),text:'Bookmark',ch:curChap()});toast('Bookmarked')}paintAnnBm()};
+$('#rMore').onclick=()=>sheet(`<div class="h2">${esc(S.cur.t)}</div><button class="act" id="mA">${ic('hl')}Notes and highlights</button><button class="act" id="mS">${ic('search')}Search in book</button><button class="act" id="mF">${ic('aa')}Display and spacing</button><div class="row" style="padding:0;border-top:1px solid var(--line)"><div class="grow"><div class="t">Keep screen on</div></div><button class="switch" role="switch" aria-checked="${S.R.keepOn}" id="mK" aria-label="Keep screen on"></button></div><div class="row" style="padding:0;border-top:1px solid var(--line)"><div class="grow"><div class="t">Full screen</div></div><button class="switch" role="switch" aria-checked="${S.R.full}" id="mU" aria-label="Full screen"></button></div>`,{onmount:s=>{
+  s.querySelector('#mA').onclick=()=>openOverlay('annotations');s.querySelector('#mS').onclick=searchSheet;s.querySelector('#mF').onclick=settingsSheet;
+  s.querySelector('#mK').onclick=e=>{S.R.keepOn=!S.R.keepOn;e.currentTarget.setAttribute('aria-checked',S.R.keepOn)};
+  s.querySelector('#mU').onclick=e=>{S.R.full=!S.R.full;e.currentTarget.setAttribute('aria-checked',S.R.full)};
+}});
+$('#tToc').onclick=tocSheet;$('#tSearch').onclick=searchSheet;$('#tNotes').onclick=()=>openOverlay('annotations');$('#tAa').onclick=settingsSheet;
+
+/* tap zones, long-press, footnotes */
+let lpT,downSid=null;
+RT.addEventListener('pointerdown',e=>{
+  lpFlag=false;const s=e.target.closest('.s');downSid=s?s.dataset.sid:null;clearTimeout(lpT);
+  if(s)lpT=setTimeout(()=>{lpFlag=true;selectSent(s.dataset.sid)},480);
+});
+['pointerup','pointercancel'].forEach(ev=>RT.addEventListener(ev,()=>clearTimeout(lpT)));
+RT.addEventListener('scroll',()=>clearTimeout(lpT),{passive:true});
+RT.addEventListener('click',e=>{
+  if(lpFlag){lpFlag=false;return}
+  if(e.target.closest('[data-fn]')){$('#fncard').classList.add('on');hideSel();return}
+  const s=e.target.closest('.s');
+  if(s&&S.ann.some(a=>a.sid===s.dataset.sid)){selectSent(s.dataset.sid);return}
+  hideSel();$('#fncard').classList.remove('on');
+  const r=RT.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;
+  if(x<.26&&S.R.mode==='pages')turn(-1);
+  else if(x>.74&&S.R.mode==='pages')turn(1);
+  else{chromeOn=!chromeOn;R.classList.toggle('nochrome',!chromeOn)}
+});
+function turn(d){RT.scrollBy({top:d*RT.clientHeight*.88,behavior:'smooth'})}
+document.addEventListener('keydown',e=>{if(!R.classList.contains('on')||$('#layer').children.length)return;if(e.key==='ArrowRight'||e.key==='PageDown')turn(1);if(e.key==='ArrowLeft'||e.key==='PageUp')turn(-1)});
+$('#fnClose').onclick=()=>$('#fncard').classList.remove('on');
+$('#fnJump').onclick=()=>{$('#fncard').classList.remove('on');backPos=RT.scrollTop;RT.scrollTo({top:RT.querySelector('#cn').offsetTop-80,behavior:'smooth'});$('#backpill').classList.add('on')};
+$('#backpill').onclick=()=>{RT.scrollTo({top:backPos,behavior:'smooth'});$('#backpill').classList.remove('on')};
+RT.addEventListener('scroll',()=>{if(backPos!==null&&Math.abs(RT.scrollTop-backPos)<30){$('#backpill').classList.remove('on');backPos=null}},{passive:true});
+
+/* highlight toolbar */
+const COL=['mint','amber','rose','sky'],CV={mint:'#7ee0c3',amber:'#e8b45c',rose:'#e68b9b',sky:'#80b5ea'};
+function hideSel(){$('#seltb').classList.remove('on');RT.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel'));curSid=null}
+function selectSent(sid){
+  hideSel();curSid=sid;RT.querySelectorAll(`[data-sid="${sid}"]`).forEach(x=>x.classList.add('sel'));
+  const a=S.ann.find(x=>x.sid===sid);
+  $('#seltb').innerHTML=COL.map(c=>`<button class="c" data-c="${c}" aria-label="Highlight ${c}"><i style="background:${CV[c]};${a&&a.color===c?'box-shadow:0 0 0 3px rgba(255,255,255,.35)':''}"></i></button>`).join('')+`<span class="sep"></span><button class="tb" data-act="note">${ic('note',18)}Note</button><button class="tb" data-act="copy" aria-label="Copy">${ic('copy',18)}</button><button class="tb" data-act="define" aria-label="Define a word">${ic('search',18)}</button>${a?`<button class="tb" data-act="rm" aria-label="Remove highlight">${ic('trash',18)}</button>`:''}`;
+  $('#seltb').classList.add('on');
+}
+$('#seltb').addEventListener('click',e=>{
+  const sid=curSid;if(!sid)return;const sent=SENT.find(s=>s.id===sid);
+  const c=e.target.closest('[data-c]'),t=e.target.closest('[data-act]');
+  if(c){let a=S.ann.find(x=>x.sid===sid);if(a)a.color=c.dataset.c;else S.ann.push({id:annId++,type:'hl',sid,text:sent.text,color:c.dataset.c,note:'',pct:Math.round(SENT.indexOf(sent)/SENT.length*100),ch:sent.ch});hideSel();paintAnn();toast('Highlighted')}
+  if(t){const k=t.dataset.act;
+    if(k==='define'){hideSel();dictSheet(sent.text);return}
+    if(k==='copy'){navigator.clipboard&&navigator.clipboard.writeText(sent.text).catch(()=>{});hideSel();toast('Copied')}
+    if(k==='rm'){S.ann=S.ann.filter(x=>x.sid!==sid);hideSel();paintAnn();toast('Highlight removed')}
+    if(k==='note'){const a=S.ann.find(x=>x.sid===sid);hideSel();sheet(`<div class="h2">Add a note</div><div class="ann" style="padding:0 0 12px"><span class="cb" style="background:${CV[a?a.color:'amber']}"></span><div class="tx"><q>${esc(sent.text)}</q></div></div><label class="fl" for="nt" style="margin-top:0">Your note</label><textarea class="field" id="nt" rows="3" placeholder="What stood out?">${esc(a?a.note:'')}</textarea><div style="margin-top:16px"><button class="btn primary" id="ntS">Save note</button></div>`,{onmount:s=>{setTimeout(()=>s.querySelector('#nt').focus(),50);s.querySelector('#ntS').onclick=()=>{const v=s.querySelector('#nt').value.trim();let a=S.ann.find(x=>x.sid===sid);if(a)a.note=v;else S.ann.push({id:annId++,type:'hl',sid,text:sent.text,color:'amber',note:v,pct:Math.round(SENT.indexOf(sent)/SENT.length*100),ch:sent.ch});closeLayer();paintAnn();toast('Saved note')}}})}
+  }
+});
+
+/* bad-file message (N-04) */
+function badFileSheet(){
+  sheet(`<div style="display:flex;gap:12px;align-items:flex-start"><span style="color:var(--amber);margin-top:2px">${ic('warn',24)}</span><div><div class="h2">This book can't be opened</div><p class="mut" style="margin:8px 0 0">The file looks damaged, or it is too large to open safely. Nothing else is affected. Your other books, notes and settings are fine.</p></div></div><div class="card" style="margin-top:16px"><div class="row"><div class="grow"><div class="t">Broken-Book.epub</div><div class="s">Internal storage / Books, 312 MB</div></div></div></div><div style="margin-top:16px;display:grid;gap:10px"><button class="btn primary" id="bfK">Keep it in my library</button><button class="btn sec" id="bfR">Remove from library</button></div><p class="dim small" style="margin:12px 4px 0">Removing it does not delete the file from your phone.</p>`,{onmount:m=>{m.querySelector('#bfK').onclick=()=>{closeLayer();toast('Kept. Kairn will try again after the next update')};m.querySelector('#bfR').onclick=()=>{closeLayer();toast('Removed from your library')}}});
+}
+/* dictionary pop-up (v1.x, drawn now) */
+const DICT={spleen:['noun',['An organ near the stomach that filters the blood.','Bad temper or spite (old use).']],hypos:['noun',['Low spirits (old use, short for hypochondria).']],circulation:['noun',['The movement of blood around the body.','The passing of something from place to place.']],precisely:['adverb',['Exactly.','In a careful, exact way.']]};
+function dictSheet(text){
+  const w=(text.toLowerCase().match(/[a-z']{4,}/g)||[]).find(x=>DICT[x]),e=w&&DICT[w];
+  sheet(e?`<div class="h2" style="font-size:26px;text-transform:capitalize">${w}</div><p class="mut small" style="margin:2px 0 12px">${e[0]}</p><div class="card">${e[1].map((d,i)=>`<div class="row"><div class="grow"><div class="t" style="font-weight:500">${i+1}. ${d}</div></div></div>`).join('')}</div><p class="dim small" style="margin:12px 4px 0">From your offline dictionary pack. No network used.</p><div style="margin-top:14px"><button class="btn sec" id="dcl">Close</button></div>`:`<div class="h2">No entry found</div><p class="mut" style="margin:8px 0 14px">Press and hold a different sentence, or get a dictionary pack in Settings. Packs are an optional download.</p><button class="btn sec" id="dcl">Close</button>`,{onmount:m=>{m.querySelector('#dcl').onclick=closeLayer}});
+}
+/* sheets in reader */
+function tocSheet(){
+  const c=curChap();
+  sheet(`<div class="h2">Contents</div><div class="card">${CH.map((x,i)=>`<button class="row" data-ch="${i}"><div class="grow"><div class="t" style="${i===c?'color:var(--mint)':''}">${x.t}</div></div>${i===c?'<span class="small mut">You are here</span>':''}</button>`).join('')}</div>`,{onmount:s=>s.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{closeLayer();RT.scrollTo({top:RT.querySelector('#'+CH[b.dataset.ch].id).offsetTop-76,behavior:'smooth'})})});
+}
+function searchSheet(){
+  sheet(`<div class="h2">Search in book</div><div class="searchrow on" style="margin-top:0"><span>${ic('search',18)}</span><input class="field" id="bq" type="search" placeholder="Search this book" autocomplete="off" aria-label="Search this book"></div><div id="bres" style="margin-top:12px;min-height:160px"><p class="dim small" style="padding:8px 4px">Type at least two letters.</p></div>`,{onmount:s=>{
+    const inp=s.querySelector('#bq');setTimeout(()=>inp.focus(),60);
+    inp.oninput=()=>{const q=inp.value.trim();const box=s.querySelector('#bres');if(q.length<2){box.innerHTML='<p class="dim small" style="padding:8px 4px">Type at least two letters.</p>';return}
+      const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig');const hits=SENT.filter(x=>re.test(x.text)||(re.lastIndex=0,false));
+      box.innerHTML=hits.length?`<div class="small mut" style="margin:0 4px 6px">${hits.length} ${hits.length===1?'match':'matches'}</div><div class="card">${hits.map(h=>`<button class="row" data-h="${h.id}" style="align-items:flex-start"><div class="grow"><div style="font-family:var(--serif);font-size:14.5px;line-height:1.5">${esc(h.text).replace(new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),m=>`<span class="mark">${m}</span>`)}</div><div class="s">${CH[h.ch].t}</div></div></button>`).join('')}</div>`:`<p class="mut" style="padding:8px 4px">No matches for “${esc(q)}”. Check the spelling or try a shorter word.</p>`;
+      box.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{closeLayer();const el=RT.querySelector(`[data-sid="${b.dataset.h}"]`);RT.scrollTo({top:el.offsetTop-110,behavior:'smooth'});el.classList.add('flash')});
+    };
+  }});
+}
+function settingsSheet(){
+  const r=S.R;
+  sheet(`<div class="h2">Display</div>
+  <div class="ctl" style="margin-top:0"><div class="lb"><span>Text size</span><span id="vSz">${r.size}</span></div><div style="display:flex;align-items:center;gap:10px"><span style="font:700 13px var(--serif)">A</span><input class="rng" id="rSz" type="range" min="14" max="30" value="${r.size}" aria-label="Text size"><span style="font:700 22px var(--serif)">A</span></div></div>
+  <div class="swatches ctl" role="radiogroup" aria-label="Theme">${themeSw(r.theme)}</div>
+  <div class="ctl">${seg('Layout',['Pages','Scroll'],r.mode==='pages'?'Pages':'Scroll')}<p class="dim small" style="margin:6px 4px 0" id="modeH">${r.mode==='pages'?'Tap the left or right edge to turn the page.':'Scroll with your thumb.'}</p></div>
+  <div class="ctl">${seg('Font',['Serif','Sans'],r.font==='serif'?'Serif':'Sans')}<button class="btn sm" style="color:var(--mint);margin-top:4px;min-height:40px" id="impF">Import your own font</button></div>
+  <details class="more"><summary>More reading options</summary><div class="ctl"><div class="lb"><span>Line spacing</span><span id="vLh">${r.lh.toFixed(2)}</span></div><input class="rng" id="rLh" type="range" min="1.2" max="2.2" step=".05" value="${r.lh}" aria-label="Line spacing"></div>
+  <div class="ctl"><div class="lb"><span>Side margins</span><span id="vMx">${r.mx}</span></div><input class="rng" id="rMx" type="range" min="8" max="48" value="${r.mx}" aria-label="Side margins"></div>
+  <div class="card ctl"><div class="row"><div class="grow"><div class="t">Justify text</div></div><button class="switch" role="switch" aria-checked="${r.just}" data-sw="just" aria-label="Justify text"></button></div><div class="row"><div class="grow"><div class="t">Hyphenation</div></div><button class="switch" role="switch" aria-checked="${r.hyph}" data-sw="hyph" aria-label="Hyphenation"></button></div></div><div class="card ctl"><div class="row"><div class="grow"><div class="t">Keep screen on</div></div><button class="switch" role="switch" aria-checked="${r.keepOn}" data-sw="keepOn" aria-label="Keep screen on"></button></div><div class="row"><div class="grow"><div class="t">Full-screen reading</div><div class="s">Hide the status bar</div></div><button class="switch" role="switch" aria-checked="${r.full}" data-sw="full" aria-label="Full-screen reading"></button></div><div class="row"><div class="grow"><div class="t">Volume keys turn pages</div></div><button class="switch" role="switch" aria-checked="${r.vol}" data-sw="vol" aria-label="Volume keys turn pages"></button></div></div></details>
+  <div class="ctl"><div class="lb"><span>Brightness</span><span id="vBr">${r.bright}%</span></div><input class="rng" id="rBr" type="range" min="20" max="100" value="${r.bright}" aria-label="Brightness"><p class="dim small" style="margin:0 4px">Only changes Kairn. Your phone's setting stays as it is.</p></div>
+  <div class="ctl"><div class="lb"><span>Warm light</span><span id="vWm">${r.warm}%</span></div><input class="rng warm" id="rWm" type="range" min="0" max="100" value="${r.warm}" aria-label="Warm light"></div>
+  <div class="ctl"><div class="lb" style="margin-bottom:8px"><span>Apply to</span></div>${seg('Scope',['This book','All books'],r.scope==='book'?'This book':'All books')}</div>`,{clear:true,onmount:s=>{
+    const live=(id,key,fmt,lab)=>{const el=s.querySelector(id);bindRange(el,v=>{r[key]=v;s.querySelector(lab).textContent=fmt(v);applyR()})};
+    live('#rSz','size',v=>v,'#vSz');live('#rLh','lh',v=>v.toFixed(2),'#vLh');live('#rMx','mx',v=>v,'#vMx');live('#rBr','bright',v=>v+'%','#vBr');live('#rWm','warm',v=>v+'%','#vWm');
+    s.querySelectorAll('.sw').forEach(b=>b.onclick=()=>{r.theme=b.dataset.t;s.querySelectorAll('.sw').forEach(x=>{const on=x===b;x.setAttribute('aria-checked',on);x.querySelector('i').innerHTML=on?ic('check',22,2.6):''});applyR()});
+    s.querySelectorAll('[data-seg]').forEach(g=>g.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{g.querySelectorAll('[data-v]').forEach(x=>x.setAttribute('aria-checked',x===b));const n=g.dataset.seg,v=b.dataset.v;
+      if(n==='Layout'){r.mode=v==='Pages'?'pages':'scroll';s.querySelector('#modeH').textContent=r.mode==='pages'?'Tap the left or right edge to turn the page.':'Scroll with your thumb.'}
+      if(n==='Font')r.font=v==='Serif'?'serif':'sans';if(n==='Scope'){r.scope=v==='This book'?'book':'all';toast(r.scope==='book'?'These settings are only for this book':'Using these settings for every book')}
+      applyR()}));
+    s.querySelectorAll('[data-sw]').forEach(b=>b.onclick=()=>{r[b.dataset.sw]=!r[b.dataset.sw];b.setAttribute('aria-checked',r[b.dataset.sw]);applyR()});
+    s.querySelector('#impF').onclick=()=>toast('Android\'s file picker opens here, choose a .ttf or .otf file');
+  }});
+}
+
+/* ---------- ANNOTATIONS ---------- */
+let annTab='All';
+function renderAnn(){
+  $('#annBook').textContent=S.cur.t;
+  const T=['All','Highlights','Notes','Bookmarks'];
+  const f=a=>annTab==='All'||(annTab==='Highlights'&&a.type==='hl')||(annTab==='Notes'&&a.note)||(annTab==='Bookmarks'&&a.type==='bm');
+  $('#annTabs').innerHTML=T.map(t=>`<button class="chip" aria-pressed="${annTab===t}" data-t="${t}">${t}</button>`).join('');
+  $$('#annTabs .chip').forEach(c=>c.onclick=()=>{annTab=c.dataset.t;renderAnn()});
+  const l=[...S.ann].filter(f).sort((a,b)=>a.pct-b.pct);
+  $('#annList').innerHTML=l.length?l.map(a=>`<div class="ann" style="${a!==l[0]?'border-top:1px solid var(--line)':''}"><span class="cb" style="background:${a.type==='bm'?'#8a949b':CV[a.color]}"></span><button class="tx" data-go="${a.id}" style="text-align:left">${a.type==='bm'?`<b style="font-size:15px">Bookmark</b>`:`<q>${esc(a.text)}</q>`}${a.note?`<div class="nt">${esc(a.note)}</div>`:''}<div class="mt">${CH[a.ch||0].t}, ${a.pct}% through the book</div></button><button class="iconbtn" data-del="${a.id}" aria-label="Delete">${ic('trash',20)}</button></div>`).join(''):`<div class="empty" style="padding:36px 20px"><div class="h2">${annTab==='All'?'Nothing saved yet':'No '+annTab.toLowerCase()+' yet'}</div><p>Press and hold a sentence in the book to highlight it. Tap the bookmark to save a spot.</p></div>`;
+  $$('#annList [data-go]').forEach(b=>b.onclick=()=>{const a=S.ann.find(x=>x.id==b.dataset.go);openOverlay('reader');setTimeout(()=>{if(a.sid){const el=RT.querySelector(`[data-sid="${a.sid}"]`);RT.scrollTo({top:el.offsetTop-110});el.classList.add('flash')}else RT.scrollTop=(RT.scrollHeight-RT.clientHeight)*a.pct/100},60)});
+  $$('#annList [data-del]').forEach(b=>b.onclick=()=>{const a=S.ann.find(x=>x.id==b.dataset.del);S.ann=S.ann.filter(x=>x!==a);renderAnn();toast('Deleted. ');});
+}
+$('#annExport').onclick=()=>{
+  let fmt='Markdown';
+  const mk=f=>f==='Markdown'?`# ${S.cur.t}\n\n`+S.ann.filter(a=>a.type!=='bm').sort((a,b)=>a.pct-b.pct).map(a=>`> ${a.text}\n${a.note?'\n'+a.note+'\n':''}\n*${CH[a.ch||0].t}, ${a.pct}%*\n`).join('\n'):S.ann.filter(a=>a.type!=='bm').map(a=>`"${a.text}"${a.note?'\n  Note: '+a.note:''}\n  ${CH[a.ch||0].t}, ${a.pct}%`).join('\n\n');
+  sheet(`<div class="h2">Export notes</div>${seg('Format',['Markdown','Plain text'],fmt)}<pre class="md" id="prev" style="margin-top:12px"></pre><div style="display:grid;gap:10px;margin-top:14px"><button class="btn primary" id="xS">Save to Documents / Kairn</button><button class="btn sec" id="xH">${ic('share',20)}Share</button></div>`,{onmount:s=>{
+    const p=()=>s.querySelector('#prev').textContent=mk(fmt);p();
+    s.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{fmt=b.dataset.v;s.querySelectorAll('[data-v]').forEach(x=>x.setAttribute('aria-checked',x===b));p()});
+    s.querySelector('#xS').onclick=()=>{closeLayer();toast('Saved '+S.cur.t+(fmt==='Markdown'?'.md':'.txt'))};s.querySelector('#xH').onclick=()=>toast('Android share sheet opens here');
+  }});
+};
+
+/* ---------- page panel notes ---------- */
+const NOTES={
+ onboarding:['First run',[
+  ['<b>Three short steps</b> instead of one page, so setup stays calm.','N-06'],
+  ['<b>Trimmed the copy.</b> Dictionaries and voices are v1.x, so they are no longer promised here.','N-06 vs X-01, X-02'],
+  ['<b>Pick a theme up front</b> with a live preview. Dark stays the default.','DEC-4'],
+  ['Both buttons always say what they do. "Skip for now" never traps you.','']]],
+ library:['Library',[
+  ['Add moved from the tab bar to a + button here. Fewer tabs, same two taps.','L-02, L-04'],
+  ['Filter chips fade at the edge so it is clear they scroll. Tap targets are 44 px or more.','X-07'],
+  ['The book in the Continue card is no longer repeated in the grid.',''],
+  ['New: a bad or oversized file gets a clear message with two choices, and nothing else is affected. Try Bad file.','N-04'],
+  ['Default view lives only here, as the grid and list button.','L-07']],
+  [['Empty library','library-empty'],['Bad file','bad-file'],['Reset books','reset']]],
+ collections:['Collections',[
+  ['The status list is gone. Reading, To read and Finished are already the Library chips.','L-08'],
+  ['This tab now holds only collections and tags. A collection is a shelf you fill. A tag is a quick label.','L-08']]],
+ add:['Add books',[
+  ['One Add button asks: watch a folder or choose files. It replaces two near-identical buttons.','L-01, L-02'],
+  ['Reached from the + button in the Library, so it is no longer a tab.',''],
+  ['Wi-Fi transfer still shows address, code and files arriving.','L-04'],
+  ['Watched folders each have an on/off switch.','L-01, L-05']],
+  [['Try transfer','add-live']]],
+ settings:['Settings',[
+  ['The Reading group moved into the reader Display sheet, where those switches are used.','R-11'],
+  ['Theme and auto-switch stay together here. Export all notes stays: it covers every book, unlike the one on the Notes screen.','R-05, A-03']]],
+ reader:['Reader',[
+  ['<b>Tap the middle</b> to hide or show controls. Left and right edges turn pages.','R-07'],
+  ['<b>Bottom bar</b>: draggable position, chapter, time left, then Contents, Search, Notes, Display.','R-07, S-01'],
+  ['<b>Press and hold a sentence</b> to highlight in four colors, add a note, copy or remove.','A-01'],
+  ['<b>Bookmark</b> button in the top bar. It fills in when this spot is saved.','A-01'],
+  ['<b>Footnotes</b> open in a card. "Go to note" shows a <b>Back to where you were</b> pill.','R-08'],
+  ['Display opens with size, theme, layout and font. Spacing, margins, justify, hyphenation, keep-screen-on, full-screen and volume keys sit under More reading options.','R-04, R-11'],
+  ['Display adds line spacing, margins, justify, hyphenation, font import, and <b>This book / All books</b>.','R-04, R-10'],
+  ['Brightness and warm light only affect Kairn, and the sheet says so.','R-06'],
+  ['New: a Define button on the hold toolbar opens the dictionary pop-up. It uses an offline pack and says so (X-01).','X-01']],
+  [['Display','reader-settings'],['Contents','toc'],['Search','search'],['Dictionary','define']]],
+ annotations:['Notes and highlights',[
+  ['"Marks" is now <b>Bookmarks</b>.',''],
+  ['Highlights you make in the reader show up here straight away. Tap one to jump to it.','A-02'],
+  ['Each entry can be deleted. Empty tabs say what to do next.',''],
+  ['<b>Export</b> offers Markdown or plain text with a preview, then save or share.','A-03']]],
+ backup:['Backup and restore',[
+  ['The size estimate changes when you turn on <b>Include book files</b>.','DEC-12'],
+  ['Backing up shows progress, then a clear result with where it was saved.','DS-01'],
+  ['<b>Restore</b> asks merge or replace, and says a safety copy is made first.','DS-01, quality bar']]],
+};
+function notes(v){
+  const n=NOTES[v];if(!n)return;
+  $('#pTitle').textContent=n[0];
+  $('#pSub').textContent='What changed from the round 2, and why.';
+  $('#pList').innerHTML=n[1].map(([t,id])=>`<li>${t}${id?` <span class="id">(${id})</span>`:''}</li>`).join('');
+  $('#pDemo').innerHTML=(n[2]||[]).map(([l,k])=>`<button data-demo="${k}">${l}</button>`).join('');
+}
+document.addEventListener('click',e=>{const d=e.target.closest('[data-demo]');if(d)go(d.dataset.demo)});
+
+/* jump */
+const BASE=JSON.stringify(S.books);
+function go(k){
+  closePop();
+  if(k==='reset'){S.books=JSON.parse(BASE);S.layout='grid';S.filter='All';k='library'}
+  if(k==='library-list'){S.layout='list';S.filter='All';k='library'}
+  else if(k==='library'){S.layout='grid'}
+  if(k==='library-empty'){S.books=[];show('library');$('#jump').value='library-empty';return}
+  if(k!=='library-empty'&&!S.books.length&&k!=='add'&&k!=='add-live'){S.books=JSON.parse(BASE)}
+  const map={
+   onboarding:()=>{onbStep=0;openOverlay('onboarding')},
+   library:()=>show('library'),collections:()=>show('collections'),add:()=>{S.live=false;show('add')},
+   'add-live':()=>{show('add');startLive()},
+   reader:()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('reader')},
+   'reader-settings':()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('reader');setTimeout(settingsSheet,150)},
+   'bad-file':()=>{show('library');setTimeout(badFileSheet,150)},
+   define:()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('reader');setTimeout(()=>dictSheet(SENT.find(x=>/spleen/.test(x.text)).text),150)},
+   toc:()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('reader');setTimeout(tocSheet,150)},
+   search:()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('reader');setTimeout(searchSheet,150)},
+   annotations:()=>{S.cur=S.books.find(b=>b.id===2)||S.books[0];openOverlay('annotations')},
+   backup:()=>{bk.state='idle';openOverlay('backup')},settings:()=>show('settings')};
+  (map[k]||map.library)();
+  const j=$('#jump');if([...j.options].some(o=>o.value===k))j.value=k;
+}
+$('#jump').onchange=e=>go(e.target.value);
+
+/* glass: soft edge under the top when content scrolls, and the surface switch */
+$$('.view > .scroll').forEach(sc=>sc.addEventListener('scroll',()=>sc.parentElement.classList.toggle('scrolled',sc.scrollTop>6),{passive:true}));
+$('#surface').onchange=e=>{$('#phone').dataset.style=e.target.value};
+
+/* init */
+S.R.theme='dark';
+show('library');
+</script>
+</body>
+</html>

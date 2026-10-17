@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- N-01 / DEC-3: no INTERNET permission at all. Wi-Fi transfer (L-04) will need
+         INTERNET + ACCESS_WIFI_STATE for a LAN-only server; add them in that change. -->
+
+    <!-- L-01 auto-detection: on Android 11+ MediaStore hides EPUBs unless the app can see "all files".
+         The user grants this from Settings; the app works fine without it (watched folders only). -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <application
+        android:name=".KairnApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Kairn">
+
+        <!-- Lets a non-debuggable build be profiled: Macrobenchmark and Perfetto can attach to the
+             release-like :app "benchmark" build without setting android:debuggable, which would itself
+             turn the JIT off and invalidate the numbers. Harmless in a normal build (it only grants a
+             shell-visible profile handle, not a debugger). -->
+        <profileable android:shell="true" tools:targetApi="29" />   <!-- element is API 29+; ignored below that -->
+
+        <!-- Portrait is deliberate (R-11): the reader is a single-column reading surface. -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity,DiscouragedApi"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- L-03: "Open with" -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/epub+zip" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.ReaderActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity,DiscouragedApi"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
+            android:theme="@style/Theme.Kairn" />
+    </application>
+</manifest>
