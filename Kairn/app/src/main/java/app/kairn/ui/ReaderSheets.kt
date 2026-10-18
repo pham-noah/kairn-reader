@@ -34,9 +34,8 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
 /*
- * The reader's sheets, lifted out of ReaderActivity. They are stateless: everything they show comes in
- * as a parameter and every action goes out as a callback, so they no longer reach into Activity fields
- * and can be previewed or tested on their own.
+ * The reader's sheets. They are stateless: everything they show comes in as a parameter and every
+ * action goes out as a callback, so they can be previewed or tested on their own.
  */
 
 @Composable
@@ -45,21 +44,25 @@ internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi,
         Icon(icon, label, tint = ui.chromeText, modifier = Modifier.size(22.dp)); Text(label, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 
-private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition
+private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition; ordered by page tone
 private val pageModes = listOf("Pages", "Scroll")
 private val columnModes = listOf("One page", "Two pages")
 
 @Composable
-internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
+internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         readerThemes.forEach { t -> KThemeSwatch(t, prefs.theme == t, { onChange(prefs.copy(theme = t)) }) }
     }
     Spacer(Modifier.height(16.dp))
     KSegmented(pageModes, if (prefs.scroll) 1 else 0, { onChange(prefs.copy(scroll = it == 1)) })
-    KControl("Columns", if (prefs.twoPage) "Two pages" else "One page") {
-        KSegmented(columnModes, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
+    // A phone has no room for two readable columns, so the choice is not offered there, and a value
+    // stored on a tablet is not honoured on a phone either (see ReaderActivity.isTablet).
+    if (showColumns) {
+        KControl("Columns", if (prefs.twoPage) "Two pages" else "One page") {
+            KSegmented(columnModes, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
+        }
+        Text("Two pages suits a tablet or a wide screen.", style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
     }
-    Text("Two pages suits a tablet or a wide screen.", style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
     KControl("Text size", "${(prefs.fontScale * 100).toInt()}%") { KSlider(prefs.fontScale.toFloat(), { onChange(prefs.copy(fontScale = it.toDouble())) }, 0.7f..2.5f) }
     KControl("Line spacing", "%.2f".format(prefs.lineHeight)) { KSlider(prefs.lineHeight.toFloat(), { onChange(prefs.copy(lineHeight = it.toDouble())) }, 1.0f..2.2f) }
     KControl("Paragraph spacing", "%.1f".format(prefs.paragraphSpacing)) { KSlider(prefs.paragraphSpacing.toFloat(), { onChange(prefs.copy(paragraphSpacing = it.toDouble())) }, 0f..2f) }

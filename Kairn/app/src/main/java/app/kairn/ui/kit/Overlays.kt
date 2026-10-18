@@ -26,7 +26,8 @@ import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.glass
 import kotlinx.coroutines.delay
 
-/** Round 5 glass sheet: the glass is the sheet's own surface, so nothing is nested and clipped. */
+/** Glass sheet. The glass is the sheet's own surface: never nest a rounded glass surface inside the
+ *  ModalBottomSheet, which already clips it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KSheet(onDismiss: () -> Unit, title: String? = null, content: @Composable ColumnScope.() -> Unit) {
@@ -44,7 +45,7 @@ fun KSheet(onDismiss: () -> Unit, title: String? = null, content: @Composable Co
     }
 }
 
-/** Round 4 `.act`: a row in an action sheet. */
+/** Action sheet row. */
 @Composable
 fun KAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, danger: Boolean = false, divider: Boolean = true) {
     Column {
@@ -59,14 +60,13 @@ fun KAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector
     }
 }
 
-/** Round 4 `.toast`: a light pill near the bottom that fades after a moment. */
+/** Toast: a light pill near the bottom that fades after a moment. */
 class ToastState {
     var message by mutableStateOf<String?>(null); private set
     private var stamp by mutableIntStateOf(0)
     fun show(text: String) { message = text; stamp++ }
     @Composable fun Host(modifier: Modifier = Modifier) {
-        // Keep the last text: when `message` goes null the exit animation still draws the pill, and it
-        // used to fade out EMPTY.
+        // Keep the last text: when `message` goes null the exit animation still draws the pill.
         val last = remember { arrayOf("") }
         message?.let { last[0] = it }
         LaunchedEffect(stamp) { if (message != null) { delay(2600); message = null } }
@@ -78,7 +78,7 @@ class ToastState {
 }
 val LocalToast = staticCompositionLocalOf { ToastState() }
 
-/** Round 4 `.pop`: small anchored menu with a check on the active item. */
+/** Small anchored menu with a check on the active item. */
 @Composable
 fun KMenu(expanded: Boolean, onDismiss: () -> Unit, items: List<Pair<String, Boolean>>, onPick: (Int) -> Unit) {
     DropdownMenu(expanded, onDismiss, containerColor = K.surf2, shape = RoundedCornerShape(16.dp)) {

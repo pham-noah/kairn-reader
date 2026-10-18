@@ -22,9 +22,8 @@ class Library(private val ctx: Context, private val store: Store, private val re
         MessageDigest.getInstance("SHA-1").digest(uri.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
 
     /**
-     * An id from the file's content (first 256 KB), so moving or renaming a file keeps the same book —
-     * its position and notes stay attached. Falls back to a location hash only when the file cannot
-     * be read.
+     * An id from the file's content (first 256 KB), so moving or renaming a file keeps the same book and
+     * its position and notes stay attached. Falls back to a location hash only when the file cannot be read.
      */
     private suspend fun contentId(uri: Uri): String? = withContext(Dispatchers.IO) {
         runCatching {
@@ -45,14 +44,15 @@ class Library(private val ctx: Context, private val store: Store, private val re
         store.put(b.copy(id = newId, uri = uri.toString(), folder = folder ?: b.folder))
         val cover = store.coverFile(oldId)
         if (cover.exists()) cover.renameTo(store.coverFile(newId))
+        val thumb = store.thumbFile(oldId)     // moved too, so the grid does not need the ensureThumbs re-decode
+        if (thumb.exists()) thumb.renameTo(store.thumbFile(newId))
         store.remove(oldId)
     }
 
     /** Adds one book. Returns the book (possibly marked broken) so the UI can show N-04. */
     suspend fun addBook(uri: Uri, folder: String?, displayName: String? = null): Book = withContext(Dispatchers.IO) {
         store.awaitLoaded()             // see Store.awaitLoaded: without this a cold import overwrites a known book
-        // Same location and already known: nothing changed, so no hashing at all.
-        // (Store.put also skips identical records, but not even building the copy is cheaper in a loop.)
+        // Same location and already known: no hashing needed (Store.put also skips identical records).
         store.findByUri(uri.toString())?.let { return@withContext if (!it.missing) it else it.copy(missing = false).also(store::put) }
 
         val fallback = displayName ?: uri.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub") ?: "Untitled"
@@ -67,7 +67,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
             return@withContext moved
         }
 
-        // Older location-hashed entry for this exact file: upgrade it in place, keeping the user's data.
+        // Older location-hashed entry for this exact file: upgrade it in place, keeping mark and position.
         if (contentId != null && store.get(legacyId) != null) {
             migrateId(legacyId, contentId, uri, folder)
             return@withContext store.get(contentId)!!
@@ -104,8 +104,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         val name = (DocumentFile.fromSingleUri(ctx, uri)?.name ?: "book-${System.currentTimeMillis()}.epub")
             .substringAfterLast('/').substringAfterLast('\\')    // a display name must never escape copiesDir
         val dest = File(store.copiesDir, name)
-        // N-04: a provider that denies or fails mid-copy used to throw straight out of the caller's
-        // lifecycleScope - i.e. crash the app on a plain share intent.
+        // N-04: a provider that denies or fails mid-copy must not throw out of the caller's lifecycleScope.
         val copied = runCatching {
             ctx.contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { i.copyTo(it) } } != null
         }.getOrDefault(false)
@@ -132,15 +131,13 @@ class Library(private val ctx: Context, private val store: Store, private val re
 
     /**
      * L-01: add new books, mark vanished ones as missing (never delete), clear the flag when they return.
-     * Each watched folder has its own on/off switch. With auto-detection on, it also sweeps the device
-     * for EPUBs already there — the two paths together are what Lithium calls "automatic book detection".
+     * With auto-detection on it also sweeps the device for EPUBs already there.
      */
     suspend fun scan(force: Boolean = true) {
         store.awaitLoaded()             // a scan against an unloaded library re-adds everything it finds
-        // Automatic callers (MainActivity.onResume) pass force=false: a scan walks every watched folder,
-        // queries MediaStore and walks external storage, and onResume fires every time the reader is
-        // closed. Skip it if one is running or one finished moments ago. Explicit callers keep the old
-        // behaviour (force=true is the default) but still never run two scans at once.
+        // Automatic callers pass force=false and skip a scan that is already running or finished moments
+        // ago: a scan walks every watched folder and queries MediaStore, and onResume fires every time the
+        // reader is closed. Explicit callers (force=true) still never run two scans at once.
         if (!force && (scanLock.isLocked || SystemClock.elapsedRealtime() - lastScanEnd < SCAN_MIN_INTERVAL_MS)) return
         scanLock.withLock {
             scanOnce()
@@ -155,7 +152,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
     private suspend fun scanOnce() = withContext(Dispatchers.IO) {
         val seen = mutableSetOf<String>()
 
-        // 1. Watched folders the user picked (survive reboots).
+        // 1. Watched folders picked in settings (survive reboots).
         for (f in store.settings.value.folders.filter { it.enabled }) {
             val root = DocumentFile.fromTreeUri(ctx, Uri.parse(f.uri)) ?: continue
             if (!root.canRead()) continue
@@ -165,8 +162,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
             }
         }
 
-        // 2. Device sweep: every EPUB already on the phone (Lithium-style), skipped entirely when the
-        //    auto-detect switch is off.
+        // 2. Device sweep: every EPUB already on the device, skipped when the auto-detect switch is off.
         if (store.settings.value.autoDetect) sweep { found ->
             val b = addBook(found, null, found.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub"))
             seen += b.id
@@ -178,8 +174,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
                 folderOn && b.id !in seen
             } else {
                 val u = Uri.parse(b.uri)
-                // path is nullable: a record with a bare "file:" uri would have thrown here and taken
-                // the whole scan down with it (no books found, no message).
+                // path is nullable: a bare "file:" uri must not take the whole scan down.
                 if (u.scheme == "file") u.path?.let { File(it).exists() } != true
                 else DocumentFile.fromSingleUri(ctx, u)?.exists() != true
             }
@@ -188,10 +183,9 @@ class Library(private val ctx: Context, private val store: Store, private val re
     }
 
     /**
-     * Backfills the small pre-scaled thumbnail for any book that has a full cover but no thumb yet.
-     * NOT called from [scan] any more: import already writes a thumbnail (ReadiumHelper.saveCover), and a
-     * cell falls back to the full cover when the thumb is missing, so this is an optimisation - and it was
-     * a decode-per-book burst competing with the first paint. Called once, after the library is on screen.
+     * Backfills the small pre-scaled thumbnail for any book that has a full cover but no thumb yet. Import
+     * already writes a thumbnail (ReadiumHelper.saveCover) and a cell falls back to the full cover, so this
+     * is an optimisation, called once after the library is on screen.
      */
     suspend fun backfillThumbs() = withContext(Dispatchers.IO) { ensureThumbs() }
 
@@ -246,8 +240,8 @@ class Library(private val ctx: Context, private val store: Store, private val re
 
     /** Opens the system "All files access" screen so the sweep can actually see EPUBs. */
     fun requestAllFilesAccess() = runCatching {
-        // The user is about to leave for the system settings and come back: the onResume scan must NOT be
-        // throttled, or the books the new permission unlocks would not appear until 30 s later.
+        // Leaving for the system settings and returning: the onResume scan must NOT be throttled, or the
+        // books the new permission unlocks would not appear until 30 s later.
         lastScanEnd = -SCAN_MIN_INTERVAL_MS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ctx.startActivity(
             Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}"))

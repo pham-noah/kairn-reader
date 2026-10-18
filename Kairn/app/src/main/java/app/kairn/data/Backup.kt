@@ -39,14 +39,11 @@ class Backup(private val ctx: Context, private val store: Store) {
     /**
      * Restore makes a safety copy first, then merges (keeps both sides) or replaces.
      *
-     * ORDER IS THE POINT: the archive is VALIDATED before anything is deleted. This used to delete every
-     * book JSON first and only then open the file the user picked, so choosing "Replace" and pointing at
-     * an unrelated zip wiped the library, threw on the first entry, left the in-memory list intact so the
-     * UI still showed every book, and reported "your data is unchanged" - with the files gone next launch.
+     * ORDER IS THE POINT: the archive is VALIDATED before anything is deleted.
      */
     suspend fun restore(src: Uri, replace: Boolean): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            store.flush()                           // the safety copy must include everything the user just did
+            store.flush()                           // the safety copy must include every queued write
 
             // 1. Validate. Nothing destructive happens until we know this is a Kairn backup. A backup of
             //    an empty library legitimately holds no books, just settings.json, so any "data/" entry is
@@ -64,7 +61,7 @@ class Backup(private val ctx: Context, private val store: Store) {
                     f.inputStream().use { it.copyTo(zip) }; zip.closeEntry()
                 }
             }
-            // Keep only the two newest safety copies; every restore used to leave another one behind for good.
+            // Keep only the two newest safety copies.
             ctx.filesDir.listFiles { f -> f.name.startsWith("safety-") && f.name.endsWith(".zip") }
                 ?.sortedByDescending { it.lastModified() }?.drop(2)?.forEach { it.delete() }
 
@@ -104,9 +101,9 @@ class Backup(private val ctx: Context, private val store: Store) {
  * Merges one book record. Never loses a note: marks are unioned by id and the newer record wins the
  * scalar fields. An unreadable record on one side must not cost the other one.
  *
- * Top level on purpose: it needs no Context, so a JVM test can call it directly. [write] defaults to a
- * direct atomic write for that reason; Backup passes the Store's queued writer so a restore cannot be
- * overtaken by a pending snapshot.
+ * Top level so a JVM test can call it without a Context: [write] defaults to a direct atomic write for
+ * that reason; Backup passes the Store's queued writer so a restore cannot be overtaken by a pending
+ * snapshot.
  */
 internal fun mergeBook(
     target: File,
@@ -131,8 +128,7 @@ internal fun mergeBook(
 }
 
 /**
- * Whether these zip entries look like one of our backups. This is the check that has to be true before
- * anything is deleted, so it is a named function with its own tests rather than an inline condition.
+ * Whether these zip entries look like one of our backups. This must be true before anything is deleted.
  *
  * Any "data/" entry is enough: a backup of an EMPTY library legitimately holds settings.json and no books.
  */
@@ -143,8 +139,8 @@ internal fun isKairnBackup(names: List<String>?): Boolean =
  * The entry names in a zip stream, or null when the stream cannot be read as a zip at all. Bounded, so a
  * corrupt or hostile file cannot make the walk run forever. The stream is consumed by this call.
  *
- * Note a JDK quirk a test caught: garbage usually yields an EMPTY list here rather than null — only some
- * corrupt streams throw. Both are "not a backup"; [isKairnBackup] handles each.
+ * A JDK quirk: garbage usually yields an EMPTY list here rather than null, and only some corrupt streams
+ * throw. Both are "not a backup"; [isKairnBackup] handles each.
  */
 internal fun zipEntryNames(input: InputStream, limit: Int = 5000): List<String>? = runCatching {
     val names = ArrayList<String>()

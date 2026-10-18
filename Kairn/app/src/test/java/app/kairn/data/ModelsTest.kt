@@ -7,9 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The data layer is where "your data is never lost" is won or lost. These tests run on the JVM
- * (no device): every model is written to JSON on disk and read back on every launch, so a
- * round-trip that drops a field is data loss the user would never see coming.
+ * JVM tests for the models (no device). Every model is written to JSON on disk and read back on every
+ * launch, so a round-trip that drops a field is data loss.
  */
 class ModelsTest {
 
@@ -117,8 +116,7 @@ class ModelsTest {
     }
 
     @Test fun `a record with no id or uri is rejected instead of silently vanishing`() {
-        // reload() is mapNotNull { Book.from(...) } and Book.from used to THROW on a missing id, so one
-        // bad field dropped the book out of the library with no message while its file stayed on disk.
+        // reload() is mapNotNull { Book.from(...) }: a missing id must reject the record, not throw.
         assertNull(Book.from(JSONObject("""{"title":"T","uri":"u"}""")))
         assertNull(Book.from(JSONObject("""{"id":"x","title":"T"}""")))
         assertNull(Mark.from(JSONObject("""{"kind":"highlight","quote":"no id, no locator"}""")))

@@ -26,11 +26,13 @@ turns, per-book text sizing, and a time-left estimate taken from the chapter's r
 ## Features
 
 **Reading** — page or scroll mode; per-book text size, line and paragraph spacing, margins, justification
-and hyphenation; light, dark, sepia and true-black themes; a warm-light filter; brightness that affects
-this app only and never your system setting; full screen and keep-screen-on; a chapter progress slider;
-table of contents; footnotes in a pop-up, with a "back to where you were" chip.
+and hyphenation; light, sepia, grey, dark and true-black themes; a warm-light filter; brightness that affects
+this app only and never your system setting; full screen and keep-screen-on; a whole-book progress slider
+with a time-left estimate for the whole book; two-page columns on a tablet only; table of contents;
+footnotes in a pop-up, with a "back to where you were" chip.
 
-**Library** — grid or list; search, sort, collections, tags and reading status; watched folders;
+**Library** — grid or list; search, sort, collections, tags and reading status; tick several books and
+drop them into one collection at once; watched folders;
 automatic detection of the EPUBs already on your device; covers read from the book file, with generated
 covers for books that have none; "Open with" from any file manager.
 

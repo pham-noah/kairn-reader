@@ -1,0 +1,12 @@
+Collections can now be filled in bulk: pick several books at once, always choosing
+from the collections you already have.
+
+Reader:
+- the progress slider and the time-left estimate cover the whole book, not one chapter,
+  and hours show past 60 minutes
+- a Grey reading theme, between Sepia and Dark
+- one bookmark per chapter, and the bookmark button removes it again
+- "Back to where you were" clears itself after a few seconds
+- two-page columns are offered on tablets only
+
+Continue reading no longer removes the book from the library - it is a shortcut beside it.

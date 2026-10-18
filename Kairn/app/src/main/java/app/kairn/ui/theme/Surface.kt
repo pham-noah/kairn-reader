@@ -18,14 +18,11 @@ import androidx.compose.ui.unit.dp
 import app.kairn.data.Ambient
 
 /**
- * Round 5 "Liquid Glass" vs round 4 "Solid".
+ * Glass (default, DEC-5): translucent panels carrying a specular sheen gradient, a hairline highlight
+ * and a soft drop shadow, over an ambient colour wash behind the app. Solid: opaque panels.
  *
- * Glass is the default (round 5, DEC-5 follow-up): translucent panels carrying a specular sheen
- * gradient, a hairline highlight and a soft drop shadow, over an ambient colour wash behind the app.
- *
- * Not reproduced from the HTML: `backdrop-filter: blur()`. Compose has no backdrop blur - it can only
- * blur a view's own content, not what is behind it - so Glass keeps the *look* of the glass (sheen,
- * highlight, depth, translucency) without true background blur. See round-5 notes in the README.
+ * Compose has no backdrop blur - it can only blur a view's own content, not what is behind it - so
+ * Glass keeps the look of the glass (sheen, highlight, depth, translucency) without true background blur.
  */
 enum class SurfaceStyle { Glass, Solid }
 
@@ -38,25 +35,17 @@ val LocalAmbient = staticCompositionLocalOf { Ambient.MINT }
 /** True when the app is drawing the Glass style. Reads a CompositionLocal, so it needs a composable scope. */
 val glass: Boolean @Composable get() = LocalSurfaceStyle.current == SurfaceStyle.Glass
 
-/** Colour + geometry tokens for the glass surfaces (mirrors round 5's CSS custom properties). */
+/** Colour + geometry tokens for the glass surfaces. */
 object Glass {
-    /**
-     * Panel fill. Deliberately a DARK translucent tint, not a white one: a white tint over a dark
-     * page has no backdrop blur to soften it, so it reads as a hazy white/grey box. A dark tint of the
-     * surface colour reads as frosted glass on a dark background, the way Liquid Glass does.
-     */
+    /** Panel fill. Deliberately a DARK translucent tint, not a white one: with no backdrop blur, a white tint over a dark page reads as a hazy white box. */
     val panelFill = Color(0x9E262C33)     // ~62% of the dark surface colour
     val fill = Color(0x14FFFFFF)          // subtle fill for small controls (chips, buttons)
     val fillHi = Color(0x2EFFFFFF)        // pressed / selected
-    val sheetFill = Color(0x94303642)     // rgba(48,54,66,.58); the old comment said (30,36,42)
+    val sheetFill = Color(0x94303642)     // rgba(48,54,66,.58)
     val well = Color(0x42000000)          // rgba(0,0,0,.26) inset wells: fields, tracks
-    val hairline = Color(0x14FFFFFF)      // very subtle edge (~8% white) - close to the fill, not a bright outline
+    val hairline = Color(0x14FFFFFF)      // very subtle edge (~8% white), close to the fill - never a bright outline
 
-    /**
-     * The sheen: a light edge along the TOP that fades out by mid-panel, plus a faint lift at the
-     * bottom. It is deliberately top-concentrated - a full-surface white gradient turned every large
-     * card into a pale grey box, because Compose has no backdrop blur to soften it.
-     */
+    /** Sheen: a light edge along the TOP that fades out by mid-panel, plus a faint lift at the bottom. Deliberately top-concentrated and subtle - Compose has no backdrop blur, and a full-surface white gradient turns every large card into a pale grey box. */
     val sheen = Brush.verticalGradient(
         0f to Color(0x0DFFFFFF),
         0.35f to Color(0x00FFFFFF),
@@ -64,7 +53,7 @@ object Glass {
         1f to Color(0x08FFFFFF),
     )
 
-    /** The four-tint ambient wash (round 5 default). */
+    /** The four-tint ambient wash. */
     val mintBlooms = listOf(
         // fractionX, fractionY, radiusFraction, colour
         floatArrayOf(0.06f, 0.02f, 0.85f) to Color(0x337EE0C3),   // mint, top-left
@@ -94,8 +83,8 @@ object Glass {
 
 /**
  * Paints the ambient colour wash as the backdrop of this node. Uses drawWithCache so the four radial
- * gradients are built once per size rather than per frame (redrawing them every frame was causing
- * visible lag when switching tabs). Reads the ambient choice, so it must be called from a composable.
+ * gradients are built once per size rather than per frame. Reads the ambient choice, so it must be
+ * called from a composable scope.
  */
 @Composable
 fun Modifier.ambientWash(): Modifier {
@@ -119,13 +108,11 @@ fun Modifier.ambientWash(): Modifier {
 }
 
 /**
- * The shared glass recipe: a dark translucent fill, a faint top sheen, and a hairline edge, plus a
- * soft drop shadow.
+ * The shared glass recipe: a dark translucent fill, a faint top sheen, a hairline edge and a soft drop shadow.
  *
- * The shadow is NOT Modifier.shadow: that gives every surface its own offscreen render node, and
- * with one on every card/chip/button it dominated list scrolling. glassShadow() draws the same soft
- * shadow as a few layered outlines - one cheap draw pass each, no render node - so the look is kept
- * and the scroll cost is not.
+ * The shadow is NOT Modifier.shadow: that gives every surface its own offscreen render node, and with one
+ * on every card/chip/button it dominates list scrolling. glassShadow() draws the same soft shadow in a
+ * cheap draw pass instead, so the look is kept and the scroll cost is not.
  */
 fun Modifier.glassSurface(
     shape: Shape,
@@ -139,20 +126,14 @@ fun Modifier.glassSurface(
     .background(Glass.sheen, shape)
     .border(1.dp, hairline, shape)
 
-/**
- * A soft drop shadow in a SINGLE draw pass. The falloff is a gradient brush built once per size
- * (drawWithCache) and painted as one rect under the card, so it costs one draw call and allocates
- * nothing per frame - and, unlike Modifier.shadow, no offscreen RenderNode per surface.
- */
+/** A soft drop shadow in a SINGLE draw pass: a gradient brush built once per size (drawWithCache) and painted as one rect, so it allocates nothing per frame and adds no offscreen RenderNode. */
 fun Modifier.glassShadow(elevation: Dp, color: Color = Color.Black, shape: Shape = RectangleShape): Modifier =
     if (elevation.value <= 0f) this else this.drawWithCache {
         val el = elevation.toPx()
-        // Inset by (most of) the corner radius, so a pill or circle does not get square shadow corners
-        // sticking out past its curve.
+        // Inset by (most of) the corner radius, so a pill or circle gets no square shadow corners past its curve.
         val r = (shape.createOutline(size, layoutDirection, this) as? Outline.Rounded)?.roundRect?.bottomLeftCornerRadius?.x ?: 0f
         val inset = (r * 0.6f).coerceAtMost(size.width / 2f)
-        // Darkest right under the card edge, fading to nothing. (This was the other way round: transparent
-        // at the edge, darkest at the far end, ending in a hard line - a dark bar, not a shadow.)
+        // Darkest right under the card edge, fading to nothing.
         val brush = Brush.verticalGradient(
             colors = listOf(color.copy(alpha = 0.34f), color.copy(alpha = 0.10f), Color.Transparent),
             startY = size.height,

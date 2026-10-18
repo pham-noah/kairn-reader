@@ -18,7 +18,7 @@ import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 
-/** Round 4 "Add books": Wi-Fi transfer card (L-04, not built yet) + watched folders (L-01). */
+/** Add books: Wi-Fi transfer card (L-04, not built yet) and watched folders (L-01). */
 @Composable
 fun AddBooksScreen(store: Store, onBack: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit) {
     val toast = LocalToast.current
@@ -34,7 +34,7 @@ fun AddBooksScreen(store: Store, onBack: () -> Unit, onPickFolder: () -> Unit, o
                     Icon(Icons.Default.Wifi, null, tint = K.mint, modifier = Modifier.size(22.dp)); Text("Send from a computer", style = KType.h2)
                 }
                 Text("Kairn shows an address. Open it on a computer on the same Wi-Fi and drop your EPUB files on the page.", style = KType.body.copy(color = K.mut), modifier = Modifier.padding(top = 6.dp, bottom = 16.dp))
-                // L-04 is not built yet; the live state (address, 4-digit code, received list) is drawn in round 4.
+                // L-04 is not built yet; the live state (address, code, received list) belongs here once it is.
                 KButton("Start Wi-Fi transfer", { toast.show("Wi-Fi transfer is not built yet") })
             }
             KGroup("Folders Kairn watches") {

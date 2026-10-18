@@ -38,7 +38,7 @@ import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
 import app.kairn.ui.theme.readerUi
 
-/** Round 4 `.chip`: 44dp pill; selected = light fill with dark ink. */
+/** Chip: 44dp pill; selected = light fill with dark ink. */
 @Composable
 fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, count: Int? = null) {
     val shape = RoundedCornerShape(999.dp)
@@ -57,11 +57,11 @@ fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modif
     }
 }
 
-/** Round 4 `.seg`: pill track with a mint selected segment. */
+/** Segmented control: pill track with a mint selected segment. */
 @Composable
 fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(999.dp)
-    val seg = modifier.fillMaxWidth().clip(shape).padding(3.dp)   // was Modifier.*: the parameter was dropped
+    val seg = modifier.fillMaxWidth().clip(shape).padding(3.dp)
     val track = if (glass) seg.background(Glass.well) else seg.background(K.bg).border(1.dp, K.line, shape)
     Row(track, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         options.forEachIndexed { i, o ->
@@ -76,28 +76,28 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
     }
 }
 
-/** Round 4 `.switch`: 52x32 track, 24dp thumb. */
+/** Switch: 52x32 track, 24dp thumb. */
 @Composable
 fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val track = animateColorAsState(if (checked) K.mint else if (glass) Color(0x29FFFFFF) else K.switchOff, label = "track")
     val thumbX = animateDpAsState(if (checked) 24.dp else 4.dp, label = "thumb")
-    // The 52x32 track is the LOOK; the tappable box around it is the target. A 32dp hit area is 16dp under
-    // the guideline, and this is the control the user hits most often in Settings.
+    // The 52x32 track is the LOOK; the tappable box around it is the target. It must stay at the 48dp
+    // minimum touch target.
     Box(modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
     Box(
         Modifier.size(52.dp, 32.dp).clip(CircleShape).background(track.value)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),   // announces on/off to TalkBack
     
     ) {
-        // No Modifier.shadow on the thumb: it allocates a RenderNode, and there is one per switch.
-        // The LAMBDA offset overload: reading thumbX.value in composition recomposed the whole switch on
-        // every animation frame, where this only re-lays it out.
+        // No Modifier.shadow on the thumb: it allocates a RenderNode, and there is one per switch. The
+        // LAMBDA offset overload is also required - reading thumbX.value in composition recomposes the
+        // whole switch on every animation frame, where this only re-lays it out.
         Box(Modifier.offset { IntOffset(thumbX.value.roundToPx(), 4.dp.roundToPx()) }.size(24.dp).clip(CircleShape).background(if (checked) K.mintInk else Color(0xFFE8ECEE)))
     }
     }
 }
 
-/** Round 4 `.radio` row (used by restore: merge or replace). */
+/** Radio row (used by restore: merge or replace). */
 @Composable
 fun KRadioRow(title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -122,7 +122,7 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
     }
 }
 
-/** Round 4 `.rng`: 6dp track, 24dp pale thumb. [accent] is amber for the warm-light slider. */
+/** Slider: 6dp track, 24dp pale thumb. [accent] is amber for the warm-light slider. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun KSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float> = 0f..1f, modifier: Modifier = Modifier, accent: Color = K.mint, onFinished: (() -> Unit)? = null, trackColor: Color = K.track) {
@@ -133,7 +133,7 @@ fun KSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointR
     )
 }
 
-/** Label on the left, live value on the right, then the slider (round 4 `.ctl`). */
+/** Label on the left, live value on the right, then the slider. */
 @Composable
 fun KControl(label: String, valueText: String, content: @Composable () -> Unit) {
     Column(Modifier.padding(top = 16.dp)) {

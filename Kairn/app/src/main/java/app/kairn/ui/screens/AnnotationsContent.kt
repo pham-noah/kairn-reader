@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.kairn.data.Mark
 import app.kairn.ui.kit.*
 import app.kairn.ui.theme.K
@@ -28,13 +27,13 @@ import java.util.Date
 
 private val markKinds = listOf(null to "All", "highlight" to "Highlights", "note" to "Notes", "bookmark" to "Bookmarks")   // constant, not rebuilt per recomposition
 
-/** A-02 / A-03: round 4's Notes and highlights list. Used inside the reader's Notes sheet. */
+/** A-02 / A-03: the Notes and highlights list, used inside the reader's Notes sheet. */
 @Composable
 fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Unit, onDelete: (Mark) -> Unit, onExport: () -> Unit) {
     var filter by remember { mutableIntStateOf(0) }
     var confirm by remember { mutableStateOf<Mark?>(null) }
     val kind = markKinds[filter].first
-    // Filtered/sorted list and chip counts only change with the marks or the filter, not on every recomposition.
+    // Filtered list and chip counts change only with the marks or the filter, not per recomposition.
     val shown = remember(marks, kind) { marks.filter { kind == null || it.kind == kind }.sortedBy { it.created } }
     val counts = remember(marks) { markKinds.map { (k, _) -> marks.count { k == null || it.kind == k } } }
 

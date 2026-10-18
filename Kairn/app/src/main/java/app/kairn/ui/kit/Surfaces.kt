@@ -31,7 +31,7 @@ fun KCard(modifier: Modifier = Modifier, padding: Int = 0, content: @Composable 
     Column(surface.padding(padding.dp), content = content)
 }
 
-/** Round 4 `.group`: a small bold label above a card or pill group. */
+/** Group: a small bold label above a card or pill group. */
 @Composable
 fun KGroup(label: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(modifier.padding(top = 22.dp)) {
@@ -40,7 +40,7 @@ fun KGroup(label: String, modifier: Modifier = Modifier, content: @Composable ()
     }
 }
 
-/** Round 4 `.row`: leading icon, title + subtitle, trailing slot. Hairline above when [divider]. */
+/** Row: leading icon, title + subtitle, trailing slot. Hairline above when [divider]. */
 @Composable
 fun KRow(
     title: String, modifier: Modifier = Modifier, subtitle: String? = null, leading: ImageVector? = null,
@@ -66,7 +66,7 @@ fun KRow(
 @Composable
 fun KChevron() = Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = K.dim, modifier = Modifier.size(20.dp))
 
-/** Text input in the round 4 `.field` style. */
+/** Text input. */
 @Composable
 fun KField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", label: String? = null, singleLine: Boolean = true, leading: ImageVector? = null, minLines: Int = 1) {
     Column(modifier) {

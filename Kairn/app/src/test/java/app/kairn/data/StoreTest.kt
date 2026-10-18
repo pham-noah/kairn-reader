@@ -9,10 +9,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-/**
- * The Store is the only thing standing between the UI and the user's data, and it had no test at all.
- * These run on the JVM against a temp dir (Store.forTesting), no device.
- */
+/** JVM tests for the Store against a temp dir (Store.forTesting), no device. */
 class StoreTest {
 
     @get:Rule val tmp = TemporaryFolder()

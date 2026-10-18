@@ -7,10 +7,10 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 /**
- * Interface = Manrope, book text = Literata (round 4). N-01 says fonts must be bundled, never loaded
- * from the web, and OQ-5 says their licences are still unchecked, so this uses the system families
- * for now. To switch: add manrope.ttf / literata.ttf under res/font, then replace the two values below
- * with FontFamily(Font(R.font.manrope, ...)) etc. Nothing else in the app needs to change.
+ * Interface = Manrope, book text = Literata. N-01 requires fonts to be bundled, never loaded from the
+ * web, and OQ-5 leaves their licences unchecked, so this uses the system families for now. To switch:
+ * add manrope.ttf / literata.ttf under res/font and replace the two values below with
+ * FontFamily(Font(R.font.manrope, ...)); nothing else in the app needs to change.
  */
 object KFonts {
     val sans: FontFamily = FontFamily.SansSerif

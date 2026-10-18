@@ -10,7 +10,7 @@ against which spec item, what is not, and the things that will bite anyone touch
 | EPUB open + render via Readium | R-01 |
 | Page / scroll mode | R-03 |
 | Font size, line + paragraph spacing, margins, justify, hyphenation (live) | R-04 (partly) |
-| Light / dark / sepia / true black, dark default, follow-system option | R-05, DEC-4 |
+| Light / sepia / grey / dark / true black, dark default, follow-system option | R-05, DEC-4 |
 | Warm-light overlay and in-app brightness (system settings untouched) | R-06 |
 | Tap zones (reading-direction aware), volume keys, chapter list, progress slider | R-07 (partly) |
 | Footnote pop-up, "jump back" chip | R-08 |
@@ -19,8 +19,8 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Full-screen, keep-screen-on | R-11 |
 | Watched folders (per-folder switch), missing-not-removed, picker import, "Open with" | L-01, L-02, L-03, L-05 |
 | Auto-detect: sweeps the device for EPUBs, like Lithium (settings toggle) | L-01 |
-| Chapter time left, fine-grained seek (by position, real word-count estimate) | R-07 |
-| Two-page column mode (per book) | R-14 |
+| Whole-book time left, fine-grained seek (by position, real word-count estimate) | R-07 |
+| Two-page column mode (per book, tablet width only) | R-14 |
 | Covers + metadata from the file; edit title/author | L-06 |
 | Grid/list, search, sort | L-07 |
 | Collections, tags, status | L-08 |

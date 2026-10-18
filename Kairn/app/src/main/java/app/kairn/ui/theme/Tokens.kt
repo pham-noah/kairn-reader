@@ -3,7 +3,7 @@ package app.kairn.ui.theme
 import androidx.compose.ui.graphics.Color
 import app.kairn.data.ThemeId
 
-/** Design tokens, copied 1:1 from the CSS variables in Kairn UI round 4. */
+/** Design tokens: the app's base colours, sizes and accents. */
 object K {
     val bg = Color(0xFF0E1114); val surf = Color(0xFF161A1E); val surf2 = Color(0xFF1E2328)
     val line = Color(0xFF2A3036); val txt = Color(0xFFEEF1F3); val mut = Color(0xFFA2ACB3)
@@ -13,8 +13,9 @@ object K {
     val danger = Color(0xFFF0848A)
     val track = Color(0xFF2F363D); val switchOff = Color(0xFF2C333A); val grab = Color(0xFF3B434A)
     val toastBg = Color(0xFFE9EEF0); val toastInk = Color(0xFF12171A)
-    /** Highlight palette, in the order the selection toolbar shows it. */
-    val highlightColors = listOf(amber, mint, rose, sky)
+    /** Highlight palette, in the order the selection toolbar shows it. The label travels WITH the
+     *  colour, so a new colour cannot be mislabelled. */
+    val highlightColors = listOf("Amber" to amber, "Mint" to mint, "Rose" to rose, "Blue" to sky)
 }
 
 /** Spacing + shape constants (dp values as plain ints so they stay out of Compose imports). */
@@ -25,13 +26,13 @@ object Dim {
     const val field = 14
     const val btn = 50
     const val btnSmall = 40
-    const val tap = 48           // minimum touch target (was 44: the old pre-Material floor)
+    const val tap = 48           // minimum touch target
 }
 
-/** The reader has its own chrome colours per reading theme (round 4: .reader[data-theme]). */
+/** The reader theme token set: page, text, muted, chrome and chromeText colours, hairline, accent, and whether the theme is light. */
 data class ReaderUi(val page: Color, val text: Color, val muted: Color, val chrome: Color, val chromeText: Color, val line: Color, val accent: Color, val light: Boolean)
 
-/** One instance per theme, built once (this is called on every Overlay recomposition and by each swatch). */
+/** One instance per theme, built once. */
 fun readerUi(t: ThemeId): ReaderUi = READER_UI.getValue(t)
 
 private val READER_UI: Map<ThemeId, ReaderUi> = ThemeId.entries.associateWith { buildReaderUi(it) }
@@ -41,9 +42,11 @@ private fun buildReaderUi(t: ThemeId): ReaderUi = when (t) {
     ThemeId.LIGHT -> ReaderUi(Color(0xFFF6F5F1), Color(0xFF1D1E20), Color(0xFF6A6C70), Color(0xF7F6F5F1), Color(0xFF1D1E20), Color(0x24000000), Color(0xFF14876A), true)
     ThemeId.SEPIA -> ReaderUi(Color(0xFFF1E4CF), Color(0xFF3A2E21), Color(0xFF7A6A56), Color(0xF7F1E4CF), Color(0xFF3A2E21), Color(0x2E3C280A), Color(0xFF14876A), true)
     ThemeId.BLACK -> ReaderUi(Color(0xFF000000), Color(0xFFC9CED2), Color(0xFF7F898F), Color(0xF7000000), Color(0xFFE6EAED), Color(0x1FFFFFFF), K.mint, false)
+    // Neutral mid grey: dark ink on it (6.8:1) so it stays readable.
+    ThemeId.GRAY -> ReaderUi(Color(0xFF9AA1A6), Color(0xFF16191C), Color(0xFF3C4247), Color(0xF59AA1A6), Color(0xFF16191C), Color(0x24000000), Color(0xFF14876A), true)
 }
 
-/** Generated cover palettes for books with no embedded cover (from round 4's sample covers). */
+/** Generated cover palettes for books with no embedded cover. */
 val coverPalettes = listOf(
     Color(0xFF2A4A5F) to Color(0xFF14232E), Color(0xFF6A4A2A) to Color(0xFF392612),
     Color(0xFF4F6A3A) to Color(0xFF2A3A1F), Color(0xFF5A3A5F) to Color(0xFF2B1B2E),

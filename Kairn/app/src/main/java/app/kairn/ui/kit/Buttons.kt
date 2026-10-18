@@ -28,7 +28,7 @@ import app.kairn.ui.theme.glassSurface
 
 enum class KButtonStyle { Primary, Secondary, Danger, Ghost }
 
-/** Round 4 `.btn`: pill, 50dp tall (40dp small), full width unless [small]. */
+/** Button: pill, 50dp tall (40dp small), full width unless [small]. */
 @Composable
 fun KButton(
     text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
@@ -62,7 +62,7 @@ fun KButton(
     }
 }
 
-/** Round 4 `.iconbtn`: 44dp circle; [bordered] adds the surface fill + hairline. */
+/** Icon button: 44dp circle; [bordered] adds the surface fill + hairline. */
 @Composable
 fun KIconButton(
     icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier,

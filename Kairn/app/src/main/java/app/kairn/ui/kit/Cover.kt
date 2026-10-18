@@ -13,13 +13,12 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue   // required by `by` delegation; never appears as an identifier
+import androidx.compose.runtime.getValue   // required by `by` delegation
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -45,21 +44,12 @@ import java.io.File
 /** A decoded cover plus the mtime of the file it came from, so a changed file is noticed. */
 private class CachedCover(val bmp: ImageBitmap, val stamp: Long)
 
-/**
- * Decoded covers, kept so a fling never re-decodes a bitmap for an item already seen.
- * Sized in KILOBYTES (1/8 of the app heap), not entries: the old 200-entry cap meant up to ~200 x 0.6-0.9 MB
- * bitmaps (well over 100 MB) on a big library. Keyed by FILE PATH, so the grid's thumbnail and the Continue
- * card's full cover are separate entries instead of fighting over one key.
- */
+/** Decoded covers, so a fling never re-decodes a bitmap already seen. Sized in KILOBYTES (1/8 of the app heap), not entries, and keyed by FILE PATH. */
 private val coverCache = object : android.util.LruCache<String, CachedCover>(((Runtime.getRuntime().maxMemory() / 1024) / 8).toInt()) {
     override fun sizeOf(key: String, value: CachedCover) = (value.bmp.width * value.bmp.height * 4 / 1024).coerceAtLeast(1)
 }
 
-/**
- * Decodes a cover downsampled to roughly the size it is drawn at (the Library grid cell is ~310px).
- * The grid points at the small pre-scaled thumbnail when one exists; otherwise the full cover is
- * sampled down here. Either way the compositor never scales a 1000px bitmap into a grid cell.
- */
+/** Decodes a cover downsampled to roughly the size it is drawn at (the Library grid cell is ~310px), so a 1000px bitmap is never scaled into a cell. */
 private fun decodeCover(file: File, maxDim: Int = 384): ImageBitmap? = runCatching {
     if (!file.exists()) return null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -72,15 +62,11 @@ private fun decodeCover(file: File, maxDim: Int = 384): ImageBitmap? = runCatchi
 }.getOrNull()
 
 /**
- * Round 4 `.cover`: 2:3, rounded 8/12/12/8, spine highlight, drop shadow, progress strip,
- * and a status badge (mint check = finished, amber = needs attention). Uses the embedded
- * cover if there is one, otherwise a generated gradient with the title.
- */
-/**
- * Cover image. Takes the cover path as a String rather than a File: `File` is an unstable type to
- * Compose, so a File parameter made EVERY cover cell unskippable - and every cell in the grid is a
- * KCover. A String is stable, so the cell can skip when nothing changed. `fallbackPath` plays the
- * same role for the full-cover fallback.
+ * Cover: 2:3, rounded 8/12/12/8, spine highlight, drop shadow, progress strip and status badge
+ * (mint check = finished, amber = needs attention); embedded cover if present, else a generated gradient.
+ *
+ * Takes the cover path as a String rather than a File: `File` is unstable to Compose, so a File
+ * parameter made every cover cell unskippable. `fallbackPath` does the same for the full-cover fallback.
  */
 @Composable
 fun KCover(
@@ -91,26 +77,23 @@ fun KCover(
     val coverFile = remember(coverPath) { File(coverPath) }
     val fallbackFile = remember(fallbackPath) { fallbackPath?.let { File(it) } }
     val key = book.id
-    // Show a cached bitmap instantly (no IO in composition), then re-check the file OFF the main thread:
-    // if its mtime changed (new cover, restore, thumbnail arriving after the full cover) decode again.
-    // The grid passes the small thumbnail; until it exists we fall back to the full cover, so a cell is
-    // never blank on a first run. This replaces a cache keyed only by book id, which needed a process
-    // restart to pick up a changed cover.
+    // Show a cached bitmap instantly (no IO in composition), then re-check the file OFF the main thread and
+    // re-decode if its mtime changed (new cover, restore, thumbnail arriving after the full cover). The grid
+    // passes the small thumbnail; until it exists the full cover is used, so a cell is never blank on a first run.
     val hit = remember(coverPath) { coverCache.get(coverPath) }
     val bmpState by produceState<ImageBitmap?>(initialValue = hit?.bmp, key1 = coverPath) {
         val loaded = withContext(Dispatchers.IO) {
             val src = if (coverFile.exists()) coverFile else fallbackFile
             if (src == null || !src.exists()) return@withContext null
             val stamp = src.lastModified()
-            if (hit != null && hit.stamp == stamp) return@withContext hit      // still current
+            if (hit != null && hit.stamp == stamp) return@withContext hit
             decodeCover(src)?.let { CachedCover(it, stamp) }
         }
         if (loaded != null) { coverCache.put(coverPath, loaded); value = loaded.bmp }
     }
     val bmp = bmpState
     val (c1, c2) = coverPalettes[(book.title.hashCode().and(0x7fffffff)) % coverPalettes.size]
-    // Memoize the fallback gradient: building a Brush per recomposition, per item, per frame is pure
-    // allocation churn while scrolling.
+    // Memoize the fallback gradient: building a Brush per recomposition, per item, per frame is allocation churn while scrolling.
     val fallbackGrad = remember(key, c1, c2) { Brush.linearGradient(listOf(c1, c2)) }
     Box(modifier.aspectRatio(2f / 3f).clip(shape)) {
         if (bmp != null) Image(bmp, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -142,9 +125,8 @@ fun KCover(
  *
  * Drawn to match kairn-mark.svg EXACTLY: same 96-unit coordinate space, same shapes, same colours.
  * The stones are ROUNDED RECTANGLES with rx = height/2 (capsules with straight top and bottom edges),
- * not ellipses - that is what the SVG's <rect rx="height/2"> produces. Each stone is rotated about
- * the SVG's own pivot (-2 about 48,72 / 3 about 49,50 / -5 about 51,28) and carries a vertical
- * gradient over its own top..bottom, exactly as the SVG's objectBoundingBox gradients do.
+ * not ellipses. Each stone is rotated about the SVG's own pivot (-2 about 48,72 / 3 about 49,50 /
+ * -5 about 51,28) and carries a vertical gradient over its own top..bottom.
  *
  *   1. kairn-mark.svg / kairn-icon.svg   (brand art)
  *   2. res/drawable/ic_cairn.xml          (launcher icon foreground)

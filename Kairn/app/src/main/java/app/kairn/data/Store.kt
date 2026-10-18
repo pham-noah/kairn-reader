@@ -10,26 +10,24 @@ import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Plain JSON on disk (DEC-8). Every write goes to a temp file and is renamed over the
- * original, so a crash or power loss mid-write can never leave a half-written file
- * ("the user's data is never lost").
+ * Plain JSON on disk (DEC-8). Every write goes to a temp file and is renamed over the original, so a
+ * crash or power loss mid-write can never leave a half-written file.
  *
- * WRITE PATH (off the main thread). The public API is unchanged and non-suspending, but nothing here
- * touches the disk on the caller's thread any more. A mutation updates the in-memory StateFlow
- * immediately (the UI sees it at once) and queues the disk write on one serial writer thread:
+ * WRITE PATH (off the main thread). The public API is non-suspending, but nothing here touches the disk
+ * on the caller's thread: a mutation updates the in-memory StateFlow immediately and queues the disk
+ * write on one serial writer thread.
  *  - writes are SERIALISED (one thread), so two writes to the same file can never interleave;
- *  - writes are COALESCED per file: if a book is updated 10 times while the writer is busy, only the
- *    newest snapshot is serialised and written. Books are immutable, so the JSON is built lazily on
- *    the writer thread - the caller never pays for toJson();
+ *  - writes are COALESCED per file: of many updates to one book only the newest snapshot is serialised
+ *    and written. Books are immutable, so the JSON is built on the writer thread - the caller never pays
+ *    for toJson();
  *  - deletes go through the same queue, so a delete can never be overtaken by an older pending write
  *    (which would resurrect the file).
  * Code that reads files directly (Backup, restore) must call [flush] first.
  *
  * @Stable because Compose otherwise infers it UNSTABLE: it exposes `File` properties (`root`,
- * `coversDir`, ...), and `File` is an unstable type, which made `store` an unstable parameter on
- * every screen - so no screen taking a Store could ever skip. The promise is true: the instance is
- * created once and its identity never changes; the parts screens actually observe are the
- * `books`/`settings` StateFlows, which are collected into Compose state.
+ * `coversDir`, ...), and `File` is an unstable type, which would make `store` an unstable parameter on
+ * every screen. The instance is created once and its identity never changes; the parts screens observe
+ * are the `books`/`settings` StateFlows, which are collected into Compose state.
  */
 @Stable
 class Store private constructor(val root: File, val copiesDir: File) {
@@ -41,12 +39,12 @@ class Store private constructor(val root: File, val copiesDir: File) {
     val thumbsDir = File(root, "thumbs").apply { mkdirs() }     // small pre-decoded cover thumbnails
     private val settingsFile = File(root, "settings.json")
 
-    init { copiesDir.mkdirs() }        // a constructor param now, so nothing creates it for us
+    init { copiesDir.mkdirs() }        // a constructor param, so nothing else creates it
 
     val books = MutableStateFlow<List<Book>>(emptyList())
     val settings = MutableStateFlow(AppSettings())
 
-    // ---- serial, coalescing writer. Declared BEFORE init: init calls reload(), which calls flush(). ----
+    // ---- serial, coalescing writer. Declared before init, which calls reload() -> flush(). ----
     private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "kairn-store") }
     private val lock = Any()
     private val pending = LinkedHashMap<File, () -> Unit>()     // newest job per file wins
@@ -57,9 +55,8 @@ class Store private constructor(val root: File, val copiesDir: File) {
             pending[key] = job
             if (draining) return                                 // the running drain will pick it up
             draining = true
-            // Submitted INSIDE the lock. flush() reads `draining` under this same lock, so with the submit
-            // outside it a flush could see draining=true, queue an empty runnable ahead of the drain, and
-            // return while the write was still pending - which is what a backup zips.
+            // Submitted INSIDE the lock: flush() reads `draining` under the same lock, so a submit outside
+            // it could let a flush return while the write was still pending - which is what a backup zips.
             io.execute(::drain)
         }
     }
@@ -78,8 +75,8 @@ class Store private constructor(val root: File, val copiesDir: File) {
 
     /**
      * Writes a whole file through the SAME serial writer as every other write, so a restore cannot be
-     * overtaken by a still-queued snapshot for that file (which is what a direct Store.writeAtomic let
-     * happen). [reload] flushes, so a caller that reloads straight after is still ordered correctly.
+     * overtaken by a still-queued snapshot for that file. [reload] flushes, so a caller that reloads
+     * straight after is still ordered correctly.
      */
     fun writeFile(target: File, text: String) = enqueue(target) { writeAtomic(target, text) }
 
@@ -96,20 +93,16 @@ class Store private constructor(val root: File, val copiesDir: File) {
     /** True once the first [load] has finished. */
     val isLoaded: Boolean get() = loadedOnce.isCompleted
 
-    /**
-     * The first read of the library from disk, OFF the main thread. It used to run synchronously inside
-     * `init`, i.e. inside Application.onCreate, reading and parsing every book file before the first
-     * frame - the main cost of a cold start on a big library.
-     */
+    /** The first read of the library from disk, off the main thread. */
     suspend fun load() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         runCatching { reload() }        // a failure must not leave every caller waiting forever
         loadedOnce.complete(Unit)
     }
 
     /**
-     * Suspends until the first [load] finishes. Anything that would otherwise act on an EMPTY library has
-     * to await this: addBook would not find the existing record and would `put` a fresh one over it -
-     * losing that book's marks and reading position - and a scan would re-add what is already known.
+     * Suspends until the first [load] finishes. A cold write without it would act on an EMPTY library:
+     * addBook would not find the existing record and would `put` a fresh one over it, losing that book's
+     * marks and reading position, and a scan would re-add what is already known.
      */
     suspend fun awaitLoaded() = loadedOnce.await()
 
@@ -126,7 +119,6 @@ class Store private constructor(val root: File, val copiesDir: File) {
         runCatching { AppSettings.from(JSONObject(settingsFile.readText())) }
             .onSuccess { settings.value = it }
             // Only a REAL parse failure warns: no settings file yet is the normal first launch, not an error.
-            // (The unit tests caught the unguarded version: android.util.Log throws in a JVM test.)
             .onFailure { if (settingsFile.exists()) Log.w("KairnStore", "settings.json could not be read; keeping the current settings", it) }
     }
 
@@ -149,8 +141,8 @@ class Store private constructor(val root: File, val copiesDir: File) {
     }
 
     /**
-     * Read-modify-write, now ATOMIC: @Synchronized so a position save (reader) and a mark added at the
-     * same moment cannot both start from the same old Book and drop one of the changes.
+     * Read-modify-write, ATOMIC: @Synchronized so a position save (reader) and a mark added at the same
+     * moment cannot both start from the same old Book and drop one of the changes.
      */
     @Synchronized
     fun update(id: String, f: (Book) -> Book) { get(id)?.let { put(f(it)) } }
@@ -178,10 +170,8 @@ class Store private constructor(val root: File, val copiesDir: File) {
             val tmp = File(target.parentFile, target.name + ".tmp")
             tmp.writeText(text)
             if (tmp.renameTo(target)) return
-            // The old code deleted `target` and retried the rename, so if the retry also failed (the reason
-            // the first one did - ENOSPC, EACCES, a SAF-backed path) the previous good file was gone and the
-            // new data sat in an unreferenced .tmp. Copying back is not atomic, but it cannot lose the old
-            // file, which is the promise that matters here.
+            // Copying back rather than deleting `target` and retrying the rename: a second rename failure
+            // (ENOSPC, EACCES, a SAF-backed path) would otherwise lose the previous good file.
             runCatching { target.outputStream().use { out -> tmp.inputStream().use { it.copyTo(out) } } }
                 .onSuccess { tmp.delete() }
                 .onFailure { Log.w("KairnStore", "could not replace ${target.name}; the previous file is intact", it) }

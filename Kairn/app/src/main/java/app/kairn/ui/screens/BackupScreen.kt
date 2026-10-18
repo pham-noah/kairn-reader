@@ -37,7 +37,7 @@ class BackupUi {
     var includeFiles by mutableStateOf(false)
 }
 
-/** DS-01: round 4's Backup and restore (idle, running, done). */
+/** DS-01: Backup and restore (idle, running, done). */
 @Composable
 fun BackupScreen(ui: BackupUi, store: Store, onBack: () -> Unit, onBackupNow: () -> Unit, onRestoreFromFile: () -> Unit) {
     val s by store.settings.collectAsStateWithLifecycle()
@@ -74,8 +74,6 @@ fun BackupScreen(ui: BackupUi, store: Store, onBack: () -> Unit, onBackupNow: ()
         }
     }
 }
-
-
 
 /** Restore sheet: merge or replace, with the safety-copy promise (DS-01). */
 @Composable

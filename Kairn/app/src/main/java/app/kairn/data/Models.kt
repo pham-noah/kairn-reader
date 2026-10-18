@@ -5,9 +5,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 enum class Status { NONE, WANT, READING, FINISHED }
-enum class ThemeId { LIGHT, DARK, SEPIA, BLACK }
+enum class ThemeId { LIGHT, DARK, SEPIA, BLACK, GRAY }   // appended, so stored names keep parsing
 
-/** Round 5 ambient wash behind the glass panels. PLAIN turns it off. */
+/** Ambient wash behind the glass panels. PLAIN turns it off. */
 enum class Ambient { MINT, OCEAN, SUNSET, PLAIN }
 
 /** A highlight, note or bookmark (A-01). [locator] is Readium Locator JSON. */
@@ -26,8 +26,8 @@ data class Mark(
 
     companion object {
         /**
-         * Null when this mark is unusable (no id, or no locator to jump to). A mark that cannot be read
-         * must never take its whole book down with it - see [Book.from].
+         * Null when the mark is unusable (no id, or no locator to jump to): a bad mark must never take
+         * its whole book down with it - see [Book.from].
          */
         fun from(o: JSONObject): Mark? {
             val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
@@ -83,10 +83,9 @@ data class ReaderPrefs(
 /**
  * One book = one JSON file (DEC-8, and the shape X-20 sync needs: one file per book limits conflicts).
  *
- * @Immutable is a real performance promise here, not decoration: `mark` holds `List<Mark>`, and
- * Compose treats `List` as UNSTABLE, so without this a `Book` parameter made every book card
- * unskippable - every visible item recomposed whenever the list's parent recomposed. All fields are
- * `val` and are rebuilt via copy(), never mutated in place, so the promise holds.
+ * @Immutable is a real performance promise here, not decoration: `marks` holds `List<Mark>`, which
+ * Compose treats as UNSTABLE, so without this every book card would recompose whenever its parent did.
+ * All fields are `val` and are rebuilt via copy(), never mutated in place, so the promise holds.
  */
 @Immutable
 data class Book(
@@ -120,9 +119,7 @@ data class Book(
 
         /**
          * Null only when the record is genuinely unusable (no id, or no uri). Every other field is read
-         * leniently and a single malformed mark is skipped rather than failing the book: before this, a
-         * throwing `getString` meant one bad field dropped a book - and all its marks - out of the
-         * library while the file stayed on disk, invisibly.
+         * leniently and a single malformed mark is skipped rather than failing the book.
          */
         fun from(o: JSONObject): Book? {
             val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
@@ -149,15 +146,15 @@ data class WatchedFolder(val uri: String, val name: String, val enabled: Boolean
 
 data class AppSettings(
     val theme: ThemeId = ThemeId.DARK,        // DEC-4
-    val glass: Boolean = true,                // Round 5 glass surfaces (default); false = round 4 Solid
-    val ambient: Ambient = Ambient.MINT,      // Round 5 ambient wash colour
+    val glass: Boolean = true,                // glass surfaces (default); false = solid
+    val ambient: Ambient = Ambient.MINT,      // ambient wash colour
     val autoSwitch: Boolean = false,          // R-05: follow system dark/light
     val keepScreenOn: Boolean = true,         // R-11
     val fullscreen: Boolean = false,          // R-11
     val volumeKeys: Boolean = true,           // R-07
     val swipeChapters: Boolean = true,        // R-07: swipe left/right to change chapter in scroll mode
     val swipeThreshold: Int = 40,             // R-07: how far (dp) a horizontal drag must go to count
-    val autoDetect: Boolean = true,           // L-01: find EPUBs already on the device on open (like Lithium)
+    val autoDetect: Boolean = true,           // L-01: find EPUBs already on the device on open
     val folders: List<WatchedFolder> = emptyList(),
     val defaults: ReaderPrefs = ReaderPrefs(),
     val onboarded: Boolean = false,           // N-06
@@ -191,9 +188,8 @@ data class AppSettings(
                 swipeChapters = o.optBoolean("swipeChapters", d.swipeChapters),
                 swipeThreshold = o.optInt("swipeThreshold", d.swipeThreshold),
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
-                // mapNotNull + optString: one folder entry without a uri used to throw, and the throw took
-                // the WHOLE settings file down with it. A blank/absent uri is an entry we cannot use, not a
-                // reason to discard every other setting.
+                // mapNotNull + optString: an entry with no usable uri is skipped, not a reason to discard
+                // every other setting.
                 folders = o.optJSONArray("folders")?.let { a ->
                     (0 until a.length()).mapNotNull { i ->
                         val f = a.optJSONObject(i) ?: return@mapNotNull null

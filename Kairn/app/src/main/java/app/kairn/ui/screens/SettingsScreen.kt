@@ -21,7 +21,7 @@ import app.kairn.ui.theme.KType
 import java.text.DateFormat
 import java.util.Date
 
-// Built once; these were re-created with .copy() several times on every recomposition (every toggle).
+// Built once: .copy() at the call sites re-created these on every recomposition (every toggle).
 private val SectionTitle = KType.title.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
 private val SmallDim = KType.small.copy(color = K.dim)
 
@@ -30,14 +30,13 @@ private val SmallDim = KType.small.copy(color = K.dim)
 fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit) {
     val s by store.settings.collectAsStateWithLifecycle()
     var licences by remember { mutableStateOf(false) }
-    // Hoisted: an inline listOf() at a call site is a NEW list instance every recomposition,
-    // which Compose sees as an unstable argument and which blocks skipping. Constant lists live here.
+    // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
+    // skipping. Constant lists live here.
     val themes = remember { listOf(ThemeId.DARK, ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
     val surfaceOpts = remember { listOf("Glass", "Solid") }
-    // Derived, not a parallel hand-written list: themeNames and ambients are fed into one KSegmented as
-    // label + value, so reordering one of two literal lists silently labelled the wrong option. Same order,
-    // same words, no way to drift.
+    // Derived, not a parallel literal list: names and values feed one KSegmented, so they cannot drift
+    // out of order.
     val ambientNames = remember(ambients) { ambients.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
     val themeNames = remember(themes) { themes.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
     val autoOpts = remember { listOf("Off", "System") }
@@ -61,7 +60,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 Text("Reading theme", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 KSegmented(themeNames, themes.indexOf(s.theme), { i -> store.saveSettings { it.copy(theme = themes[i], defaults = it.defaults.copy(theme = themes[i])) } })
                 Text("Switch automatically", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
-                // Round 4 also has "Schedule" (light/dark from times). Not built; only Off and System are real.
+                // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
                 KSegmented(autoOpts, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
                 Text(if (s.autoSwitch) "Follows your phone's light and dark setting." else "Kairn starts in Dark.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
             }

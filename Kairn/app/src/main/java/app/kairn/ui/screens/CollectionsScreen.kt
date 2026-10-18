@@ -34,7 +34,7 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
     val settings by store.settings.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf<Int?>(null) }   // 0 = collection, 1 = tag
 
-    // Group once per change to `books`; the rows below used to re-scan the whole library per collection and per tag.
+    // Group once per change to `books`, not once per collection and per tag row.
     val byCollection = remember(books) { groupBooks(books) { it.collections } }
     val byTag = remember(books) { groupBooks(books) { it.tags } }
     val collections = remember(byCollection, settings.shelves) {

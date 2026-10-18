@@ -12,9 +12,8 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
- * The restore path can destroy a library, and it had no test at all. These cover the two things that
- * protect it: rejecting a file that is not a Kairn backup BEFORE anything is deleted, and merging a
- * book without losing a mark.
+ * Covers the two things that protect the restore path: rejecting a file that is not a Kairn backup BEFORE
+ * anything is deleted, and merging a book without losing a mark.
  */
 class BackupTest {
 

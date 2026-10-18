@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Full-screen screens that sit above the tabs (round 4 "overlays"). */
+/** Full-screen screens that sit above the tabs. */
 enum class Overlay { Onboarding, Add, Backup }
 
 /**
@@ -103,8 +103,8 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                     scope.launch {
                         app.backup.restore(u, replace).fold(
                             { toast.show(if (replace) "Restored. A safety copy of your old data was kept." else "Merged. A safety copy of your old data was kept.") },
-                            // The reason matters: "nothing was changed" and "restored part-way, your data is
-                            // in the safety copy" are different messages and only one of them is true.
+                            // The exception message matters: "nothing was changed" and "restored part-way" are
+                            // different outcomes that need different messages.
                             { e -> toast.show(e.message ?: "Restore failed. Your data is unchanged.") },
                         )
                     }

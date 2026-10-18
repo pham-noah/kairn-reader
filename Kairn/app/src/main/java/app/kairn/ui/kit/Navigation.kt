@@ -32,7 +32,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     Settings("Settings", Icons.Default.Settings),
 }
 
-/** Round 4 `.nav`: three tabs, mint pill behind the selected icon. */
+/** Bottom nav: three tabs, mint pill behind the selected icon. */
 @Composable
 fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
     val bar = if (glass)
@@ -51,8 +51,8 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
                         Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(999.dp)).background(if (on) (if (glass) Color(0x26FFFFFF) else K.mint.copy(alpha = .14f)) else Color.Transparent), contentAlignment = Alignment.Center) {
                             Icon(t.icon, null, tint = if (on) K.mint else K.dim, modifier = Modifier.size(22.dp))
                         }
-                        // 11.5sp in K.dim was the smallest text in the app, on the primary navigation, at 4.47:1 on the glass
-                        // panel. K.mut on the same panel is 6.56:1.
+                        // Nav label contrast on the glass panel: K.mut is 6.56:1. Nothing smaller or dimmer
+                        // goes on the primary navigation.
                         Text(t.label, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (on) K.mint else K.mut)
                     }
                 }
@@ -61,7 +61,7 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
     }
 }
 
-/** Round 4 `.sub`: back button + title (+ optional subtitle) for pushed screens. */
+/** Sub-header: back button + title (+ optional subtitle) for pushed screens. */
 @Composable
 fun KSubHeader(title: String, onBack: () -> Unit, subtitle: String? = null) {
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

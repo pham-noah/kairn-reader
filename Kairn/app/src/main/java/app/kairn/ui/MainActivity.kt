@@ -22,8 +22,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // The app chrome is ALWAYS dark. The default (auto) style follows the SYSTEM theme, so on a phone in
-        // light mode the status/nav icons would turn dark-on-dark. Pin the dark style.
+        // The app chrome is always dark. The default (auto) style follows the SYSTEM theme, so in
+        // light mode the status/nav icons would turn dark-on-dark.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
@@ -37,9 +37,9 @@ class MainActivity : AppCompatActivity() {
 
     private var thumbsBackfilled = false
 
-    // L-01. At boot nothing should compete with the first frames: wait for the library to be read, let the
-    // grid draw and settle, and only then do the automatic scan (which walks folders and MediaStore). The
-    // thumbnail backfill is one-shot per process and runs after that, not inside the scan.
+    // L-01: at boot nothing should compete with the first frames: wait for the library read, let the
+    // grid settle, then run the automatic scan. The thumbnail backfill is one-shot per process, after
+    // the scan.
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch {

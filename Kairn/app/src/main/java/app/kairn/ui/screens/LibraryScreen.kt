@@ -1,5 +1,6 @@
 package app.kairn.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,7 +14,9 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
@@ -44,9 +47,40 @@ private const val CT_GRID = 0
 private const val CT_LIST = 1
 
 /**
- * Holder for the callbacks so the item lambdas are stable across recompositions - otherwise every
- * item's lambda is considered changed each frame and nothing in the grid can be skipped.
+ * The tick on a picked book in selection mode. A rounded square, not the cover's "finished" circle:
+ * the two share a corner and would read as the same badge.
  */
+@Composable
+private fun PickMark(modifier: Modifier = Modifier) =
+    Box(modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(K.mint), contentAlignment = Alignment.Center) {
+        Icon(Icons.Default.Check, null, tint = K.mintInk, modifier = Modifier.size(16.dp))
+    }
+
+/** Every collection a book can join: the shelves that exist plus any a book already carries. */
+private fun knownCollections(books: List<Book>, shelves: List<String>): List<String> =
+    (shelves + books.flatMap { it.collections }).distinct().sortedBy { it.lowercase() }
+
+/** Chips over existing collections, so books join a collection instead of a near-duplicate being typed. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CollectionChips(
+    known: List<String>,
+    cols: Set<String>,
+    emptyHint: String = "No collections yet. Make one on the Collections tab.",
+    onToggle: (String) -> Unit,
+) {
+    if (known.isEmpty()) {
+        Text(emptyHint, style = KType.small, modifier = Modifier.padding(start = 4.dp))
+        return
+    }
+    Box(Modifier.heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            known.forEach { name -> KChip(name, name in cols, { onToggle(name) }) }
+        }
+    }
+}
+
+/** Holds item callbacks so lambdas stay stable across recompositions (unstable ones block skipping). */
 @androidx.compose.runtime.Stable
 private class LibActions(
     val open: (Book) -> Unit,
@@ -54,16 +88,22 @@ private class LibActions(
 )
 
 /**
- * Grid cell. A SEPARATE composable on purpose: an inlined cell body inside `items {}` is recomposed
- * with the grid and cannot be skipped. Extracted with only stable parameters (Book, the now-@Stable
- * Store, and the stable LibActions holder), it shows as `restartable skippable` in the Compose
- * report - matching how Episteme calls SharedMobileBookCard instead of inlining the card.
+ * Grid cell. A separate composable on purpose: an inlined cell body inside `items {}` is recomposed
+ * with the grid and cannot be skipped. Parameterised with stable types (Book, Store, LibActions).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GridBookCell(b: Book, store: Store, actions: LibActions) {
+private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: Boolean) {
     Column(Modifier.combinedClickable(onClick = { actions.open(b) }, onLongClick = { actions.longPress(b) })) {
-        KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), fallbackPath = store.coverFile(b.id).path)
+        Box {
+            KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), fallbackPath = store.coverFile(b.id).path)
+            // Picked: a mint ring around the cover, so it reads as "selected" and not as the finished badge.
+            if (selected) {
+                val shape = remember { RoundedCornerShape(topStart = 8.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 8.dp) }
+                Box(Modifier.matchParentSize().border(2.dp, K.mint, shape))
+                PickMark(Modifier.align(Alignment.TopEnd).padding(6.dp))
+            }
+        }
         Text(b.title, style = KType.body.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 17.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp))
         Text(b.author, fontSize = 13.sp, color = K.dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
     }
@@ -72,8 +112,9 @@ private fun GridBookCell(b: Book, store: Store, actions: LibActions) {
 /** List row. Same extraction rationale as [GridBookCell]. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ListBookRow(b: Book, store: Store, actions: LibActions) {
+private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Boolean) {
     Row(Modifier.fillMaxWidth().combinedClickable(onClick = { actions.open(b) }, onLongClick = { actions.longPress(b) }).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (selected) PickMark()
         KCover(b, store.thumbFile(b.id).path, Modifier.width(46.dp), compact = true, fallbackPath = store.coverFile(b.id).path)
         Column(Modifier.weight(1f)) {
             Text(b.title, style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -97,9 +138,8 @@ fun LibraryScreen(
     onOpen: (Book) -> Unit, onAdd: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
 ) {
     val toast = LocalToast.current
-    // Lifecycle-aware: while the reader is on top this screen is stopped, and the reader saves the position
-    // every few seconds (which emits `books`). collectAsState() would re-filter and re-sort the whole
-    // library behind the reader each time; this stops collecting until the screen is visible again.
+    // Lifecycle-aware: while the reader is on top it saves position every few seconds (emitting `books`).
+    // collectAsState() would re-filter and re-sort the library behind it; this stops until the screen shows.
     val books by store.books.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
@@ -110,15 +150,19 @@ fun LibraryScreen(
     var problem by remember { mutableStateOf<Book?>(null) }
     var actions by remember { mutableStateOf<Book?>(null) }
     var editing by remember { mutableStateOf<Book?>(null) }
+    // Selection mode: tick several books, then put them all into one collection.
+    var selecting by remember { mutableStateOf(false) }
+    var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var bulkTo by remember { mutableStateOf(false) }
+    val shelves by store.settings.collectAsStateWithLifecycle()
+    val knownCols = remember(books, shelves.shelves) { knownCollections(books, shelves.shelves) }
 
-    // `shelf` is a parameter: a bare read inside remember{ derivedStateOf } would capture the FIRST value
-    // forever. rememberUpdatedState keeps the lambda reading the current one.
+    // `shelf` is a parameter: a bare read inside remember{ derivedStateOf } would capture the first
+    // value forever; rememberUpdatedState keeps reading the current one.
     val currentShelf by rememberUpdatedState(shelf)
     val filtering by remember { derivedStateOf { query.isNotBlank() || status != null || currentShelf != null } }
-    // Mirrors Episteme's LibraryProjector: derive the visible list ONCE per data change, outside the
-    // recomposition path. derivedStateOf reads the states it depends on (books, filters) and only
-    // recomputes when one of them actually changes - not on every frame of a scroll. (A remember()
-    // keyed on `books` would have re-compared the whole list each recomposition - O(n) per frame.)
+    // Derive the visible list once per data change, outside the recomposition path: derivedStateOf reads
+    // its dependencies (books, filters) and recomputes only when one changes, not on every scroll frame.
     val continueBook by remember {
         derivedStateOf {
             books.filter { it.lastRead > 0 && it.status != Status.FINISHED && !it.missing && !it.broken }.maxByOrNull { it.lastRead }
@@ -127,14 +171,11 @@ fun LibraryScreen(
     val cb = continueBook
     val shown by remember {
         derivedStateOf {
-            // Read continueBook / filtering INSIDE the lambda: the old `cb`/`filtering` locals were plain
-            // vals captured at first composition, so these filters used stale values.
-            val continueId = continueBook?.id
+            // Read currentShelf inside the lambda: plain vals captured at first composition would be stale.
             val shelf = currentShelf
             books.filter { b ->
                 (shelf == null || shelf in b.collections || shelf in b.tags) && (status == null || b.status == status) &&
-                    (query.isBlank() || b.title.contains(query, true) || b.author.contains(query, true)) &&
-                    (filtering || b.id != continueId)   // the Continue book is not repeated in the grid
+                    (query.isBlank() || b.title.contains(query, true) || b.author.contains(query, true))
             }.sortedWith(when (sort) {
                 SortBy.RECENT -> compareByDescending<Book> { it.lastRead }.thenByDescending { it.added }
                 SortBy.TITLE -> compareBy { it.title.lowercase() }
@@ -144,7 +185,17 @@ fun LibraryScreen(
         }
     }
     val statusCounts by remember { derivedStateOf { books.groupingBy { it.status }.eachCount() } }
-    val actions_ = remember { LibActions(open = { b -> if (b.missing || b.broken) problem = b else onOpen(b) }, longPress = { b -> actions = b }) }
+    // The LibActions holder is created once, so a captured callback would be frozen at its first value.
+    // rememberUpdatedState reads the current one while keeping the holder stable.
+    val currentOpen by rememberUpdatedState(onOpen)
+    val actions_ = remember {
+        // One pick-toggle, shared by taps and long presses while selection mode is on.
+        fun pick(b: Book) { picked = if (b.id in picked) picked - b.id else picked + b.id }
+        LibActions(
+            open = { b -> if (selecting) pick(b) else if (b.missing || b.broken) problem = b else currentOpen(b) },
+            longPress = { b -> if (selecting) pick(b) else actions = b },
+        )
+    }
 
     @Composable fun Header() = Column {
         KScreenHeader("Library", Modifier.padding(top = 16.dp), leading = { CairnMark(30) }) {
@@ -156,8 +207,8 @@ fun LibraryScreen(
         LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (shelf != null) item { KChip(shelf, true, onClearShelf) }
             item { KChip("All", status == null, { status = null }, count = books.size) }
-            // Every status the user can SET has a chip. WANT was settable in Edit details and impossible to
-            // filter for, and the `else -> "Finished"` arm labelled any new value as Finished.
+            // Every status that can be set has a chip, so any new value is filterable instead of folding
+            // into Finished.
             items(Status.entries.filter { it != Status.NONE }) { s ->
                 KChip(when (s) { Status.NONE -> "Not yet"; Status.WANT -> "Want"; Status.READING -> "Reading"; Status.FINISHED -> "Finished" }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
             }
@@ -177,8 +228,8 @@ fun LibraryScreen(
 
     Box(Modifier.fillMaxSize()) {
         if (books.isEmpty() && !store.isLoaded) {
-            // The first read of the library is still running. Show the header and nothing else: the "No books
-            // yet" empty state used to flash on every cold start before the grid appeared.
+            // The first library read is still running: show the header only, not the empty state, which
+            // would flash before the grid appears.
             Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = Dim.screenPad.dp)) {
                 KScreenHeader("Library", Modifier.padding(top = 16.dp), leading = { CairnMark(30) })
             }
@@ -196,18 +247,31 @@ fun LibraryScreen(
                 }
             }
         } else if (grid) {
-            LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, bottom = 24.dp),
+            LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Header() }
-                items(shown, key = { it.id }, contentType = { CT_GRID }) { b -> GridBookCell(b, store, actions_) }
+                items(shown, key = { it.id }, contentType = { CT_GRID }) { b -> GridBookCell(b, store, actions_, b.id in picked) }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyColumn(Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 item { Header() }
-                items(shown, key = { it.id }, contentType = { CT_LIST }) { b -> ListBookRow(b, store, actions_) }
+                items(shown, key = { it.id }, contentType = { CT_LIST }) { b -> ListBookRow(b, store, actions_, b.id in picked) }
+            }
+        }
+
+        // Pinned over the books so the action is always reachable while picking.
+        if (selecting) {
+            Row(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().background(K.surf).statusBarsPadding().padding(horizontal = Dim.screenPad.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("${picked.size} selected", style = KType.title.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                KButton("Add to collection", { bulkTo = true }, small = true, enabled = picked.isNotEmpty())
+                KButton("Cancel", { selecting = false; picked = emptySet() }, style = KButtonStyle.Secondary, small = true)
             }
         }
     }
+    BackHandler(selecting) { selecting = false; picked = emptySet() }
 
     problem?.let { b ->
         KSheet({ problem = null }, if (b.missing) "File missing" else "This book can't be opened") {
@@ -222,10 +286,21 @@ fun LibraryScreen(
     actions?.let { b ->
         KSheet({ actions = null }, b.title) {
             KAction("Edit details, collections and tags", Icons.Default.Edit, { editing = b; actions = null }, divider = false)
+            KAction("Select books to add to a collection", Icons.Default.LibraryAdd, { selecting = true; picked = setOf(b.id); actions = null })
             KAction(if (b.status == Status.FINISHED) "Mark as reading" else "Mark as finished", Icons.Default.CheckCircle,
                 { store.update(b.id) { it.copy(status = if (it.status == Status.FINISHED) Status.READING else Status.FINISHED) }; actions = null })
             KAction("Remove from library", Icons.Default.Delete, { store.remove(b.id); actions = null; toast.show("Removed. The file itself was not touched.") }, danger = true)
         }
+    }
+    if (bulkTo) KSheet({ bulkTo = false }, "Add to collection") {
+        Text("${picked.size} ${if (picked.size == 1) "book" else "books"}: tap a collection to put them in it.", style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))
+        CollectionChips(knownCols, emptySet()) { name ->
+            val n = picked.size
+            picked.forEach { id -> store.update(id) { b -> b.copy(collections = (b.collections + name).distinct()) } }
+            toast.show("Added $n ${if (n == 1) "book" else "books"} to $name")
+            bulkTo = false; selecting = false; picked = emptySet()
+        }
+        Spacer(Modifier.height(16.dp))
     }
     editing?.let { EditBookSheet(it, store) { editing = null } }
 }
@@ -244,21 +319,44 @@ private fun ContinueCard(b: Book, store: Store, onOpen: (Book) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
     var title by remember { mutableStateOf(b.title) }
     var author by remember { mutableStateOf(b.author) }
     var status by remember { mutableStateOf(b.status) }
-    var cols by remember { mutableStateOf(b.collections.joinToString(", ")) }
+    // Collections are picked from existing ones; a free-text field let a typo mint a near-identical shelf.
+    var cols by remember { mutableStateOf(b.collections.toSet()) }
+    var newCol by remember { mutableStateOf("") }
+    var addingCol by remember { mutableStateOf(false) }
+    // Tags stay free text: they are quick throwaway labels and a book can carry many.
     var tags by remember { mutableStateOf(b.tags.joinToString(", ")) }
     fun split(s: String) = s.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    fun addCol() {
+        val n = newCol.trim()
+        if (n.isEmpty()) return
+        store.saveSettings { s -> s.copy(shelves = (s.shelves + n).distinct()) }
+        cols = cols + n; newCol = ""; addingCol = false
+    }
     val opts = listOf(Status.NONE to "None", Status.WANT to "Want", Status.READING to "Reading", Status.FINISHED to "Finished")
+    val allBooks by store.books.collectAsStateWithLifecycle()
+    val settings by store.settings.collectAsStateWithLifecycle()
+    // Everything that exists: shelves made on the Collections tab plus any a book arrived carrying.
+    val known = remember(allBooks, settings.shelves, b.collections) { knownCollections(allBooks + b, settings.shelves) }
     KSheet(onDone, "Edit details") {
         KField(title, { title = it }, label = "Title"); KField(author, { author = it }, label = "Author")
         Text("Status", style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
         KSegmented(opts.map { it.second }, opts.indexOfFirst { it.first == status }, { status = opts[it].first })
-        KField(cols, { cols = it }, label = "Collections (comma separated)"); KField(tags, { tags = it }, label = "Tags (comma separated)")
+        Text("Collections", style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
+        CollectionChips(known, cols, "No collections yet. Make one here.") { name -> cols = if (name in cols) cols - name else cols + name }
+        if (addingCol) {
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { KField(newCol, { newCol = it }, placeholder = "New collection name") }
+                KButton("Add", { addCol() }, small = true, enabled = newCol.isNotBlank())
+            }
+        } else KButton("New collection", { addingCol = true }, Modifier.padding(top = 10.dp), style = KButtonStyle.Secondary, small = true)
+        KField(tags, { tags = it }, label = "Tags (comma separated)")
         Spacer(Modifier.height(16.dp))
-        KButton("Save", { store.update(b.id) { it.copy(title = title.ifBlank { b.title }, author = author, status = status, collections = split(cols), tags = split(tags)) }; onDone() })
+        KButton("Save", { store.update(b.id) { it.copy(title = title.ifBlank { b.title }, author = author, status = status, collections = cols.sortedBy { c -> c.lowercase() }, tags = split(tags)) }; onDone() })
     }
 }

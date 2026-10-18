@@ -114,18 +114,18 @@ class ReaderActivity : AppCompatActivity() {
     private var canScrollChapter = false
     private var loggedScroll = false
     private var positions: List<Locator> = emptyList()   // R-07: fine-grained seek targets
+    private var positionsPerHref: Map<String, Int> = emptyMap()   // how many of those belong to each chapter
     private var chapterTitles: Map<String, String> = emptyMap()   // href -> chapter title (for scrubbing)
     private var chapterWords by mutableIntStateOf(0)      // R-07: words in the current chapter (state: the time-left label reads it)
-    private var chapterHref: String? = null
-    private var chapterProgress by mutableFloatStateOf(0f)   // state: the slider and time-left label read it
+    private var chapterHref by mutableStateOf<String?>(null)   // state: the bookmark button reads it to know which chapter it is in
+    private var bookProgress by mutableFloatStateOf(0f)   // state: WHOLE-BOOK progression; the slider and time-left label read it
     private var searchJob: Job? = null
     private val wordSplit = Regex("\\s+")
     private val toast = ToastState()                     // short confirmations ("Bookmark added")
 
     private val exportNotes = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
-        // This callback runs on the MAIN thread: the write is disk IO and annotationsMarkdown() sorts the
-        // whole mark list and string-builds every quote, so both belong on IO.
+        // This callback runs on the main thread: annotationsMarkdown() and the write are disk IO, so both run on IO.
         if (u != null && b != null) lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 contentResolver.openOutputStream(u)?.use { it.write(b.annotationsMarkdown().toByteArray()) }
@@ -134,8 +134,8 @@ class ReaderActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Pass null: a restored fragment could not be rebuilt after process death (no factory yet);
-        // we reopen from the saved position (R-09) instead.
+        // Pass null: a restored fragment cannot be rebuilt after process death (no factory yet); the
+        // reader reopens from the saved position (R-09) instead.
         super.onCreate(null)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         bookId = intent.getStringExtra(EXTRA_ID) ?: return finish()
@@ -146,7 +146,7 @@ class ReaderActivity : AppCompatActivity() {
         root.addView(ComposeView(this).apply {
             setContent {
                 // collectAsState, not .value: a StateFlow read inside composition is not observed, so the
-                // reader's glass/ambient theme used to be frozen at whatever it was when the reader opened.
+                // glass and ambient settings would not update while the reader is open.
                 val s by app.store.settings.collectAsState()
                 KairnTheme(glass = s.glass, ambient = s.ambient) { Overlay() }
             }
@@ -158,9 +158,8 @@ class ReaderActivity : AppCompatActivity() {
             applyBook(book)
             lifecycleScope.launch { openBook(book) }
         } else lifecycleScope.launch {
-            // Either the record is really gone, or the first read of the library has not finished yet - a
-            // cold "Open with" can arrive before it does. Waiting is the difference between that working and
-            // the reader closing itself on the user.
+            // The record may be missing, or the first library read may not have finished yet - a cold
+            // "Open with" can arrive before it does. Wait for the read, then retry rather than closing.
             app.store.awaitLoaded()
             val late = app.store.get(bookId) ?: return@launch finish()
             applyBook(late)
@@ -178,29 +177,22 @@ class ReaderActivity : AppCompatActivity() {
 
     private suspend fun openBook(book: Book) {
         val t0 = SystemClock.elapsedRealtime()
-        // Parsing the EPUB (zip directory + OPF + manifest) is blocking work and this coroutine runs on
-        // the MAIN dispatcher. Nothing hops for us: Readium's AssetRetriever and PublicationOpener
-        // reference no dispatcher at all (checked in the 3.0.0 jars). positions() below is already
-        // wrapped for exactly this reason.
+        // Parsing the EPUB is blocking and this coroutine runs on the main dispatcher: Readium's
+        // AssetRetriever and PublicationOpener reference no dispatcher, so this must hop to IO (as
+        // positions() below does).
         val p = withContext(Dispatchers.IO) { app.readium.open(android.net.Uri.parse(book.uri)) }
         if (p == null) {                                    // N-04: message, never a crash
             app.store.put(book.copy(broken = true)); error = "bad"; loading = false; return
         }
         pub = p
         rtl = p.metadata.readingProgression == ReadingProgression.RTL
-        // Load the whole-book position list for the seek slider. Readium scans the publication to build
-        // it and that is the slow part of opening a book (measured: 484-1172ms on a 5384-locator book).
-        // On IO, never the main thread - lifecycleScope.launch() without a dispatcher runs on the UI
-        // thread, so this used to stall the UI on every open while positions were computed.
-        //
-        // A disk cache was tried and REMOVED: serialising the locators produced ~1MB of JSON and a warm
-        // load (1007-1067ms) was still slower than recomputing (484-1172ms), even with the text excerpts
-        // stripped. The cost is the 5384 href/locations entries themselves, and a slimmer index is not
-        // worth the code. Computing off the main thread is the actual fix.
+        // Load the whole-book position list for the seek slider. positions() scans the whole
+        // publication and is the slow part of opening: it belongs on IO, never the main thread.
         val tp = SystemClock.elapsedRealtime()
         lifecycleScope.launch {
             val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
             positions = computed
+            positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
             android.util.Log.i("KairnPerf", "positions n=${positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
         }
         // href -> chapter title, from the table of contents, so scrubbing can name the chapter.
@@ -219,7 +211,7 @@ class ReaderActivity : AppCompatActivity() {
 
         val factory = EpubNavigatorFactory(p)
         val highlightCallback = HighlightActionModeCallback(
-            K.highlightColors.map { name(it) to it.toArgb() },
+            K.highlightColors.map { (n, c) -> n to c.toArgb() },
             onCopy = { copySelection() },
         ) { c, done -> highlightSelection(c) { done() } }
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
@@ -243,20 +235,14 @@ class ReaderActivity : AppCompatActivity() {
         supportFragmentManager.commitNow { replace(container.id, EpubNavigatorFragment::class.java, Bundle(), "reader") }
         val n = supportFragmentManager.findFragmentByTag("reader") as EpubNavigatorFragment
         nav = n
-        // Do not drop the loading cover yet: the navigator opens at the saved position, and clearing
-        // this now would flash the top of the chapter before it settles. It clears on the first
-        // locator in the R-09 block below (req: open at the position, not the chapter start).
+        // Keep the loading cover until the first locator arrives: the navigator opens at the saved
+        // position, and clearing it now would flash the top of the chapter before it settles.
 
         n.addInputListener(object : InputListener {            // R-07: tap zones
             override fun onTap(event: TapEvent): Boolean {
-                // Scroll mode has no pages: a tap only shows/hides the bars, so you can
-                // scroll freely without tapping the edge skipping to the next chapter.
-                // Exception: a chapter too short to scroll has no bottom to reach, so the edge
-                // zones stay live there or it would be a dead end.
+                // Scroll mode has no pages: a tap only shows/hides the bars, unless the chapter is
+                // too short to scroll, in which case the edge zones stay live so it is not a dead end.
                 if (prefs.scroll) {
-                    // A chapter too short to scroll has no bottom to reach, so the edge zones stay
-                    // live there - otherwise it would be a dead end. canScrollChapter is set by the
-                    // scroll watcher from the chapter's real scroll height.
                     if (canScrollChapter) { toggleBars(); return true }
                     val w0 = container.width.toFloat(); val x0 = event.point.x
                     when {
@@ -277,24 +263,24 @@ class ReaderActivity : AppCompatActivity() {
         })
 
         // Readium's R2BasicWebView overrides onScrollChanged, so setOnScrollChangeListener never
-        // fires. WebView.getScrollY() is also always 0 (Chromium scrolls internally). The reliable
-        // way to read scroll position is window.scrollY via evaluateJavascript, which is what this
-        // watcher polls while scroll mode is on.
+        // fires, and WebView.getScrollY() is always 0 (Chromium scrolls internally). Read
+        // window.scrollY via evaluateJavascript, which is what this watcher polls in scroll mode.
         startScrollWatcher(n)
 
-        // Timing: how long the whole open took (parse + navigator + first position). adb logcat -s KairnPerf.
+        // Timing: how long the whole open took (parse + navigator + first position).
         android.util.Log.i("KairnPerf", "openBook ${SystemClock.elapsedRealtime() - t0}ms title='${book.title.take(32)}'")
 
-        // R-09: save position (debounced) and on pause. The UI state follows every locator immediately;
-        // only the disk write waits. collectLatest cancels the wait when the next locator arrives, so a
-        // write happens ~0.8 s after the reader settles, with a 5 s ceiling so a long continuous scroll
-        // still checkpoints. (Before: the collector slept 400 ms per locator, which delayed the UI state
-        // AND rewrote the whole book file every 400 ms while scrolling.)
+        // R-09: save the position, debounced. The UI state follows every locator immediately; only
+        // the disk write waits. collectLatest cancels the pending write when the next locator
+        // arrives: a write lands ~0.8 s after the reader settles, with a 5 s ceiling during
+        // continuous scroll.
         lifecycleScope.launch {
             var lastSaved = 0L
             n.currentLocator.collectLatest { loc ->
                 if (loading) loading = false            // first real position: reveal the page
-                chapterProgress = (loc.locations.progression ?: 0.0).toFloat()
+                // WHOLE-BOOK progression, not the chapter's: the slider and the time left are about
+                // the book (progression is the position inside the current resource, not the book).
+                loc.locations.totalProgression?.let { bookProgress = it.toFloat() }
                 chapterTitle = loc.title ?: ""
                 if (loc.href.toString() != chapterHref) { chapterHref = loc.href.toString(); chapterWords = 0; loadChapterWords(loc) }
                 if (jumpBack?.href == loc.href && jumpBack?.locations?.progression == loc.locations.progression) jumpBack = null
@@ -303,8 +289,8 @@ class ReaderActivity : AppCompatActivity() {
                 savePosition(loc)
             }
         }
-        // A-01: draw highlights when the MARKS change - not on every emission of the library flow, which
-        // also fires for each position save and used to rebuild all decorations every time.
+        // A-01: draw highlights when the marks change, not on every emission of the library flow,
+        // which also fires for each position save and would rebuild all decorations every time.
         lifecycleScope.launch {
             app.store.books.map { list -> list.firstOrNull { it.id == bookId }?.marks }.distinctUntilChanged().collect { m ->
                 m ?: return@collect
@@ -325,8 +311,7 @@ class ReaderActivity : AppCompatActivity() {
             it.copy(locator = loc.toJSON().toString(), progress = (loc.locations.totalProgression ?: 0.0).toFloat(),
                 lastRead = System.currentTimeMillis(), broken = false,
                 status = when {
-                    // Reaching the end IS finishing the book: nothing else ever set FINISHED, so a book read to
-                    // the last page stayed "Reading" for ever (and kept sitting in Continue reading).
+                    // Reaching the end IS finishing the book: nothing else sets FINISHED.
                     atEnd -> Status.FINISHED
                     it.status == Status.NONE || it.status == Status.WANT -> Status.READING
                     else -> it.status          // a manual status (and a re-read of a finished book) is left alone
@@ -339,32 +324,40 @@ class ReaderActivity : AppCompatActivity() {
 
     // ---- preferences (R-03, R-04, R-05, R-06, R-10) ----
 
+    /** Tablet = the OS threshold (600dp shortest side). Two-page columns are a wide-screen idea. */
+    private val isTablet: Boolean get() = resources.configuration.smallestScreenWidthDp >= 600
+
     private fun effectiveTheme(p: ReaderPrefs): ThemeId {
         if (!app.store.settings.value.autoSwitch) return p.theme
         val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
-        // Exhaustive on purpose: the `else` arms this replaced meant a fifth ThemeId compiled clean and was
-        // silently folded to LIGHT/DARK. Now it is a compile error. Behaviour is unchanged.
+        // Exhaustive on purpose: an `else` arm would silently fold a future ThemeId into
+        // LIGHT/DARK instead of failing to compile.
         return when (p.theme) {
             ThemeId.BLACK -> if (night) ThemeId.BLACK else ThemeId.LIGHT
             ThemeId.SEPIA -> if (night) ThemeId.DARK else ThemeId.SEPIA
             ThemeId.DARK, ThemeId.LIGHT -> if (night) ThemeId.DARK else ThemeId.LIGHT
+            ThemeId.GRAY -> ThemeId.GRAY   // a neutral mid tone reads the same day or night: auto-switch leaves it alone
         }
     }
 
     private fun toEpub(p: ReaderPrefs): EpubPreferences {
         val t = effectiveTheme(p)
+        // BLACK and GRAY are not Readium themes: they are explicit page/ink colours laid over a
+        // base theme (GRAY sits on the LIGHT base, because its ink is dark).
+        val bg = when (t) { ThemeId.BLACK -> RColor(0xFF000000.toInt()); ThemeId.GRAY -> RColor(0xFF9AA1A6.toInt()); else -> null }
+        val ink = when (t) { ThemeId.BLACK -> RColor(0xFFDADDE0.toInt()); ThemeId.GRAY -> RColor(0xFF16191C.toInt()); else -> null }
         return EpubPreferences(
-            theme = when (t) {   // exhaustive: BLACK is DARK plus the two explicit colours above
-                ThemeId.LIGHT -> Theme.LIGHT
+            theme = when (t) {   // exhaustive: BLACK/GRAY carry their colours explicitly below
+                ThemeId.LIGHT, ThemeId.GRAY -> Theme.LIGHT
                 ThemeId.SEPIA -> Theme.SEPIA
                 ThemeId.DARK, ThemeId.BLACK -> Theme.DARK
             },
-            backgroundColor = if (t == ThemeId.BLACK) RColor(0xFF000000.toInt()) else null,
-            textColor = if (t == ThemeId.BLACK) RColor(0xFFDADDE0.toInt()) else null,
+            backgroundColor = bg,
+            textColor = ink,
             fontSize = p.fontScale, lineHeight = p.lineHeight, paragraphSpacing = p.paragraphSpacing,
             pageMargins = p.margins, publisherStyles = false, scroll = p.scroll,
-            columnCount = if (p.twoPage) ColumnCount.TWO else null,   // R-14: reflowable two-page. `spread`
-            textAlign = if (p.justify) RTextAlign.JUSTIFY else RTextAlign.START, hyphens = p.hyphens,   // is fixed-layout only; setting it here crashes.
+            columnCount = if (p.twoPage && isTablet) ColumnCount.TWO else null,      // R-14: reflowable two-page, tablet only. `spread` is fixed-layout only; setting it here crashes.
+            textAlign = if (p.justify) RTextAlign.JUSTIFY else RTextAlign.START, hyphens = p.hyphens,
         )
     }
 
@@ -402,16 +395,15 @@ class ReaderActivity : AppCompatActivity() {
         if (app.store.settings.value.volumeKeys && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) true
         else super.onKeyUp(keyCode, event)
 
-    // Scroll-mode horizontal gestures. The pager also handles them, but its own threshold is far too
-    // eager: a small sideways wobble while scrolling would jump a chapter. So in scroll mode we detect
-    // a deliberate flick ourselves (long enough, and clearly horizontal) and drive the chapter change;
-    // anything short of that is swallowed so the pager never sees it either.
+    // Scroll-mode horizontal gestures. The pager's own threshold is too eager: a small sideways
+    // wobble while scrolling would jump a chapter. So in scroll mode we detect a deliberate flick
+    // ourselves and swallow anything shorter, so the pager never sees it either.
     private var downX = 0f; private var downY = 0f; private var armed = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (!prefs.scroll) return super.dispatchTouchEvent(ev)
 
-        // The threshold is the user's: Settings > Reading > "Swipe distance".
+        // The threshold comes from Settings > Reading > "Swipe distance".
         val flick = app.store.settings.value.swipeThreshold * resources.displayMetrics.density
         val swipeOn = app.store.settings.value.swipeChapters
         when (ev.actionMasked) {
@@ -433,11 +425,9 @@ class ReaderActivity : AppCompatActivity() {
             }
             MotionEvent.ACTION_CANCEL -> { armed = false }
         }
-        // Past the horizontal decision point? Keep swallowing, so a wobbling scroll never pages.
+        // Past the decision point: keep swallowing, so a wobbling scroll never pages.
         return if (armed) true else super.dispatchTouchEvent(ev)
     }
-
-    // ---- actions ----
 
     /** Copies the current selection (the menu's Copy item, since Readium lets us own the menu). */
     private fun copySelection() = lifecycleScope.launch {
@@ -469,17 +459,34 @@ class ReaderActivity : AppCompatActivity() {
     }
     private fun addMarkTo(m: Mark) = app.store.update(bookId) { it.copy(marks = it.marks + m) }
 
+    /** The chapter a mark's locator lives in, for the once-per-chapter bookmark rule. */
+    private fun markHref(m: Mark): String? =
+        runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.href?.toString()
+
+    /**
+     * One bookmark per chapter: the top-bar button bookmarks the chapter you are in, and pressing it
+     * again removes every bookmark in that chapter.
+     */
+    private fun toggleChapterBookmark(bookmarked: Boolean) {
+        val h = chapterHref ?: return
+        if (!bookmarked) {
+            addMark("bookmark", K.mint.toArgb())
+            toast.show("Bookmark added")
+        } else {
+            app.store.update(bookId) { b -> b.copy(marks = b.marks.filterNot { it.kind == "bookmark" && markHref(it) == h }) }
+            toast.show("Bookmark removed")
+        }
+    }
+
     private fun goTo(l: Locator) { nav?.go(l, true); sheet = Sheet.NONE }
 
     /**
-     * Scroll mode (R-03): watches the chapter WebView's own scroll position (via JavaScript, because
-     * Readium's WebView does not report scroll through the Android listener API) purely to know when
-     * the reader has reached the end of a scrollable chapter, so the "Next chapter" button can appear.
-     * It does NOT advance by itself.
+     * R-03: watches the chapter's scroll position (via JavaScript, because Readium's WebView does
+     * not report scroll through the Android listener API) to know when a scrollable chapter ends.
+     * It does not advance by itself.
      */
     private fun startScrollWatcher(n: EpubNavigatorFragment) = lifecycleScope.launch {
-        // Runs only while RESUMED (the old isResumed flag was never cleared in onPause, so it polled the
-        // paused WebView forever) and only while scroll mode is on (no 250 ms wake-ups otherwise).
+        // Runs only while RESUMED and only while scroll mode is on (no 250 ms wake-ups otherwise).
         repeatOnLifecycle(Lifecycle.State.RESUMED) {
             snapshotFlow { prefs.scroll }.collectLatest { scrolling ->
                 if (!scrolling) return@collectLatest
@@ -489,9 +496,8 @@ class ReaderActivity : AppCompatActivity() {
     }
 
     private suspend fun pollScroll(n: EpubNavigatorFragment) {
-        // The navigator exposes evaluateJavascript() itself, so this no longer walks the view tree looking
-        // for "a" WebView: with the pager keeping neighbouring chapters loaded, that walk could sample the
-        // wrong chapter, and it kept a strong WebView reference on the Activity for nothing.
+        // Use the navigator's evaluateJavascript(); a view-tree walk for a WebView could sample a
+        // neighbouring chapter the pager has preloaded, and holds a strong reference on the Activity.
         val raw = runCatching {
             n.evaluateJavascript(
                 "Math.round(window.scrollY)+','+Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0)+','+window.innerHeight",
@@ -502,8 +508,7 @@ class ReaderActivity : AppCompatActivity() {
         val y = p[0].toDoubleOrNull() ?: return
         val sh = p[1].toDoubleOrNull() ?: return
         val ih = p[2].toDoubleOrNull() ?: return
-        // Sets canScrollChapter, which the tap handler reads (a chapter too short to scroll has no bottom
-        // to reach, so its edge zones stay live). It never advances the chapter by itself.
+        // Sets canScrollChapter, which the tap handler reads. It never advances the chapter by itself.
         canScrollChapter = sh > ih + 4
         if (y > 0 && !loggedScroll) {
             loggedScroll = true
@@ -523,23 +528,27 @@ class ReaderActivity : AppCompatActivity() {
         if (words != null && chapterHref == href) chapterWords = words    // ignore a result for a chapter we already left
     }
 
-    /** R-07: "12 min left" in this chapter, at a 240 wpm reading speed. Empty when we can't know. */
-    private fun timeLeft(chapterProgression: Float): String {
+    /** R-07: "12 min left" for the WHOLE book, at a 240 wpm reading speed. Empty when we can't know. */
+    private fun timeLeft(bookProgression: Float): String {
         if (chapterWords <= 0) return ""
-        val remaining = (chapterWords * (1f - chapterProgression.coerceIn(0f, 1f))).toInt()
+        val chapterPositions = chapterHref?.let { positionsPerHref[it] } ?: 0
+        val totalPositions = positions.size
+        if (chapterPositions <= 0 || totalPositions <= 0) return ""
+        // Readium splits a chapter into positions of even character size, so words-per-position
+        // measured on the current chapter scales to the rest of the book. Remaining positions x
+        // that is the book's time left.
+        val wordsPerPosition = chapterWords.toFloat() / chapterPositions
+        val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * totalPositions * wordsPerPosition).toInt()
         val mins = remaining / 240
         return when {
+            remaining <= 0 -> ""
             mins <= 0 -> "under a min left"
-            else -> "$mins min left"
+            mins < 60 -> "$mins min left"
+            else -> "${mins / 60} h ${mins % 60} min left"
         }
     }
 
-    /** A-02: a friendly name for a highlight colour, used as the selection-menu label. */
-    private fun name(c: androidx.compose.ui.graphics.Color): String = when (c) {
-        K.amber -> "Amber"; K.mint -> "Mint"; K.rose -> "Rose"; else -> "Blue"
-    }
-
-    /** One search at a time: typing cancels the previous query (they used to pile up and land out of order). */
+    /** One search at a time: typing cancels the previous query so results cannot land out of order. */
     private fun onSearchQuery(q: String) {
         searchJob?.cancel()
         if (q.length < 3) { searchResults = emptyList(); return }
@@ -558,8 +567,6 @@ class ReaderActivity : AppCompatActivity() {
         }
     }
 
-    // ---- UI (round 4 reader chrome: bars take the reading theme's colours) ----
-
     @Composable
     private fun Overlay() {
         val ui = readerUi(effectiveTheme(prefs))
@@ -574,14 +581,26 @@ class ReaderActivity : AppCompatActivity() {
                     Row(Modifier.statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         KIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back to library", { finish() }, tint = ui.chromeText)
                         Text(bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, textAlign = ComposeTextAlign.Center, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        // Highlighting lives in the long-press selection menu, so the top bar stays clean.
-                        KIconButton(Icons.Default.BookmarkAdd, "Add bookmark", { addMark("bookmark", K.mint.toArgb()); toast.show("Bookmark added") }, tint = ui.chromeText)
+                        // Highlighting lives in the long-press selection menu; the top bar only carries
+                        // the bookmark toggle, whose icon and label flip when this chapter has one.
+                        val bookmarkHere = remember(marks, chapterHref) {
+                            val h = chapterHref
+                            h != null && marks.any { it.kind == "bookmark" && markHref(it) == h }
+                        }
+                        KIconButton(
+                            if (bookmarkHere) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
+                            if (bookmarkHere) "Remove this chapter's bookmark" else "Bookmark this chapter",
+                            { toggleChapterBookmark(bookmarkHere) },
+                            tint = ui.chromeText,
+                        )
                     }
                     HorizontalDivider(color = ui.line)
                 }
             }
 
             jumpBack?.let { j ->   // R-08: "Back to where you were"
+                // A short-lived offer: it clears itself after a delay, and any new jump re-arms it.
+                LaunchedEffect(j) { delay(6000); jumpBack = null }
                 Row(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
                     .clickable { goTo(j); jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text("Back to where you were", color = K.mintInk, fontWeight = FontWeight.ExtraBold)
@@ -603,13 +622,14 @@ class ReaderActivity : AppCompatActivity() {
                         val ro = pub?.readingOrder.orEmpty()
                         var drag by remember { mutableStateOf<Float?>(null) }
                         var expanded by remember { mutableStateOf(false) }
-                        // Preload the chapter under the slider while dragging, so releasing feels instant
-                        // (the target chapter is already loaded). Debounced so a fast scrub does not load
-                        // every chapter it passes over.
-                        var preloadJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+                        // Preload the chapter under the slider while dragging so releasing feels instant,
+                        // debounced so a fast scrub does not load every chapter it passes over.
+                        // A plain holder, not snapshot state: a Job in mutableStateOf would recompose
+                        // this scope on every scrub tick while dragging.
+                        val preloadJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
                         fun previewSeek(v: Float) {
-                            preloadJob?.cancel()
-                            preloadJob = lifecycleScope.launch {
+                            preloadJob[0]?.cancel()
+                            preloadJob[0] = lifecycleScope.launch {
                                 delay(220)
                                 val l = positions.getOrNull((v * (positions.size - 1)).toInt()) ?: return@launch
                                 nav?.go(l, animated = false)
@@ -625,9 +645,9 @@ class ReaderActivity : AppCompatActivity() {
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(preview ?: chapterTitle, color = if (preview != null) ui.accent else ui.muted, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                            Text(timeLeft(chapterProgress), color = ui.muted, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                            Text(timeLeft(bookProgress), color = ui.muted, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
                         }
-                        KSlider(drag ?: chapterProgress, { v -> drag = v; previewSeek(v) }, accent = ui.accent, trackColor = ui.line, onFinished = {   // R-07: seek by position
+                        KSlider(drag ?: bookProgress, { v -> drag = v; previewSeek(v) }, accent = ui.accent, trackColor = ui.line, onFinished = {   // R-07: seek by position
                             drag?.let { v ->
                                 val l = positions.getOrNull((v * (positions.size - 1)).toInt())
                                 if (l != null) goTo(l)
@@ -635,7 +655,6 @@ class ReaderActivity : AppCompatActivity() {
                             }
                             drag = null
                         })
-                        // (removed) the end-of-chapter "Next chapter" button
                         // The bar stays minimal; the tools live behind "Options".
                         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { expanded = !expanded }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = ui.chromeText, modifier = Modifier.size(20.dp))
@@ -662,7 +681,7 @@ class ReaderActivity : AppCompatActivity() {
             }
             if (sheet != Sheet.NONE) KSheet({ sheet = Sheet.NONE }, when (sheet) { Sheet.DISPLAY -> "Display"; Sheet.CONTENTS -> "Contents"; Sheet.SEARCH -> "Search in book"; else -> "Notes and highlights" }) {
                 when (sheet) {
-                    Sheet.DISPLAY -> DisplaySheet(prefs, ::updatePrefs)
+                    Sheet.DISPLAY -> DisplaySheet(prefs, ::updatePrefs, showColumns = isTablet)
                     Sheet.CONTENTS -> ContentsSheet(pub, ::goTo)
                     Sheet.SEARCH -> SearchSheet(searchResults, ::onSearchQuery, ::goTo)
                     Sheet.NOTES -> AnnotationsContent(bookTitle, marks,
