@@ -125,6 +125,8 @@ class ReaderActivity : AppCompatActivity() {
     private var searchJob: Job? = null
     private val wordSplit = Regex("\\s+")
     private val toast = ToastState()                     // short confirmations ("Bookmark added")
+    // Every write to this book's record goes through one place; see ReaderWriter.
+    private val writer by lazy { ReaderWriter(app.store, bookId) }
 
     private val exportNotes = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
@@ -185,7 +187,7 @@ class ReaderActivity : AppCompatActivity() {
         // positions() below does).
         val p = withContext(Dispatchers.IO) { app.readium.open(android.net.Uri.parse(book.uri)) }
         if (p == null) {                                    // N-04: message, never a crash
-            app.store.put(book.copy(broken = true)); error = "bad"; loading = false; return
+            writer.markBroken(); error = "bad"; loading = false; return
         }
         pub = p
         rtl = p.metadata.readingProgression == ReadingProgression.RTL
@@ -310,25 +312,13 @@ class ReaderActivity : AppCompatActivity() {
         applyWindow()
     }
 
-    /** Cheap on the caller's thread: Store updates memory and queues the disk write on its own thread. */
-    private fun savePosition(loc: Locator) {
-        val atEnd = (loc.locations.totalProgression ?: 0.0) >= 0.99     // the last position of the book
-        app.store.update(bookId) {
-            it.copy(locator = loc.toJSON().toString(), progress = (loc.locations.totalProgression ?: 0.0).toFloat(),
-                lastRead = System.currentTimeMillis(), broken = false,
-                status = when {
-                    // Reaching the end IS finishing the book: nothing else sets FINISHED.
-                    atEnd -> Status.FINISHED
-                    it.status == Status.NONE || it.status == Status.WANT -> Status.READING
-                    else -> it.status          // a manual status (and a re-read of a finished book) is left alone
-                })
-        }
-    }
+    /** Cheap on the caller's thread: the writer hands the record to the store, which queues the disk write. */
+    private fun savePosition(loc: Locator) = writer.savePosition(loc)
 
     override fun onPause() {
         super.onPause()
         // The prefs write is debounced: a close inside that window would drop the last change.
-        app.store.update(bookId) { it.copy(prefs = prefs) }
+        writer.savePrefs(prefs)
         nav?.currentLocator?.value?.let(::savePosition)
     }
     override fun onDestroy() { pub?.close(); super.onDestroy() }
@@ -384,7 +374,7 @@ class ReaderActivity : AppCompatActivity() {
         applyJob?.cancel()
         applyJob = lifecycleScope.launch {
             delay(120)
-            app.store.update(bookId) { it.copy(prefs = p) }     // R-10: per book
+            writer.savePrefs(p)     // R-10: per book
             applyPrefs()
         }
     }
@@ -479,7 +469,7 @@ class ReaderActivity : AppCompatActivity() {
             n.clearSelection()
         }
     }
-    private fun addMarkTo(m: Mark) = app.store.update(bookId) { it.copy(marks = it.marks + m) }
+    private fun addMarkTo(m: Mark) = writer.addMark(m)
 
     /**
      * A-02: "Note" on a selection. The selection has to be read while the ActionMode is still open
@@ -504,11 +494,9 @@ class ReaderActivity : AppCompatActivity() {
 
     /** Deleting an annotation is one tap, so it comes with a five-second Undo that puts it back. */
     private fun deleteMark(m: Mark) {
-        app.store.update(bookId) { b -> b.copy(marks = ReaderLogic.withoutMark(b.marks, m.id)) }
+        writer.deleteMark(m)
         val what = when (m.kind) { "note" -> "Note"; "bookmark" -> "Bookmark"; else -> "Highlight" }
-        toast.show("$what deleted", "Undo") {
-            app.store.update(bookId) { b -> if (b.marks.any { it.id == m.id }) b else b.copy(marks = b.marks + m) }
-        }
+        toast.show("$what deleted", "Undo") { writer.restoreMark(m) }
     }
 
     /** The chapter a mark's locator lives in, for the once-per-chapter bookmark rule. */
@@ -525,7 +513,7 @@ class ReaderActivity : AppCompatActivity() {
             addMark("bookmark", K.mint.toArgb())
             toast.show("Bookmark added")
         } else {
-            app.store.update(bookId) { b -> b.copy(marks = b.marks.filterNot { it.kind == "bookmark" && markHref(it) == h }) }
+            writer.removeBookmarksIn(h, ::markHref)
             toast.show("Bookmark removed")
         }
     }
