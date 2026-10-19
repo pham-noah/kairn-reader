@@ -55,7 +55,13 @@ the folder picker covers everything else.
 
 ## Install
 
-Android 8.0 or newer. Sideload the APK, or install from F-Droid once the submission is merged.
+**Not in the main F-Droid repository yet.** The submission was closed on project age: reviewers expect at
+least three months of active development, and the app was two days old when it was filed. The same merge
+request can be reopened once that history exists — around January 2027 — or earlier if the app can show
+proven users. A self-hosted F-Droid repository is the plan for the gap, so updates arrive through the F-Droid
+client before then.
+
+**Today**, build it from source; the recipe is below. Android 8.0 or newer.
 
 ## Building
 
