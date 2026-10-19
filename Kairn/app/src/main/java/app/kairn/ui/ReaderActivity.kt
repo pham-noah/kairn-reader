@@ -107,6 +107,7 @@ class ReaderActivity : AppCompatActivity() {
     private var footnote by mutableStateOf<String?>(null)
     private var jumpBack by mutableStateOf<Locator?>(null)
     private var noteDraft by mutableStateOf<NoteTarget?>(null)   // a selection waiting for a note body
+    private var noteEdit by mutableStateOf<Mark?>(null)  // an existing note being edited
     private var chapterTitle by mutableStateOf("")
     private var bookTitle by mutableStateOf("")
     private var marks by mutableStateOf<List<Mark>>(emptyList())
@@ -501,6 +502,15 @@ class ReaderActivity : AppCompatActivity() {
         toast.show("Note saved")
     }
 
+    /** Deleting an annotation is one tap, so it comes with a five-second Undo that puts it back. */
+    private fun deleteMark(m: Mark) {
+        app.store.update(bookId) { b -> b.copy(marks = ReaderLogic.withoutMark(b.marks, m.id)) }
+        val what = when (m.kind) { "note" -> "Note"; "bookmark" -> "Bookmark"; else -> "Highlight" }
+        toast.show("$what deleted", "Undo") {
+            app.store.update(bookId) { b -> if (b.marks.any { it.id == m.id }) b else b.copy(marks = b.marks + m) }
+        }
+    }
+
     /** The chapter a mark's locator lives in, for the once-per-chapter bookmark rule. */
     private fun markHref(m: Mark): String? =
         runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.href?.toString()
@@ -523,16 +533,17 @@ class ReaderActivity : AppCompatActivity() {
     private fun goTo(l: Locator) { nav?.go(l, true); sheet = Sheet.NONE }
 
     /**
-     * R-03: watches the chapter's scroll position (via JavaScript, because Readium's WebView does
-     * not report scroll through the Android listener API) to know when a scrollable chapter ends.
-     * It does not advance by itself.
+     * R-03: whether the current chapter is longer than the screen, which decides what a tap in scroll mode
+     * does. That only changes when the chapter, the scroll mode or the layout settings change, so this is
+     * evaluated once per change rather than polled four times a second - the JS call is not free, and
+     * polling it while nothing moves was the battery cost of leaving the reader open.
      */
     private fun startScrollWatcher(n: EpubNavigatorFragment) = lifecycleScope.launch {
-        // Runs only while RESUMED and only while scroll mode is on (no 250 ms wake-ups otherwise).
         repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            snapshotFlow { prefs.scroll }.collectLatest { scrolling ->
-                if (!scrolling) return@collectLatest
-                while (true) { delay(250); pollScroll(n) }
+            snapshotFlow { Triple(prefs.scroll, chapterHref, prefs) }.collectLatest { (scrolling, href, _) ->
+                if (!scrolling || href == null) return@collectLatest
+                delay(600)          // let the new chapter lay out before measuring it
+                pollScroll(n)
             }
         }
     }
@@ -570,30 +581,35 @@ class ReaderActivity : AppCompatActivity() {
         if (words != null && chapterHref == href) chapterWords = words    // ignore a result for a chapter we already left
     }
 
-    /** R-07: "12 min left" for the WHOLE book, at a 240 wpm reading speed. Empty when we can't know. */
-    private fun timeLeft(bookProgression: Float): String {
-        if (chapterWords <= 0) return ""
-        val chapterPositions = chapterHref?.let { positionsPerHref[it] } ?: 0
-        val totalPositions = positions.size
-        if (chapterPositions <= 0 || totalPositions <= 0) return ""
-        // Readium splits a chapter into positions of even character size, so words-per-position
-        // measured on the current chapter scales to the rest of the book. Remaining positions x
-        // that is the book's time left.
-        val wordsPerPosition = chapterWords.toFloat() / chapterPositions
-        val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * totalPositions * wordsPerPosition).toInt()
-        val mins = remaining / 240
-        return when {
-            remaining <= 0 -> ""
-            mins <= 0 -> "under a min left"
-            mins < 60 -> "$mins min left"
-            else -> "${mins / 60} h ${mins % 60} min left"
-        }
-    }
+    /** R-07: "12 min left" for the WHOLE book. The arithmetic lives in ReaderLogic, where it is tested. */
+    private fun timeLeft(bookProgression: Float): String = ReaderLogic.timeLeftLabel(
+        chapterWords,
+        chapterHref?.let { positionsPerHref[it] } ?: 0,
+        positions.size,
+        bookProgression,
+    )
+
+    private var searchCap by mutableIntStateOf(100)   // how many hits the current search asked for
+    private var lastQuery = ""
 
     /** One search at a time: typing cancels the previous query so results cannot land out of order. */
     private fun onSearchQuery(q: String) {
+        lastQuery = q
+        searchCap = 100
+        runSearch(q)
+    }
+
+    /** "Show more": the sheet asks for another page, so the search runs again with a wider cap. */
+    private fun searchMore() {
+        if (lastQuery.length < 3) return
+        searchCap += 100
+        runSearch(lastQuery)
+    }
+
+    private fun runSearch(q: String) {
         searchJob?.cancel()
         if (q.length < 3) { searchResults = emptyList(); searchBusy = false; return }
+        val cap = searchCap
         searchJob = lifecycleScope.launch {
             delay(250)
             val p = pub ?: return@launch
@@ -605,7 +621,7 @@ class ReaderActivity : AppCompatActivity() {
                     val iter = p.search(q) ?: return@runCatching emptyList<Locator>()
                     try {
                         val out = mutableListOf<Locator>()
-                        while (out.size < 100) {
+                        while (out.size < cap) {
                             val page = iter.next().getOrNull() ?: break    // Try<LocatorCollection, SearchError>
                             out += page.locators
                         }
@@ -636,7 +652,7 @@ class ReaderActivity : AppCompatActivity() {
                         // the bookmark toggle, whose icon and label flip when this chapter has one.
                         val bookmarkHere = remember(marks, chapterHref) {
                             val h = chapterHref
-                            h != null && marks.any { it.kind == "bookmark" && markHref(it) == h }
+                            h != null && ReaderLogic.chapterHasBookmark(marks, h, ::markHref)
                         }
                         KIconButton(
                             if (bookmarkHere) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
@@ -731,6 +747,15 @@ class ReaderActivity : AppCompatActivity() {
                 }
             }
             noteDraft?.let { t -> KSheet({ noteDraft = null }, "Add a note") { NoteEditor(t) { text -> saveNote(t, text) } } }
+            noteEdit?.let { m ->
+                KSheet({ noteEdit = null }, "Edit note") {
+                    NoteEditor(NoteTarget(m.quote, m.locator), initial = m.note) { text ->
+                        app.store.update(bookId) { b -> b.copy(marks = b.marks.map { if (it.id == m.id) it.copy(note = text) else it }) }
+                        noteEdit = null
+                        toast.show("Note updated")
+                    }
+                }
+            }
             // Leaving the search sheet drops its hits: reopening it with an empty field must not show
             // the previous query's results.
             LaunchedEffect(sheet) { if (sheet != Sheet.SEARCH) { searchResults = emptyList(); searchBusy = false } }
@@ -738,10 +763,11 @@ class ReaderActivity : AppCompatActivity() {
                 when (sheet) {
                     Sheet.DISPLAY -> DisplaySheet(prefs, ::updatePrefs, showColumns = isTablet)
                     Sheet.CONTENTS -> ContentsSheet(pub, ::goTo)
-                    Sheet.SEARCH -> SearchSheet(searchResults, searchBusy, ::onSearchQuery, ::goTo)
+                    Sheet.SEARCH -> SearchSheet(searchResults, searchBusy, searchResults.size >= searchCap && lastQuery.length >= 3, ::onSearchQuery, ::searchMore, ::goTo)
                     Sheet.NOTES -> AnnotationsContent(bookTitle, marks,
                         onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(::goTo) },
-                        onDelete = { m -> app.store.update(bookId) { b -> b.copy(marks = b.marks.filterNot { it.id == m.id }) } },
+                        onDelete = { m -> deleteMark(m) },
+                        onEditNote = { m -> noteEdit = m },
                         onExport = { exportNotes.launch("${bookTitle.take(40)}-notes.md") })   // A-03
                     Sheet.NONE -> {}
                 }

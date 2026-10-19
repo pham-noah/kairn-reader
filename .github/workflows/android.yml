@@ -1,0 +1,41 @@
+name: Android
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Unit tests, lint and a debug build
+        working-directory: Kairn
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
+
+      - name: Keep the reports when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            Kairn/app/build/reports/**
+            Kairn/app/build/test-results/**

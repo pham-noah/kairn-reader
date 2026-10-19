@@ -60,19 +60,45 @@ fun KAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector
     }
 }
 
-/** Toast: a light pill near the bottom that fades after a moment. */
+/** Toast: a light pill near the bottom that fades after a moment. It can carry one action (Undo). */
 class ToastState {
     var message by mutableStateOf<String?>(null); private set
+    private var actionLabel by mutableStateOf<String?>(null)
+    private var pending: (() -> Unit)? = null
     private var stamp by mutableIntStateOf(0)
-    fun show(text: String) { message = text; stamp++ }
+
+    fun show(text: String, actionLabel: String? = null, action: (() -> Unit)? = null) {
+        message = text
+        this.actionLabel = if (action != null) actionLabel else null
+        pending = action
+        stamp++
+    }
+
+    private fun fire() {
+        val a = pending
+        pending = null; actionLabel = null; message = null
+        a?.invoke()
+    }
+
     @Composable fun Host(modifier: Modifier = Modifier) {
         // Keep the last text: when `message` goes null the exit animation still draws the pill.
         val last = remember { arrayOf("") }
         message?.let { last[0] = it }
-        LaunchedEffect(stamp) { if (message != null) { delay(2600); message = null } }
+        LaunchedEffect(stamp) { if (message != null) { delay(if (actionLabel != null) 5000 else 2600); message = null } }
         AnimatedVisibility(message != null, modifier, enter = fadeIn() + slideInVertically { it / 2 }, exit = fadeOut() + slideOutVertically { it / 2 }) {
-            Text(last[0], color = K.toastInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                modifier = Modifier.padding(horizontal = 20.dp).shadow(10.dp, RoundedCornerShape(16.dp)).background(K.toastBg, RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 13.dp).fillMaxWidth())
+            Row(
+                Modifier.padding(horizontal = 20.dp).shadow(10.dp, RoundedCornerShape(16.dp)).background(K.toastBg, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 13.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(last[0], color = K.toastInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                actionLabel?.let { label ->
+                    Text(
+                        label, color = Color(0xFF0B6E55), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
+                        modifier = Modifier.padding(start = 14.dp).clickable(role = androidx.compose.ui.semantics.Role.Button) { fire() }.padding(vertical = 6.dp, horizontal = 4.dp),
+                    )
+                }
+            }
         }
     }
 }

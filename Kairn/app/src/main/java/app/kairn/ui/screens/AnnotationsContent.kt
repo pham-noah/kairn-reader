@@ -29,7 +29,7 @@ private val markKinds = listOf(null to "All", "highlight" to "Highlights", "note
 
 /** A-02 / A-03: the Notes and highlights list, used inside the reader's Notes sheet. */
 @Composable
-fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Unit, onDelete: (Mark) -> Unit, onExport: () -> Unit) {
+fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Unit, onDelete: (Mark) -> Unit, onEditNote: (Mark) -> Unit, onExport: () -> Unit) {
     var filter by remember { mutableIntStateOf(0) }
     var confirm by remember { mutableStateOf<Mark?>(null) }
     val kind = markKinds[filter].first
@@ -53,7 +53,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
                         Box(Modifier.width(4.dp).fillMaxHeight().heightIn(min = 36.dp).clip(RoundedCornerShape(4.dp)).background(if (m.kind == "bookmark") K.mint else Color(m.color)))
                         Column(Modifier.weight(1f)) {
                             Text(if (m.kind == "bookmark") "Bookmark" + if (m.quote.isNotBlank()) ", ${m.quote}" else "" else m.quote, style = KType.quote, maxLines = 5)
-                            if (m.note.isNotBlank()) Text(m.note, style = KType.small, modifier = Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(K.bg).padding(horizontal = 12.dp, vertical = 9.dp))
+                            if (m.note.isNotBlank()) Text(m.note, style = KType.small, modifier = Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(K.bg).clickable { onEditNote(m) }.padding(horizontal = 12.dp, vertical = 9.dp))
                             Text(DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(m.created)), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp))
                         }
                         KIconButton(Icons.Default.Delete, "Delete", { if (m.note.isNotBlank()) confirm = m else onDelete(m) }, tint = K.dim)

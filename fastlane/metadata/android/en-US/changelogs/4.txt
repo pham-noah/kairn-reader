@@ -1,0 +1,13 @@
+Bundled fonts: Manrope for the interface and Literata for book text, so the app no longer
+borrows the system families.
+
+Notes can be edited after you write them, and every delete now offers Undo for five seconds.
+
+Search shows a page of results at a time, with Show more results at the end instead of
+stopping silently at 100.
+
+The reader no longer measures the chapter four times a second while you read: it checks
+once per chapter, which is the only time the answer changes.
+
+First release with a GitHub Actions workflow that runs the unit tests, lint and a build on
+every push.

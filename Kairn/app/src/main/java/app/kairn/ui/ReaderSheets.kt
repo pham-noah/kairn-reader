@@ -53,8 +53,8 @@ internal class NoteTarget(val quote: String, val locator: String)
 
 /** The note editor. The quoted text stays visible so it is obvious what the note belongs to. */
 @Composable
-internal fun NoteEditor(target: NoteTarget, onSave: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+internal fun NoteEditor(target: NoteTarget, initial: String = "", onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
     if (target.quote.isNotBlank()) {
         Text(
             "“" + target.quote.take(180) + if (target.quote.length > 180) "…" else "",
@@ -122,7 +122,7 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
 }
 
 @Composable
-internal fun SearchSheet(results: List<Locator>, busy: Boolean, onQuery: (String) -> Unit, onGo: (Locator) -> Unit) {
+internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean, onQuery: (String) -> Unit, onMore: () -> Unit, onGo: (Locator) -> Unit) {
     var q by remember { mutableStateOf("") }
     Column(Modifier.heightIn(max = 560.dp).imePadding()) {
         KField(q, { q = it; onQuery(it) }, placeholder = "Search in this book", leading = Icons.Default.Search)
@@ -144,6 +144,11 @@ internal fun SearchSheet(results: List<Locator>, busy: Boolean, onQuery: (String
                 withStyle(SpanStyle(background = K.mint.copy(alpha = .3f))) { append(l.text.highlight.orEmpty()) }
                 append(l.text.after?.take(40).orEmpty() + "…")
             }, color = K.txt, modifier = Modifier.fillMaxWidth().clickable { onGo(l) }.padding(vertical = 12.dp, horizontal = 4.dp))
-        } }
+        }
+        // A cap without a way past it reads as "that is all there is".
+        if (canMore && !busy) item {
+            KButton("Show more results", onMore, style = KButtonStyle.Secondary, small = true, modifier = Modifier.padding(top = 10.dp))
+        }
+        }
     }
 }

@@ -116,8 +116,8 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     if (licences) KSheet({ licences = false }, "Open-source licences") {
         KCard {
             KRow("Readium Kotlin Toolkit", subtitle = "BSD-3-Clause. Renders your books.")
-            KRow("Manrope and Literata", subtitle = "SIL Open Font License. Not bundled yet.", divider = true)
+            KRow("Manrope and Literata", subtitle = "SIL Open Font License. Bundled with the app.", divider = true)
         }
-        Text("Dictionary and font licences are still being checked.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+        Text("Dictionary licences are still being checked.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
     }
 }

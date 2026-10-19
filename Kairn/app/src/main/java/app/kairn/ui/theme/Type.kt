@@ -1,20 +1,43 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package app.kairn.ui.theme
 
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import app.kairn.R
 
 /**
- * Interface = Manrope, book text = Literata. N-01 requires fonts to be bundled, never loaded from the
- * web, and OQ-5 leaves their licences unchecked, so this uses the system families for now. To switch:
- * add manrope.ttf / literata.ttf under res/font and replace the two values below with
- * FontFamily(Font(R.font.manrope, ...)); nothing else in the app needs to change.
+ * Interface = Manrope, book text = Literata. Both are bundled (N-01: fonts never load from the web) under
+ * the SIL Open Font License; the licence texts are in licences/ at the repository root.
+ *
+ * Both are variable fonts, so every weight is the same resource with a different value on the wght axis -
+ * which is why the entries below repeat one id. FontVariation needs API 26, the app's minimum.
  */
 object KFonts {
-    val sans: FontFamily = FontFamily.SansSerif
-    val serif: FontFamily = FontFamily.Serif
+    private fun weight(id: Int, w: Int): Font = Font(
+        resId = id,
+        weight = FontWeight(w),
+        variationSettings = FontVariation.Settings(FontVariation.weight(w)),
+    )
+
+    val sans: FontFamily = FontFamily(
+        weight(R.font.manrope, 400),
+        weight(R.font.manrope, 500),
+        weight(R.font.manrope, 600),
+        weight(R.font.manrope, 700),
+        weight(R.font.manrope, 800),
+    )
+
+    val serif: FontFamily = FontFamily(
+        weight(R.font.literata, 400),
+        weight(R.font.literata, 600),
+        weight(R.font.literata, 700),
+    )
 }
 
 object KType {

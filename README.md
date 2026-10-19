@@ -25,7 +25,7 @@ folder, or let it find the EPUBs already on your device.
 **Reading** — page or scroll; per-book text size, spacing, margins, justification, hyphenation; five page
 tones from light to true black; a warm-light filter; brightness for this app alone or from the system;
 full screen; a whole-book progress slider with time left; two-page columns on a tablet; contents; footnote
-pop-ups with a "back to where you were" chip.
+pop-ups with a "back to where you were" chip. Set in Manrope and Literata, both bundled.
 
 **Library** — grid or list; search, sort, reading status; collections and tags you can rename or delete;
 add several books to one collection at once; watched folders; a scan for the EPUBs already on your device;
@@ -34,10 +34,10 @@ generated covers for books without one; "Open with" from any file manager.
 **Sending books** — a page you open from a computer on the same Wi-Fi. Drop EPUBs on it and they land in
 the library. The address carries a four-digit code.
 
-**Notes and highlights** — four highlight colours, notes typed on a selection, one bookmark per chapter,
-a per-book list to jump from, Markdown export.
+**Notes and highlights** — four highlight colours, notes typed on a selection and edited later, one
+bookmark per chapter, a per-book list to jump from, an undo on every delete, Markdown export.
 
-**Search** — full text, in the book you are reading.
+**Search** — full text, in the book you are reading, a page of results at a time.
 
 **Backup** — one zip, optionally with the book files inside; merge or replace on restore.
 

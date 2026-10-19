@@ -24,8 +24,8 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Covers + metadata from the file; edit title/author | L-06 |
 | Grid/list, search, sort | L-07 |
 | Collections, tags, status; rename and delete a collection or a tag | L-08 |
-| Highlights (4 colours), notes, bookmarks, per-book list with jump, Markdown export | A-01, A-02, A-03 |
-| Full-text search in book | S-01 |
+| Highlights (4 colours), notes (written and edited), bookmarks, per-book list with jump, undo on delete, Markdown export | A-01, A-02, A-03 |
+| Full-text search in book, a page of results at a time | S-01 |
 | Backup (one zip, optional book files) and restore (safety copy, merge or replace) | DS-01, DEC-12 |
 | Bad/missing file messages, never a crash | N-04 |
 | Wi-Fi transfer: a LAN-only upload page, running only while its screen is open | L-04 |
@@ -51,6 +51,9 @@ unchecked) · release signing (DEC-14) · all v1.x items (X-01…X-20).
 - **The transfer server is code-gated by default.** The address the phone shows carries a random four-digit
   segment (`/4821`); every other path answers 404. Turning "Require a code" off opens it to anything on the
   network that can reach the port. Either way it exists only while the Add books screen is open.
+- **Fonts are bundled** (Manrope for the interface, Literata for book text), both variable, both OFL;
+  licence texts in `licences/`. Readium still renders the book with its own font unless the app passes
+  one, so book text uses Literata only where the reader draws it (the quote style and covers).
 - **`ensureThumbs`** in `Library` backfills thumbnails for books that lack one. Import already writes a
   thumbnail, and a cell falls back to the full cover, so this is an optimisation for older records, not a
   correctness path.
