@@ -23,16 +23,17 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Two-page column mode (per book, tablet width only) | R-14 |
 | Covers + metadata from the file; edit title/author | L-06 |
 | Grid/list, search, sort | L-07 |
-| Collections, tags, status | L-08 |
-| Highlights (4 colours), bookmarks, per-book list with jump, Markdown export | A-01, A-02, A-03 |
+| Collections, tags, status; rename and delete a collection or a tag | L-08 |
+| Highlights (4 colours), notes, bookmarks, per-book list with jump, Markdown export | A-01, A-02, A-03 |
 | Full-text search in book | S-01 |
 | Backup (one zip, optional book files) and restore (safety copy, merge or replace) | DS-01, DEC-12 |
 | Bad/missing file messages, never a crash | N-04 |
-| No INTERNET permission, no analytics, all data in open JSON | N-01..N-02, DEC-3, DEC-8 |
+| Wi-Fi transfer: a LAN-only upload page, running only while its screen is open | L-04 |
+| No analytics, no crash reporting, all data in open JSON | N-01..N-02, DEC-8 |
 
 ## Not built yet
 
-R-04 custom font import · R-12 RTL/vertical verification · R-13 image zoom · L-04 Wi-Fi transfer ·
+R-04 custom font import · R-12 RTL/vertical verification · R-13 image zoom ·
 dictionary pop-up (DEC-13) · N-08 contrast audit · bundled Manrope/Literata/Libron fonts (OQ-5: licences
 unchecked) · release signing (DEC-14) · all v1.x items (X-01…X-20).
 
@@ -41,13 +42,15 @@ unchecked) · release signing (DEC-14) · all v1.x items (X-01…X-20).
 - **N-05 ("strings in resources") is not actually done.** There are ~65 user-visible string literals in
   Kotlin, and 15 of the 16 entries in `strings.xml` are unused. Nothing is translated; every string lives
   in code.
-- **Notes are read-only.** A `Mark` carries a `note` field and the annotations screen renders it and
-  exports it, but nothing in the app ever writes one — there is no way to type a note yet. Highlights and
-  bookmarks are fully working; notes are UI waiting for an input.
-- **The merged manifest carries `ACCESS_NETWORK_STATE`.** It is pulled in by `media3-exoplayer`, which
-  Readium's navigator depends on for audio playback. There is still no `INTERNET` permission, so the app
-  cannot make network calls — but a reviewer will see that permission and it is worth knowing why it is
-  there.
+- **Notes are written from the selection menu.** Select text, tap Note, type. A note is a `Mark` with
+  `kind = "note"`, so it lists, jumps, deletes (with a confirm) and exports like a highlight.
+- **The manifest carries `INTERNET`** (L-04). A listening socket needs it. No network request is made at
+  any point unless the user starts Wi-Fi transfer, and even then the app only listens — the browser on the
+  computer is the client. The server is bound only while the Add books screen is open. `ACCESS_NETWORK_STATE`
+  is separate and comes from `media3-exoplayer`, pulled in by Readium's navigator.
+- **The transfer server is code-gated by default.** The address the phone shows carries a random four-digit
+  segment (`/4821`); every other path answers 404. Turning "Require a code" off opens it to anything on the
+  network that can reach the port. Either way it exists only while the Add books screen is open.
 - **`ensureThumbs`** in `Library` backfills thumbnails for books that lack one. Import already writes a
   thumbnail, and a cell falls back to the full cover, so this is an optimisation for older records, not a
   correctness path.

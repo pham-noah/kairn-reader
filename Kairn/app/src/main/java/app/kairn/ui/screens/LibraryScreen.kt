@@ -150,6 +150,7 @@ fun LibraryScreen(
     var problem by remember { mutableStateOf<Book?>(null) }
     var actions by remember { mutableStateOf<Book?>(null) }
     var editing by remember { mutableStateOf<Book?>(null) }
+    var quickAdd by remember { mutableStateOf<Book?>(null) }   // "add this book to a collection" chips
     // Selection mode: tick several books, then put them all into one collection.
     var selecting by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -247,14 +248,18 @@ fun LibraryScreen(
                 }
             }
         } else if (grid) {
-            LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
+            // Adaptive, not fixed: three columns on a phone, more on a tablet, and the cell never gets
+            // narrower than a readable width when the font scale grows.
+            LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Header() }
+                if (shown.isEmpty() && filtering) item(span = { GridItemSpan(maxLineSpan) }) { NoMatches { query = ""; status = null; onClearShelf() } }
                 items(shown, key = { it.id }, contentType = { CT_GRID }) { b -> GridBookCell(b, store, actions_, b.id in picked) }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 item { Header() }
+                if (shown.isEmpty() && filtering) item { NoMatches { query = ""; status = null; onClearShelf() } }
                 items(shown, key = { it.id }, contentType = { CT_LIST }) { b -> ListBookRow(b, store, actions_, b.id in picked) }
             }
         }
@@ -286,7 +291,9 @@ fun LibraryScreen(
     actions?.let { b ->
         KSheet({ actions = null }, b.title) {
             KAction("Edit details, collections and tags", Icons.Default.Edit, { editing = b; actions = null }, divider = false)
-            KAction("Select books to add to a collection", Icons.Default.LibraryAdd, { selecting = true; picked = setOf(b.id); actions = null })
+            // One tap to file a book, instead of entering selection mode for a single book.
+            KAction("Add to a collection", Icons.Default.BookmarkAdd, { quickAdd = b; actions = null })
+            KAction("Select several books", Icons.Default.LibraryAdd, { selecting = true; picked = setOf(b.id); actions = null })
             KAction(if (b.status == Status.FINISHED) "Mark as reading" else "Mark as finished", Icons.Default.CheckCircle,
                 { store.update(b.id) { it.copy(status = if (it.status == Status.FINISHED) Status.READING else Status.FINISHED) }; actions = null })
             KAction("Remove from library", Icons.Default.Delete, { store.remove(b.id); actions = null; toast.show("Removed. The file itself was not touched.") }, danger = true)
@@ -302,8 +309,31 @@ fun LibraryScreen(
         }
         Spacer(Modifier.height(16.dp))
     }
+    quickAdd?.let { opened ->
+        // Read the live record, so the chips follow the store instead of the copy the sheet opened with.
+        val cur = books.firstOrNull { it.id == opened.id } ?: opened
+        KSheet({ quickAdd = null }, "Collections") {
+            Text("Tap a collection to put this book in it, or tap again to take it out.", style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))
+            CollectionChips(knownCols, cur.collections.toSet()) { name ->
+                store.update(cur.id) { b -> b.copy(collections = if (name in b.collections) b.collections - name else (b.collections + name).distinct()) }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
     editing?.let { EditBookSheet(it, store) { editing = null } }
 }
+
+/** Shown when a filter or a search leaves nothing: a blank grid with "0 books" above it reads as a bug. */
+@Composable
+private fun NoMatches(onClear: () -> Unit) =
+    Column(
+        Modifier.fillMaxWidth().padding(top = 40.dp, start = 12.dp, end = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("No books match", style = KType.h2)
+        Text("Try another search, or clear the filters to see the whole library.", style = KType.body.copy(color = K.mut))
+        KButton("Clear filters", onClear, style = KButtonStyle.Secondary, small = true)
+    }
 
 @Composable
 private fun ContinueCard(b: Book, store: Store, onOpen: (Book) -> Unit) {
@@ -343,6 +373,8 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
     val settings by store.settings.collectAsStateWithLifecycle()
     // Everything that exists: shelves made on the Collections tab plus any a book arrived carrying.
     val known = remember(allBooks, settings.shelves, b.collections) { knownCollections(allBooks + b, settings.shelves) }
+    // Existing tags as chips: typing them out again is how near-duplicates get made.
+    val knownTags = remember(allBooks, settings.extraTags) { (settings.extraTags + allBooks.flatMap { it.tags }).distinct().sortedBy { it.lowercase() } }
     KSheet(onDone, "Edit details") {
         KField(title, { title = it }, label = "Title"); KField(author, { author = it }, label = "Author")
         Text("Status", style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
@@ -355,6 +387,13 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
                 KButton("Add", { addCol() }, small = true, enabled = newCol.isNotBlank())
             }
         } else KButton("New collection", { addingCol = true }, Modifier.padding(top = 10.dp), style = KButtonStyle.Secondary, small = true)
+        if (knownTags.isNotEmpty()) {
+            Text("Existing tags", style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
+            CollectionChips(knownTags, split(tags).toSet(), "No tags yet.") { t ->
+                val cur = split(tags).toSet()
+                tags = (if (t in cur) cur - t else cur + t).joinToString(", ")
+            }
+        }
         KField(tags, { tags = it }, label = "Tags (comma separated)")
         Spacer(Modifier.height(16.dp))
         KButton("Save", { store.update(b.id) { it.copy(title = title.ifBlank { b.title }, author = author, status = status, collections = cols.sortedBy { c -> c.lowercase() }, tags = split(tags)) }; onDone() })

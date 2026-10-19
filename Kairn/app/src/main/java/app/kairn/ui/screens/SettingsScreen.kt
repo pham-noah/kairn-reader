@@ -32,7 +32,8 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     var licences by remember { mutableStateOf(false) }
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
     // skipping. Constant lists live here.
-    val themes = remember { listOf(ThemeId.DARK, ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.BLACK) }
+    // Same five themes the reader offers, in the same page-tone order, so a default can be any of them.
+    val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
     val surfaceOpts = remember { listOf("Glass", "Solid") }
     // Derived, not a parallel literal list: names and values feed one KSegmented, so they cannot drift
@@ -62,7 +63,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 Text("Switch automatically", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
                 KSegmented(autoOpts, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
-                Text(if (s.autoSwitch) "Follows your phone's light and dark setting." else "Kairn starts in Dark.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+                Text(if (s.autoSwitch) "Follows your phone's light and dark setting." else "Kairn opens in the theme you pick above.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
             }
         }
         KGroup("Reading") {

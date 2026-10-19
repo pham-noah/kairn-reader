@@ -106,10 +106,12 @@ class ReaderActivity : AppCompatActivity() {
     private var loading by mutableStateOf(true)
     private var footnote by mutableStateOf<String?>(null)
     private var jumpBack by mutableStateOf<Locator?>(null)
+    private var noteDraft by mutableStateOf<NoteTarget?>(null)   // a selection waiting for a note body
     private var chapterTitle by mutableStateOf("")
     private var bookTitle by mutableStateOf("")
     private var marks by mutableStateOf<List<Mark>>(emptyList())
     private var searchResults by mutableStateOf<List<Locator>>(emptyList())
+    private var searchBusy by mutableStateOf(false)   // a search is running off the UI thread
     private var rtl = false
     private var canScrollChapter = false
     private var loggedScroll = false
@@ -213,7 +215,10 @@ class ReaderActivity : AppCompatActivity() {
         val highlightCallback = HighlightActionModeCallback(
             K.highlightColors.map { (n, c) -> n to c.toArgb() },
             onCopy = { copySelection() },
-        ) { c, done -> highlightSelection(c) { done() } }
+            // All named: a trailing lambda now binds to onNote, which is the last parameter.
+            onHighlight = { c, done -> highlightSelection(c) { done() } },
+            onNote = { done -> startNote(done) },
+        )
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
             initialPreferences = toEpub(prefs),
@@ -319,7 +324,12 @@ class ReaderActivity : AppCompatActivity() {
         }
     }
 
-    override fun onPause() { super.onPause(); nav?.currentLocator?.value?.let(::savePosition) }
+    override fun onPause() {
+        super.onPause()
+        // The prefs write is debounced: a close inside that window would drop the last change.
+        app.store.update(bookId) { it.copy(prefs = prefs) }
+        nav?.currentLocator?.value?.let(::savePosition)
+    }
     override fun onDestroy() { pub?.close(); super.onDestroy() }
 
     // ---- preferences (R-03, R-04, R-05, R-06, R-10) ----
@@ -361,10 +371,21 @@ class ReaderActivity : AppCompatActivity() {
         )
     }
 
+    private var applyJob: Job? = null
+
+    /**
+     * A slider emits on every drag tick, so submitting preferences (a Readium pref apply) and writing the
+     * book JSON at that rate makes the Display sheet heavy. The UI state follows immediately; the engine
+     * and the disk get the settled value ~120 ms later. onPause flushes it, so a quick close cannot lose it.
+     */
     private fun updatePrefs(p: ReaderPrefs) {
         prefs = p
-        app.store.update(bookId) { it.copy(prefs = p) }     // R-10: per book
-        applyPrefs()
+        applyJob?.cancel()
+        applyJob = lifecycleScope.launch {
+            delay(120)
+            app.store.update(bookId) { it.copy(prefs = p) }     // R-10: per book
+            applyPrefs()
+        }
     }
 
     private fun applyPrefs() {
@@ -459,6 +480,27 @@ class ReaderActivity : AppCompatActivity() {
     }
     private fun addMarkTo(m: Mark) = app.store.update(bookId) { it.copy(marks = it.marks + m) }
 
+    /**
+     * A-02: "Note" on a selection. The selection has to be read while the ActionMode is still open
+     * (finishing it clears the WebView selection), so [done] closes the menu after the quote is captured.
+     */
+    private fun startNote(done: () -> Unit) = lifecycleScope.launch {
+        val n = nav
+        val sel = n?.let { runCatching { it.currentSelection() }.getOrNull() }
+        if (sel != null) {
+            noteDraft = NoteTarget(sel.locator.text.highlight.orEmpty(), sel.locator.toJSON().toString())
+            n.clearSelection()
+        }
+        done()      // the menu must close even when the selection could not be read
+    }
+
+    /** Notes carry no colour of their own; mint is the colour the Notes list draws for them. */
+    private fun saveNote(target: NoteTarget, text: String) {
+        addMarkTo(Mark(UUID.randomUUID().toString(), "note", K.mint.toArgb(), target.quote, text, target.locator, System.currentTimeMillis()))
+        noteDraft = null
+        toast.show("Note saved")
+    }
+
     /** The chapter a mark's locator lives in, for the once-per-chapter bookmark rule. */
     private fun markHref(m: Mark): String? =
         runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.href?.toString()
@@ -551,19 +593,28 @@ class ReaderActivity : AppCompatActivity() {
     /** One search at a time: typing cancels the previous query so results cannot land out of order. */
     private fun onSearchQuery(q: String) {
         searchJob?.cancel()
-        if (q.length < 3) { searchResults = emptyList(); return }
+        if (q.length < 3) { searchResults = emptyList(); searchBusy = false; return }
         searchJob = lifecycleScope.launch {
             delay(250)
             val p = pub ?: return@launch
-            val iter = p.search(q) ?: return@launch         // SearchIterator (experimental API)
-            try {
-                val out = mutableListOf<Locator>()
-                while (out.size < 100) {
-                    val page = iter.next().getOrNull() ?: break    // Try<LocatorCollection, SearchError>
-                    out += page.locators
-                }
-                searchResults = out
-            } finally { iter.close() }
+            searchBusy = true
+            // Publication.search() walks the whole book: on the main dispatcher it freezes the reader
+            // for as long as the scan takes. The iterator is used and closed off the UI thread.
+            val hits = withContext(Dispatchers.IO) {
+                runCatching {
+                    val iter = p.search(q) ?: return@runCatching emptyList<Locator>()
+                    try {
+                        val out = mutableListOf<Locator>()
+                        while (out.size < 100) {
+                            val page = iter.next().getOrNull() ?: break    // Try<LocatorCollection, SearchError>
+                            out += page.locators
+                        }
+                        out
+                    } finally { iter.close() }
+                }.getOrDefault(emptyList())
+            }
+            searchBusy = false
+            searchResults = hits
         }
     }
 
@@ -679,11 +730,15 @@ class ReaderActivity : AppCompatActivity() {
                     KButton("Remove from library", { app.store.remove(bookId); finish() }, style = KButtonStyle.Danger)
                 }
             }
+            noteDraft?.let { t -> KSheet({ noteDraft = null }, "Add a note") { NoteEditor(t) { text -> saveNote(t, text) } } }
+            // Leaving the search sheet drops its hits: reopening it with an empty field must not show
+            // the previous query's results.
+            LaunchedEffect(sheet) { if (sheet != Sheet.SEARCH) { searchResults = emptyList(); searchBusy = false } }
             if (sheet != Sheet.NONE) KSheet({ sheet = Sheet.NONE }, when (sheet) { Sheet.DISPLAY -> "Display"; Sheet.CONTENTS -> "Contents"; Sheet.SEARCH -> "Search in book"; else -> "Notes and highlights" }) {
                 when (sheet) {
                     Sheet.DISPLAY -> DisplaySheet(prefs, ::updatePrefs, showColumns = isTablet)
                     Sheet.CONTENTS -> ContentsSheet(pub, ::goTo)
-                    Sheet.SEARCH -> SearchSheet(searchResults, ::onSearchQuery, ::goTo)
+                    Sheet.SEARCH -> SearchSheet(searchResults, searchBusy, ::onSearchQuery, ::goTo)
                     Sheet.NOTES -> AnnotationsContent(bookTitle, marks,
                         onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(::goTo) },
                         onDelete = { m -> app.store.update(bookId) { b -> b.copy(marks = b.marks.filterNot { it.id == m.id }) } },

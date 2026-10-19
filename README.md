@@ -1,84 +1,82 @@
 # Kairn
 
-**An EPUB reader for Android that keeps your library, your notes and your reading to yourself.**
+**An offline EPUB reader for Android. Your library, your notes and your place stay on your phone.**
 
-Kairn reads the books you already own. No account, no subscription, no library to migrate into: point it
-at a folder, or let it find the EPUBs already on your phone, and read.
+Kairn reads the books you already own. No account, no subscription, nothing to import into: point it at a
+folder, or let it find the EPUBs already on your device.
 
-## Why Kairn
+![Library](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/01-library.png)
+![Reading](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/02-reader.png)
 
-**It cannot phone home.** Kairn is built without the INTERNET permission, so the app has no way to reach
-the network at all — there is no tracking to switch off, no crash reporting to opt out of and no update
-check to block. You can verify that in the app's own permissions instead of taking it on trust.
+## What sets it apart
 
-**Your data is files, not a database.** Reading positions, highlights, bookmarks, status and reading
-settings are plain JSON in the app's own folder, one file per book. Nothing needs Kairn to open them.
-
-**A moved book keeps its history.** Books are identified by their contents, not their location, so
-renaming or moving a file keeps every highlight and your place in it.
-
-**A backup that cannot leave you worse off.** Everything fits in one zip. Restore checks the archive
-before it touches anything, takes a safety copy first, and says plainly what happened.
-
-**Made for a phone screen.** Tap zones that follow the book's reading direction, optional volume-key page
-turns, per-book text sizing, and a time-left estimate taken from the chapter's real word count.
+- **Nothing phones home.** Nothing touches the network unless you start the Wi-Fi transfer, and even then
+  Kairn only listens — the browser on your computer makes the request. No analytics, no crash reporting,
+  no update check.
+- **Your data is files, not a database.** Positions, highlights, notes and settings are plain JSON in the
+  app's folder, one file per book. Any text editor opens them.
+- **A moved book keeps its history.** Books are identified by their contents, so renaming or moving a file
+  keeps every highlight and your place in it.
+- **A restore cannot leave you worse off.** One zip; the archive is validated, a safety copy is taken, and
+  the app says plainly what happened.
 
 ## Features
 
-**Reading** — page or scroll mode; per-book text size, line and paragraph spacing, margins, justification
-and hyphenation; light, sepia, grey, dark and true-black themes; a warm-light filter; brightness that affects
-this app only and never your system setting; full screen and keep-screen-on; a whole-book progress slider
-with a time-left estimate for the whole book; two-page columns on a tablet only; table of contents;
-footnotes in a pop-up, with a "back to where you were" chip.
+**Reading** — page or scroll; per-book text size, spacing, margins, justification, hyphenation; five page
+tones from light to true black; a warm-light filter; brightness for this app alone or from the system;
+full screen; a whole-book progress slider with time left; two-page columns on a tablet; contents; footnote
+pop-ups with a "back to where you were" chip.
 
-**Library** — grid or list; search, sort, collections, tags and reading status; tick several books and
-drop them into one collection at once; watched folders;
-automatic detection of the EPUBs already on your device; covers read from the book file, with generated
-covers for books that have none; "Open with" from any file manager.
+**Library** — grid or list; search, sort, reading status; collections and tags you can rename or delete;
+add several books to one collection at once; watched folders; a scan for the EPUBs already on your device;
+generated covers for books without one; "Open with" from any file manager.
 
-**Annotations** — highlights in four colours and bookmarks, listed per book and exported as Markdown.
+**Sending books** — a page you open from a computer on the same Wi-Fi. Drop EPUBs on it and they land in
+the library. The address carries a four-digit code.
 
-**Search** — full text, inside the book you are reading.
+**Notes and highlights** — four highlight colours, notes typed on a selection, one bookmark per chapter,
+a per-book list to jump from, Markdown export.
 
-**Backup** — one zip, optionally including the book files themselves; merge or replace on restore, with a
-safety copy every time.
+**Search** — full text, in the book you are reading.
+
+**Backup** — one zip, optionally with the book files inside; merge or replace on restore.
 
 ## Privacy
 
-No INTERNET permission, therefore no analytics, no crash reporting, no ads and no accounts. Nothing leaves
-the device unless you export it yourself.
+Nothing touches the network unless you start the Wi-Fi transfer, and even then Kairn only listens: your
+computer's browser makes the request, and the server is bound only while that screen is open and needs the
+code it shows. There is no analytics, no crash reporting, no ads, no account and no update check — the app
+opens no outgoing connection at any point.
+
+Kairn requests one network permission for that server, because a socket needs it even to listen.
+
+`MANAGE_EXTERNAL_STORAGE` is used to find EPUBs already on the device. The app is fully usable without it —
+the folder picker covers everything else.
 
 ## Install
 
-Sideload the APK for now — an F-Droid release is being prepared and the listing metadata is already in the
-repository. Requires Android 8.0 or newer.
-
-## What is coming
-
-- Writing a note on a highlight
-- Dictionary lookup for a selected word
-- A choice of reading fonts, and importing your own
-- Double-tap to zoom an image inside a book
-- Sending books from a computer's browser over your own Wi-Fi
-- Right-to-left and vertical text
-- Tablet and landscape layouts
-- Syncing a library between devices — the one-file-per-book format is designed for it
+Android 8.0 or newer. Sideload the APK, or install from F-Droid once the submission is merged.
 
 ## Building
 
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
-    ./gradlew :app:assembleDebug        # gradlew.bat on Windows
+    ./gradlew :app:assembleDebug
     ./gradlew :app:testDebugUnitTest
-    ./gradlew :app:assembleRelease      # unsigned; a store signs its own
+    ./gradlew :app:assembleRelease        # unsigned; a store signs its own
 
-The smaller details — the reader library's API traps, the performance work, and what each spec item maps
-to — are in [SPEC_STATUS.md](SPEC_STATUS.md).
+[SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0 API traps, the performance
+work, and which spec item maps to what.
+
+## Roadmap
+
+Dictionary lookup · bundled reading fonts · image zoom · right-to-left and vertical text · tablet layouts ·
+library sync between devices.
 
 ## Credits
 
-Built on the [Readium Kotlin Toolkit](https://github.com/readium/kotlin-toolkit) (BSD-3-Clause) and
-AndroidX (Apache-2.0). No proprietary dependencies and no Play Services.
+[Readium Kotlin Toolkit](https://github.com/readium/kotlin-toolkit) (BSD-3-Clause) and AndroidX
+(Apache-2.0). No proprietary dependencies, no Play Services.
 
 ## Licence
 

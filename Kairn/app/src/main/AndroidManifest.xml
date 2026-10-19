@@ -2,8 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- N-01 / DEC-3: no INTERNET permission at all. Wi-Fi transfer (L-04) will need
-         INTERNET + ACCESS_WIFI_STATE for a LAN-only server; add them in that change. -->
+    <!-- L-04 Wi-Fi transfer is the ONLY reason this is here, and it is a listening server, not a client:
+         a socket needs the permission either way, but the app never opens an outbound connection. The
+         server runs only while its screen is open (see WifiTransfer / AddBooksScreen). -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- L-01 auto-detection: on Android 11+ MediaStore hides EPUBs unless the app can see "all files".
          The user grants this from Settings; the app works fine without it (watched folders only). -->

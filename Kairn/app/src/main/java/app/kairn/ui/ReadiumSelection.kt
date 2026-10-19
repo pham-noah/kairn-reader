@@ -24,6 +24,7 @@ class HighlightActionModeCallback(
     private val colors: List<Pair<String, Int>>,          // (label, ARGB)
     private val onCopy: () -> Unit,
     private val onHighlight: (color: Int, done: () -> Unit) -> Unit,
+    private val onNote: (done: () -> Unit) -> Unit,
 ) : BaseActionModeCallback() {
 
     private val byItemId = HashMap<Int, Int>()            // menu item id -> ARGB
@@ -48,6 +49,9 @@ class HighlightActionModeCallback(
     @SuppressLint("AlwaysShowAction")
     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
         menu.add(Menu.NONE, COPY_ID, 0, "Copy").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        // A note is the other thing worth doing to a selection, so it sits with Copy rather than in an
+        // overflow menu the reader would have to find.
+        menu.add(Menu.NONE, NOTE_ID, 1, "Note").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         colors.forEachIndexed { i, (label, argb) ->
             val id = Menu.FIRST + 100 + i
             byItemId[id] = argb
@@ -70,10 +74,14 @@ class HighlightActionModeCallback(
         if (item.itemId == COPY_ID) {                        // copy, then close the menu
             onCopy(); mode.finish(); return true
         }
+        if (item.itemId == NOTE_ID) {                        // open the editor, then close the menu
+            onNote { mode.finish() }; return true
+        }
         val argb = byItemId[item.itemId] ?: return false
         onHighlight(argb) { mode.finish() }
         return true
     }
 
-    private companion object { const val COPY_ID = 0x4B410001 }   // arbitrary, unique to this menu
+    private companion object { const val COPY_ID = 0x4B410001; const val NOTE_ID = 0x4B410002 }
+
 }

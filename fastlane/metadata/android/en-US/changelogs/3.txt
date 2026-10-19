@@ -1,0 +1,17 @@
+Send books from a computer over your own Wi-Fi: open the Add books screen, start the
+transfer and type the address it shows into a browser. A four-digit code in the address
+keeps everyone else on the network out, and the transfer stops when you leave the screen.
+
+Notes: select text in a book and tap Note. Notes list, jump, export and delete like
+highlights.
+
+Collections and tags can be renamed and deleted, "Add to a collection" files one book in a
+single tap, and the edit sheet offers your existing tags as chips.
+
+Reader and library fixes:
+- full-text search runs off the UI thread, so a search no longer freezes the page
+- brightness has a way back to following the system
+- the settings theme picker offers the same five themes as the reader
+- a filter that matches nothing now says so, with a Clear filters action
+- the library grid adapts to wider screens instead of a fixed three columns
+- switches respond anywhere in their row, not just on the 32dp track

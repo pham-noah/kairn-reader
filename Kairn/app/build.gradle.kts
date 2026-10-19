@@ -12,8 +12,8 @@ android {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
     buildTypes {
         release {

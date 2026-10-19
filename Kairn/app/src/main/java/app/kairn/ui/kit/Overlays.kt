@@ -38,7 +38,7 @@ fun KSheet(onDismiss: () -> Unit, title: String? = null, content: @Composable Co
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         dragHandle = { Box(Modifier.padding(top = 10.dp, bottom = 14.dp).size(40.dp, 4.dp).background(if (glass) Color(0x52FFFFFF) else K.grab, RoundedCornerShape(4.dp))) },
     ) {
-        Column(Modifier.padding(horizontal = Dim.screenPad.dp).padding(bottom = 22.dp).navigationBarsPadding()) {
+        Column(Modifier.padding(horizontal = Dim.screenPad.dp).padding(bottom = 22.dp).navigationBarsPadding().imePadding()) {
             if (title != null) Text(title, style = KType.h2, modifier = Modifier.padding(bottom = 12.dp))
             content()
         }

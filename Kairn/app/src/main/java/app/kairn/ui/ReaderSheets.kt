@@ -48,6 +48,26 @@ private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, Th
 private val pageModes = listOf("Pages", "Scroll")
 private val columnModes = listOf("One page", "Two pages")
 
+/** What a selection turned into when "Note" was tapped: the quoted text and its Locator JSON. */
+internal class NoteTarget(val quote: String, val locator: String)
+
+/** The note editor. The quoted text stays visible so it is obvious what the note belongs to. */
+@Composable
+internal fun NoteEditor(target: NoteTarget, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    if (target.quote.isNotBlank()) {
+        Text(
+            "“" + target.quote.take(180) + if (target.quote.length > 180) "…" else "",
+            style = KType.quote.copy(color = K.mut),
+            maxLines = 4,
+            modifier = Modifier.padding(start = 4.dp, bottom = 14.dp),
+        )
+    }
+    KField(text, { text = it }, label = "Your note", singleLine = false, minLines = 3)
+    Spacer(Modifier.height(16.dp))
+    KButton("Save note", { onSave(text.trim()) }, enabled = text.isNotBlank())
+}
+
 @Composable
 internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -69,6 +89,11 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     KControl("Margins", "%.1f".format(prefs.margins)) { KSlider(prefs.margins.toFloat(), { onChange(prefs.copy(margins = it.toDouble())) }, 0.5f..2.5f) }
     KControl("Warm light", "${(prefs.warmth * 100).toInt()}%") { KSlider(prefs.warmth, { onChange(prefs.copy(warmth = it)) }, accent = K.amber) }
     KControl("Brightness, this app only", if (prefs.brightness < 0) "System" else "${(prefs.brightness * 100).toInt()}%") { KSlider(if (prefs.brightness < 0) 0.5f else prefs.brightness, { onChange(prefs.copy(brightness = it.coerceAtLeast(0.05f))) }, 0.05f..1f) }
+    // The slider can only set an explicit level, so without this a book could never go back to following
+    // the system brightness once the slider had been touched.
+    if (prefs.brightness >= 0f) {
+        KButton("Follow the system brightness", { onChange(prefs.copy(brightness = -1f)) }, style = KButtonStyle.Ghost, small = true)
+    }
     Spacer(Modifier.height(8.dp))
     KCard {
         KRow("Justify text") { KSwitch(prefs.justify, { onChange(prefs.copy(justify = it)) }) }
@@ -97,12 +122,21 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
 }
 
 @Composable
-internal fun SearchSheet(results: List<Locator>, onQuery: (String) -> Unit, onGo: (Locator) -> Unit) {
+internal fun SearchSheet(results: List<Locator>, busy: Boolean, onQuery: (String) -> Unit, onGo: (Locator) -> Unit) {
     var q by remember { mutableStateOf("") }
     Column(Modifier.heightIn(max = 560.dp).imePadding()) {
         KField(q, { q = it; onQuery(it) }, placeholder = "Search in this book", leading = Icons.Default.Search)
         Spacer(Modifier.height(8.dp))
-        if (q.length >= 3 && results.isEmpty()) Text("No matches yet.", style = KType.small, modifier = Modifier.padding(start = 4.dp))
+        // Three states, in order: working, nothing found, a result count. "No matches" over a running
+        // search reads as a failed search.
+        val note = when {
+            busy -> "Searching…"
+            q.length < 3 -> "Type at least three letters."
+            results.isEmpty() -> "No matches."
+            results.size == 1 -> "1 match"
+            else -> "${results.size} matches"
+        }
+        Text(note, style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         LazyColumn { items(results.size) { i ->
             val l = results[i]
             Text(buildAnnotatedString {

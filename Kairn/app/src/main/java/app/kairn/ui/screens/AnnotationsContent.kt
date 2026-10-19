@@ -42,7 +42,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
         LazyRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(markKinds.size) { i -> KChip(markKinds[i].second, filter == i, { filter = i }, count = counts[i]) }
         }
-        if (shown.isEmpty()) Text("Select text and choose a highlight colour, or tap the bookmark icon.", style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
+        if (shown.isEmpty()) Text("Select text and pick a colour to highlight it, tap Note to write a note, or tap the bookmark icon.", style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
         else KCard(Modifier.weight(1f, fill = false)) {
             LazyColumn {
                 items(shown.size, key = { shown[it].id }) { i ->

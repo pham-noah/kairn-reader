@@ -81,13 +81,14 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
 fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val track = animateColorAsState(if (checked) K.mint else if (glass) Color(0x29FFFFFF) else K.switchOff, label = "track")
     val thumbX = animateDpAsState(if (checked) 24.dp else 4.dp, label = "thumb")
-    // The 52x32 track is the LOOK; the tappable box around it is the target. It must stay at the 48dp
-    // minimum touch target.
-    Box(modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+    // The 52x32 track is the LOOK; the tap target is the box around it, which must be the 48dp
+    // minimum. The toggleable goes on the OUTER box, or the target is only the 32dp-tall track.
     Box(
-        Modifier.size(52.dp, 32.dp).clip(CircleShape).background(track.value)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),   // announces on/off to TalkBack
-    
+        modifier.heightIn(min = 48.dp).toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
+        contentAlignment = Alignment.Center,
+    ) {
+    Box(
+        Modifier.size(52.dp, 32.dp).clip(CircleShape).background(track.value),
     ) {
         // No Modifier.shadow on the thumb: it allocates a RenderNode, and there is one per switch. The
         // LAMBDA offset overload is also required - reading thumbX.value in composition recomposes the

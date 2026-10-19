@@ -79,7 +79,13 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                         Overlay.Onboarding -> OnboardingScreen(app.store) { goAdd ->
                             app.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
                         }
-                        Overlay.Add -> AddBooksScreen(app.store, { overlay = null }, launchPickFolder, launchPickBook)
+                        Overlay.Add -> AddBooksScreen(app.store, { overlay = null }, launchPickFolder, launchPickBook,
+                            onImportFile = { file, name ->
+                                scope.launch {
+                                    val b = app.library.addBook(Uri.fromFile(file), null, name.removeSuffix(".epub"))
+                                    toast.show(if (b.broken) "Could not read $name" else "Added ${b.title}")
+                                }
+                            })
                         Overlay.Backup -> BackupScreen(backupUi, app.store, { overlay = null },
                             onBackupNow = {
                                 val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
