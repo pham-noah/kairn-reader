@@ -12,11 +12,9 @@ import androidx.compose.ui.unit.sp
 import app.kairn.R
 
 /**
- * Interface = Manrope, book text = Literata. Both are bundled (N-01: fonts never load from the web) under
- * the SIL Open Font License; the licence texts are in licences/ at the repository root.
- *
- * Both are variable fonts, so every weight is the same resource with a different value on the wght axis -
- * which is why the entries below repeat one id. FontVariation needs API 26, the app's minimum.
+ * Interface = Manrope, book text = Literata.
+ * Both are bundled (N-01: fonts never load from the web) under the SIL Open Font License; the licence texts are in licences/ at the repository root.
+ * FontVariation needs API 26, the app's minimum.
  */
 object KFonts {
     private fun weight(id: Int, w: Int): Font = Font(

@@ -1,5 +1,6 @@
 package app.kairn.ui.kit
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -16,20 +17,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.R
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
 
-enum class Tab(val label: String, val icon: ImageVector) {
-    Library("Library", Icons.Default.AutoStories),
-    Collections("Collections", Icons.Default.CollectionsBookmark),
-    Settings("Settings", Icons.Default.Settings),
+/** Tabs carry a string RESOURCE, not a literal: the nav bar is the first thing a translation loses. */
+enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
+    Library(R.string.tab_library, Icons.Default.AutoStories),
+    Collections(R.string.tab_collections, Icons.Default.CollectionsBookmark),
+    Settings(R.string.tab_settings, Icons.Default.Settings),
 }
 
 /** Bottom nav: three tabs, mint pill behind the selected icon. */
@@ -53,7 +57,7 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
                         }
                         // Nav label contrast on the glass panel: K.mut is 6.56:1. Nothing smaller or dimmer
                         // goes on the primary navigation.
-                        Text(t.label, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = if (on) K.mint else K.mut)
+                        Text(stringResource(t.label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (on) K.mint else K.mut)
                     }
                 }
             }

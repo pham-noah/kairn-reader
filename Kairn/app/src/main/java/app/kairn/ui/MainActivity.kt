@@ -38,8 +38,6 @@ class MainActivity : AppCompatActivity() {
     private var thumbsBackfilled = false
 
     // L-01: at boot nothing should compete with the first frames: wait for the library read, let the
-    // grid settle, then run the automatic scan. The thumbnail backfill is one-shot per process, after
-    // the scan.
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch {

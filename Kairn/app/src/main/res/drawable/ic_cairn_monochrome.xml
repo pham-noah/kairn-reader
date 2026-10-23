@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome layer for Android 13+ themed icons. The launcher tints this alpha mask with the user's
+  wallpaper colours, so it must be ONE flat fill - no gradients, no per-stone colours.
+
+  Same stones, same rotations and pivots as ic_cairn.xml (and kairn-mark.svg); only the fill differs.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+
+    <group android:scaleX="0.9" android:scaleY="0.9" android:translateX="10.8" android:translateY="5.4">
+
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M19.5,85 L76.5,85 A1.5,1.5 0 0 1 78,86.5 A1.5,1.5 0 0 1 76.5,88 L19.5,88 A1.5,1.5 0 0 1 18,86.5 A1.5,1.5 0 0 1 19.5,85 Z" />
+
+        <group android:rotation="-2" android:pivotX="48" android:pivotY="72">
+            <path android:fillColor="#FFFFFF"
+                android:pathData="M24,62 L72,62 A10,10 0 0 1 82,72 A10,10 0 0 1 72,82 L24,82 A10,10 0 0 1 14,72 A10,10 0 0 1 24,62 Z" />
+        </group>
+
+        <group android:rotation="3" android:pivotX="49" android:pivotY="50">
+            <path android:fillColor="#FFFFFF"
+                android:pathData="M35.5,40 L62.5,40 A9.5,9.5 0 0 1 72,49.5 A9.5,9.5 0 0 1 62.5,59 L35.5,59 A9.5,9.5 0 0 1 26,49.5 A9.5,9.5 0 0 1 35.5,40 Z" />
+        </group>
+
+        <group android:rotation="-5" android:pivotX="51" android:pivotY="28">
+            <path android:fillColor="#FFFFFF"
+                android:pathData="M46.5,20 L55.5,20 A8.5,8.5 0 0 1 64,28.5 A8.5,8.5 0 0 1 55.5,37 L46.5,37 A8.5,8.5 0 0 1 38,28.5 A8.5,8.5 0 0 1 46.5,20 Z" />
+        </group>
+
+    </group>
+</vector>

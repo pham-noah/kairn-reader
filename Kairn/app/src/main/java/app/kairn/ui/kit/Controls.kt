@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.data.ThemeId
+import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -53,7 +54,7 @@ fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modif
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Text(label, style = KType.title.copy(fontWeight = FontWeight.SemiBold), color = if (selected) Color(0xFF101316) else K.mut)
-        if (count != null) Text("$count", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color(0xFF4A5258) else K.dim)
+        if (count != null) Text("$count", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color(0xFF4A5258) else K.dim)
     }
 }
 
@@ -67,7 +68,7 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
         options.forEachIndexed { i, o ->
             val on = i == selected
             Box(
-                Modifier.weight(1f).heightIn(min = 44.dp).clip(shape)
+                Modifier.weight(1f).heightIn(min = Dim.tap.dp).clip(shape)
                     .then(if (on) Modifier.background(if (glass) Color(0x33FFFFFF) else K.mint) else Modifier)
                     .clickable(role = Role.RadioButton) { onSelect(i) }.semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
@@ -91,8 +92,6 @@ fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = 
         Modifier.size(52.dp, 32.dp).clip(CircleShape).background(track.value),
     ) {
         // No Modifier.shadow on the thumb: it allocates a RenderNode, and there is one per switch. The
-        // LAMBDA offset overload is also required - reading thumbX.value in composition recomposes the
-        // whole switch on every animation frame, where this only re-lays it out.
         Box(Modifier.offset { IntOffset(thumbX.value.roundToPx(), 4.dp.roundToPx()) }.size(24.dp).clip(CircleShape).background(if (checked) K.mintInk else Color(0xFFE8ECEE)))
     }
     }
@@ -116,10 +115,12 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
     Column(modifier.heightIn(min = 48.dp).clickable(role = Role.RadioButton, onClick = onClick).semantics { this.selected = selected }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier.size(52.dp).clip(CircleShape).background(ui.page)
-                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else K.grab, CircleShape),
+                // A near-black page on a near-black sheet has no edge of its own: the unselected ring has to
+                // carry the shape, so a dark swatch gets a lighter one than a light swatch does.
+                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else if (ui.light) K.grab else Color(0xFF5B646C), CircleShape),
             contentAlignment = Alignment.Center,
         ) { if (selected) Icon(Icons.Default.Check, null, tint = if (ui.light) Color(0xFF14876A) else K.mint) }
-        Text(theme.name.lowercase().replaceFirstChar(Char::uppercase), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, color = if (selected) K.txt else K.mut)
+        Text(theme.name.lowercase().replaceFirstChar(Char::uppercase), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) K.txt else K.mut)
     }
 }
 

@@ -46,8 +46,6 @@ class Backup(private val ctx: Context, private val store: Store) {
             store.flush()                           // the safety copy must include every queued write
 
             // 1. Validate. Nothing destructive happens until we know this is a Kairn backup. A backup of
-            //    an empty library legitimately holds no books, just settings.json, so any "data/" entry is
-            //    the test.
             val names = ctx.contentResolver.openInputStream(src)?.use { zipEntryNames(it) }
             require(isKairnBackup(names)) {
                 "That file isn't a Kairn backup, so nothing was changed."
@@ -98,12 +96,9 @@ class Backup(private val ctx: Context, private val store: Store) {
 }
 
 /**
- * Merges one book record. Never loses a note: marks are unioned by id and the newer record wins the
- * scalar fields. An unreadable record on one side must not cost the other one.
- *
- * Top level so a JVM test can call it without a Context: [write] defaults to a direct atomic write for
- * that reason; Backup passes the Store's queued writer so a restore cannot be overtaken by a pending
- * snapshot.
+ * Merges one book record.
+ * An unreadable record on one side must not cost the other one.
+ * Top level so a JVM test can call it without a Context: [write] defaults to a direct atomic write for that reason; Backup passes the Store's queued writer so a restore cannot be overtaken by a pending snapshot.
  */
 internal fun mergeBook(
     target: File,
@@ -136,11 +131,8 @@ internal fun isKairnBackup(names: List<String>?): Boolean =
     names != null && names.any { it.startsWith("data/") }
 
 /**
- * The entry names in a zip stream, or null when the stream cannot be read as a zip at all. Bounded, so a
- * corrupt or hostile file cannot make the walk run forever. The stream is consumed by this call.
- *
- * A JDK quirk: garbage usually yields an EMPTY list here rather than null, and only some corrupt streams
- * throw. Both are "not a backup"; [isKairnBackup] handles each.
+ * The entry names in a zip stream, or null when the stream cannot be read as a zip at all.
+ * Bounded, so a corrupt or hostile file cannot make the walk run forever.
  */
 internal fun zipEntryNames(input: InputStream, limit: Int = 5000): List<String>? = runCatching {
     val names = ArrayList<String>()

@@ -12,28 +12,30 @@ object ReaderLogic {
     /** The reading speed behind the time-left estimate. */
     const val WPM = 240
 
+    /** A chapter shorter than this is a title page or a divider: its words-per-position is noise. */
+    const val MIN_CHAPTER_WORDS = 100
+
     /**
-     * Whole-book minutes left, at [wpm].
-     *
-     * Readium splits a resource into positions of even character size, so positions-per-chapter is
-     * proportional to chapter length. Measuring words-per-position on the chapter being read scales to the
-     * rest of the book. Null when any input is missing - the caller then shows nothing rather than a guess.
+     * What has been measured so far, book-wide: words and the positions they occupy.
      */
-    fun minutesLeft(chapterWords: Int, chapterPositions: Int, totalPositions: Int, bookProgression: Float, wpm: Int = WPM): Int? {
-        if (chapterWords <= 0 || chapterPositions <= 0 || totalPositions <= 0) return null
-        val wordsPerPosition = chapterWords.toFloat() / chapterPositions
-        val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * totalPositions * wordsPerPosition).toInt()
-        return remaining / wpm
+    data class Pace(val words: Long = 0, val positions: Int = 0) {
+        val wordsPerPosition: Float? get() = if (positions > 0 && words > 0) words.toFloat() / positions else null
+
+        /** Adds a chapter's measurement; a chapter under [MIN_CHAPTER_WORDS] is ignored as noise. */
+        fun add(words: Int, positions: Int): Pace =
+            if (words < MIN_CHAPTER_WORDS || positions <= 0) this
+            else Pace(this.words + words, this.positions + positions)
     }
 
-    /** The label under the progress slider. "" when the estimate cannot be known yet. */
-    fun timeLeftLabel(chapterWords: Int, chapterPositions: Int, totalPositions: Int, bookProgression: Float): String {
-        val mins = minutesLeft(chapterWords, chapterPositions, totalPositions, bookProgression) ?: return ""
-        return when {
-            mins <= 0 -> "under a min left"
-            mins < 60 -> "$mins min left"
-            else -> "${mins / 60} h ${mins % 60} min left"
-        }
+    /**
+     * Whole-book minutes left, at [wpm], from the accumulated [pace].
+     * Readium splits a resource into positions of even character size, so positions track length closely; words-per-position for the book turns the remaining positions into remaining words.
+     */
+    fun minutesLeft(pace: Pace, totalPositions: Int, bookProgression: Float, wpm: Int = WPM): Int? {
+        val perPosition = pace.wordsPerPosition ?: return null
+        if (totalPositions <= 0) return null
+        val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * totalPositions * perPosition).toInt()
+        return remaining / wpm
     }
 
     /** Marks minus one id. Used by every delete, so the "already gone" case is the same everywhere. */

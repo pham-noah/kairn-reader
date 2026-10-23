@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "app.kairn"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
-        targetSdk = 34
-        versionCode = 4
-        versionName = "0.4.0"
+        targetSdk = 35
+        versionCode = 5
+        versionName = "0.5.0"
     }
     buildTypes {
         release {
@@ -55,6 +55,10 @@ android {
         // has no Timber and plain Log is deliberate, so the check is meaningless here - disabling it keeps
         // the remaining warnings visible instead of burying them in 4 lines of noise.
         disable += "LogNotTimber"
+        // The launcher icon must stay in mipmap-anydpi-V26 even though minSdk is 26: aapt2 refuses an
+        // <adaptive-icon> that sits in a version-less folder ("resource mipmap/ic_launcher not found").
+        // Lint's "merge this folder" advice is wrong for adaptive icons, so the check is off.
+        disable += "ObsoleteSdkInt"
     }
 }
 

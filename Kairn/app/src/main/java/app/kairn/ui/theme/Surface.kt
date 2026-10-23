@@ -18,11 +18,8 @@ import androidx.compose.ui.unit.dp
 import app.kairn.data.Ambient
 
 /**
- * Glass (default, DEC-5): translucent panels carrying a specular sheen gradient, a hairline highlight
- * and a soft drop shadow, over an ambient colour wash behind the app. Solid: opaque panels.
- *
- * Compose has no backdrop blur - it can only blur a view's own content, not what is behind it - so
- * Glass keeps the look of the glass (sheen, highlight, depth, translucency) without true background blur.
+ * Glass (default, DEC-5): translucent panels carrying a specular sheen gradient, a hairline highlight and a soft drop shadow, over an ambient colour wash behind the app.
+ * Compose has no backdrop blur - it can only blur a view's own content, not what is behind it - so Glass keeps the look of the glass (sheen, highlight, depth, translucency) without true background blur.
  */
 enum class SurfaceStyle { Glass, Solid }
 
@@ -109,10 +106,6 @@ fun Modifier.ambientWash(): Modifier {
 
 /**
  * The shared glass recipe: a dark translucent fill, a faint top sheen, a hairline edge and a soft drop shadow.
- *
- * The shadow is NOT Modifier.shadow: that gives every surface its own offscreen render node, and with one
- * on every card/chip/button it dominates list scrolling. glassShadow() draws the same soft shadow in a
- * cheap draw pass instead, so the look is kept and the scroll cost is not.
  */
 fun Modifier.glassSurface(
     shape: Shape,

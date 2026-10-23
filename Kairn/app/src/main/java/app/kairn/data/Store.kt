@@ -4,30 +4,16 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Stable
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.Executors
 
 /**
- * Plain JSON on disk (DEC-8). Every write goes to a temp file and is renamed over the original, so a
- * crash or power loss mid-write can never leave a half-written file.
- *
- * WRITE PATH (off the main thread). The public API is non-suspending, but nothing here touches the disk
- * on the caller's thread: a mutation updates the in-memory StateFlow immediately and queues the disk
- * write on one serial writer thread.
- *  - writes are SERIALISED (one thread), so two writes to the same file can never interleave;
- *  - writes are COALESCED per file: of many updates to one book only the newest snapshot is serialised
- *    and written. Books are immutable, so the JSON is built on the writer thread - the caller never pays
- *    for toJson();
- *  - deletes go through the same queue, so a delete can never be overtaken by an older pending write
- *    (which would resurrect the file).
- * Code that reads files directly (Backup, restore) must call [flush] first.
- *
- * @Stable because Compose otherwise infers it UNSTABLE: it exposes `File` properties (`root`,
- * `coversDir`, ...), and `File` is an unstable type, which would make `store` an unstable parameter on
- * every screen. The instance is created once and its identity never changes; the parts screens observe
- * are the `books`/`settings` StateFlows, which are collected into Compose state.
+ * Plain JSON on disk (DEC-8).
+ * Every write goes to a temp file and is renamed over the original, so a crash or power loss mid-write can never leave a half-written file.
+ * WRITE PATH (off the main thread).
  */
 @Stable
 class Store private constructor(val root: File, val copiesDir: File) {
@@ -89,14 +75,23 @@ class Store private constructor(val root: File, val copiesDir: File) {
     }
 
     private val loadedOnce = kotlinx.coroutines.CompletableDeferred<Unit>()
+    private val loadedFlow = MutableStateFlow(false)
 
-    /** True once the first [load] has finished. */
+    /** True once the first [load] has finished. Plain read; use [loaded] from a composable. */
     val isLoaded: Boolean get() = loadedOnce.isCompleted
+
+    /**
+     * [isLoaded] as a StateFlow, for screens that draw a placeholder until the first read finishes.
+     * An EMPTY library emits nothing on [books], so a plain boolean read in composition would leave the
+     * library stuck on its "loading" layout forever on a first run - the read finishing is itself an event.
+     */
+    val loaded: StateFlow<Boolean> = loadedFlow
 
     /** The first read of the library from disk, off the main thread. */
     suspend fun load() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         runCatching { reload() }        // a failure must not leave every caller waiting forever
         loadedOnce.complete(Unit)
+        loadedFlow.value = true
     }
 
     /**
@@ -114,8 +109,6 @@ class Store private constructor(val root: File, val copiesDir: File) {
             runCatching { Book.from(JSONObject(f.readText())) }.getOrNull()
         }
         // Keep the previous settings on a parse failure instead of replacing them with defaults: the next
-        // saveSettings would then persist the reset, so one malformed key would wipe theme, folders and
-        // the onboarded flag for good.
         runCatching { AppSettings.from(JSONObject(settingsFile.readText())) }
             .onSuccess { settings.value = it }
             // Only a REAL parse failure warns: no settings file yet is the normal first launch, not an error.

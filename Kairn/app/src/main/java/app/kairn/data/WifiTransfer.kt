@@ -12,14 +12,8 @@ import java.util.Locale
 
 /**
  * L-04: a LAN-only HTTP server, so a computer on the same Wi-Fi can drop EPUB files onto the phone.
- *
- * It is started by hand from the Add books screen and stops when that screen closes. It serves one
- * page and one upload endpoint, binds every interface because the phone's address is not known in
- * advance, and never talks to anything itself - the only traffic is a browser on the local network
- * talking to it. Plain java.net: no HTTP library, no dependency, and nothing that needs a main thread.
- *
- * Uploads are written by [onFile]'s caller into [dir]; a name that arrives in the query string is
- * reduced to a bare, safe file name before it is used (a browser must not be able to choose a path).
+ * It serves one page and one upload endpoint, binds every interface because the phone's address is not known in advance, and never talks to anything itself - the only traffic is a browser on the local network talking to it.
+ * Plain java.net: no HTTP library, no dependency, and nothing that needs a main thread.
  */
 class WifiTransfer(
     private val dir: File,

@@ -13,12 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.R
 import app.kairn.data.Store
 import app.kairn.data.ThemeId
 import app.kairn.ui.kit.*
@@ -39,7 +41,7 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
                 0 -> {
                     CairnMark(64)
                     Text("Read anywhere.\nNo signal needed.", style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
-                    Text("A quiet EPUB reader. Your books, notes and settings stay on your phone.", style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
+                    Text(stringResource(R.string.s_a_quiet_epub_reader_your_books_notes_and), style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
                     Column(Modifier.padding(top = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         listOf("No account, no ads, no tracking", "Works with airplane mode on", "Free, with nothing locked away").forEach {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -49,31 +51,33 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
                     }
                 }
                 1 -> {
-                    Text("Bring your books", style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
-                    Text("Three ways to add EPUB files. You can use any of them later too.", style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
+                    Text(stringResource(R.string.s_bring_your_books), style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
+                    Text(stringResource(R.string.s_three_ways_to_add_epub_files_you_can_use), style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
                     Column(Modifier.padding(top = 14.dp)) {
-                        Option(Icons.Default.Folder, "Watch a folder", "New books show up on their own")
-                        Option(Icons.Default.Wifi, "Send over Wi-Fi", "From a computer, no cable")
-                        Option(Icons.Default.Description, "Open a file", "Tap an EPUB in any app")
+                        Option(Icons.Default.Folder, stringResource(R.string.add_folder), stringResource(R.string.s_new_books_show_up_on_their_own))
+                        Option(Icons.Default.Wifi, stringResource(R.string.s_send_over_wi_fi), stringResource(R.string.s_from_a_computer_no_cable))
+                        Option(Icons.Default.Description, stringResource(R.string.s_open_a_file), stringResource(R.string.s_tap_an_epub_in_any_app))
                     }
                 }
                 else -> {
-                    Text("Pick your look", style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
-                    Text("Dark is the default. You can change it in the reader any time.", style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
+                    Text(stringResource(R.string.s_pick_your_look), style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
+                    Text(stringResource(R.string.s_dark_is_the_default_you_can_change_it_in), style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
                     Row(Modifier.padding(top = 26.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.DARK, ThemeId.BLACK).forEach { t ->
+                        // Every theme the reader offers, in the same page-tone order as the Display sheet:
+                        // a look that is missing here reads as a look that does not exist.
+                        listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK).forEach { t ->
                             KThemeSwatch(t, current.theme == t, { store.saveSettings { it.copy(theme = t, defaults = it.defaults.copy(theme = t)) } })
                         }
                     }
                     val ui = readerUi(current.theme)
-                    Text("Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.", fontFamily = KFonts.serif, fontSize = 17.sp, lineHeight = 27.sp, color = ui.text,
+                    Text(stringResource(R.string.s_call_me_ishmael_some_years_ago_never_min), fontFamily = KFonts.serif, fontSize = 17.sp, lineHeight = 27.sp, color = ui.text,
                         modifier = Modifier.padding(top = 22.dp).fillMaxWidth().clip(RoundedCornerShape(Dim.card.dp)).background(ui.page).border(1.dp, K.line, RoundedCornerShape(Dim.card.dp)).padding(18.dp))
                 }
             }
         }
         Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            KButton(if (step < 2) "Next" else "Add your first books", { if (step < 2) step++ else onFinish(true) })
-            KButton(if (step < 2) "Skip" else "Skip for now", { onFinish(false) }, style = KButtonStyle.Ghost)
+            KButton(if (step < 2) stringResource(R.string.s_next) else stringResource(R.string.s_add_your_first_books), { if (step < 2) step++ else onFinish(true) })
+            KButton(if (step < 2) stringResource(R.string.s_skip) else stringResource(R.string.s_skip_for_now), { onFinish(false) }, style = KButtonStyle.Ghost)
         }
     }
 }

@@ -82,9 +82,7 @@ data class ReaderPrefs(
 
 /**
  * One book = one JSON file (DEC-8, and the shape X-20 sync needs: one file per book limits conflicts).
- *
- * @Immutable is a real performance promise here, not decoration: `marks` holds `List<Mark>`, which
- * Compose treats as UNSTABLE, so without this every book card would recompose whenever its parent did.
+ * @Immutable is a real performance promise here, not decoration: `marks` holds `List<Mark>`, which Compose treats as UNSTABLE, so without this every book card would recompose whenever its parent did.
  * All fields are `val` and are rebuilt via copy(), never mutated in place, so the promise holds.
  */
 @Immutable

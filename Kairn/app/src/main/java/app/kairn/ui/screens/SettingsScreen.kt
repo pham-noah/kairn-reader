@@ -7,8 +7,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.kairn.R
 import app.kairn.data.Ambient
 import app.kairn.data.Library
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,8 +34,6 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     val s by store.settings.collectAsStateWithLifecycle()
     var licences by remember { mutableStateOf(false) }
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
-    // skipping. Constant lists live here.
-    // Same five themes the reader offers, in the same page-tone order, so a default can be any of them.
     val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
     val surfaceOpts = remember { listOf("Glass", "Solid") }
@@ -47,31 +48,31 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     val folders = s.folders.count { it.enabled }
 
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = Dim.screenPad.dp).padding(bottom = 24.dp)) {
-        Text("Settings", style = KType.h1, modifier = Modifier.padding(top = 16.dp))
+        Text(stringResource(R.string.tab_settings), style = KType.h1, modifier = Modifier.padding(top = 16.dp))
         KGroup("Appearance") {
             KCard(padding = 16) {
-                Text("Surface", style = SectionTitle, modifier = Modifier.padding(bottom = 10.dp))
+                Text(stringResource(R.string.s_surface), style = SectionTitle, modifier = Modifier.padding(bottom = 10.dp))
                 KSegmented(surfaceOpts, if (s.glass) 0 else 1, { i -> store.saveSettings { it.copy(glass = i == 0) } })
-                Text(if (s.glass) "Translucent panels with a light sheen. The default." else "Flat, opaque panels (the earlier look).", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+                Text(if (s.glass) stringResource(R.string.s_translucent_panels_with_a_light_sheen_th) else stringResource(R.string.s_flat_opaque_panels_the_earlier_look), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
                 if (s.glass) {
-                    Text("Ambient colour", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
+                    Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                     KSegmented(ambientNames, ambients.indexOf(s.ambient), { i -> store.saveSettings { it.copy(ambient = ambients[i]) } })
-                    Text("The soft colour glow behind the panels.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+                    Text(stringResource(R.string.s_the_soft_colour_glow_behind_the_panels), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
                 }
-                Text("Reading theme", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
+                Text(stringResource(R.string.s_reading_theme), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 KSegmented(themeNames, themes.indexOf(s.theme), { i -> store.saveSettings { it.copy(theme = themes[i], defaults = it.defaults.copy(theme = themes[i])) } })
-                Text("Switch automatically", style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
+                Text(stringResource(R.string.s_switch_automatically), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
                 KSegmented(autoOpts, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
-                Text(if (s.autoSwitch) "Follows your phone's light and dark setting." else "Kairn opens in the theme you pick above.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+                Text(if (s.autoSwitch) stringResource(R.string.s_follows_your_phone_s_light_and_dark_sett) else stringResource(R.string.s_kairn_opens_in_the_theme_you_pick_above), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
             }
         }
         KGroup("Reading") {
             KCard {
-                KRow("Keep screen on", subtitle = "While a book is open") { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
-                KRow("Full screen", subtitle = "Hide the status bar when the reader bars are hidden", divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
-                KRow("Volume keys turn pages", divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
-                KRow("Swipe to change chapter", subtitle = "In scroll mode: left for next, right for previous", divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
+                KRow(stringResource(R.string.s_keep_screen_on), subtitle = stringResource(R.string.s_while_a_book_is_open)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
+                KRow(stringResource(R.string.s_full_screen), subtitle = stringResource(R.string.s_hide_the_status_bar_with_the_bars), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
+                KRow(stringResource(R.string.s_volume_keys_turn_pages), divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
+                KRow(stringResource(R.string.s_swipe_to_change_chapter), subtitle = stringResource(R.string.s_in_scroll_mode_left_for_next_right_for_p), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
                 if (s.swipeChapters) {
                     // One compact row: label left, choice right. No subtitle, no stacked layout.
                     Row(
@@ -79,7 +80,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Swipe distance", style = KType.title)
+                        Text(stringResource(R.string.s_swipe_distance), style = KType.title)
                         KSegmented(
                             swipeNames,
                             when { s.swipeThreshold <= 34 -> 0; s.swipeThreshold <= 62 -> 1; else -> 2 },
@@ -92,32 +93,32 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
         }
         KGroup("Library") {
             KCard {
-                KRow("Find books on this device", subtitle = "Scan for EPUBs already on your phone, like Lithium") {
+                KRow(stringResource(R.string.s_find_books_on_this_device), subtitle = stringResource(R.string.s_scan_for_epubs_already_on_your_phone_lik)) {
                     KSwitch(s.autoDetect, { v ->
                         store.saveSettings { it.copy(autoDetect = v) }
                         if (v) { onScan(); if (library.needsAllFilesAccess()) library.requestAllFilesAccess() }
                     })
                 }
-                KRow("Watched folders", subtitle = "$folders ${if (folders == 1) "folder" else "folders"}, new books appear on their own", divider = true, onClick = onWatchedFolders) { KChevron() }
+                KRow(stringResource(R.string.s_watched_folders), subtitle = pluralStringResource(R.plurals.folders_count, folders, folders), divider = true, onClick = onWatchedFolders) { KChevron() }
             }
         }
         KGroup("Your data") {
-            KCard { KRow("Backup and restore", subtitle = last, onClick = onBackup) { KChevron() } }
+            KCard { KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup) { KChevron() } }
         }
         KGroup("About") {
             KCard {
-                KRow("Language") { Text("English", color = K.mut) }
-                KRow("Open-source licences", divider = true, onClick = { licences = true }) { KChevron() }
+                KRow(stringResource(R.string.s_language)) { Text(stringResource(R.string.s_english), color = K.mut) }
+                KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
             }
         }
-        Text("Kairn, draft build. No account, no ads, no tracking.", style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
+        Text(stringResource(R.string.s_kairn_draft_build_no_account_no_ads_no_t), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
     }
 
-    if (licences) KSheet({ licences = false }, "Open-source licences") {
+    if (licences) KSheet({ licences = false }, stringResource(R.string.s_open_source_licences)) {
         KCard {
-            KRow("Readium Kotlin Toolkit", subtitle = "BSD-3-Clause. Renders your books.")
-            KRow("Manrope and Literata", subtitle = "SIL Open Font License. Bundled with the app.", divider = true)
+            KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
+            KRow(stringResource(R.string.s_manrope_and_literata), subtitle = stringResource(R.string.s_sil_open_font_license_bundled_with_the_a), divider = true)
         }
-        Text("Dictionary licences are still being checked.", style = SmallDim, modifier = Modifier.padding(top = 12.dp))
+        Text(stringResource(R.string.s_dictionary_licences_are_still_being_chec), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
     }
 }

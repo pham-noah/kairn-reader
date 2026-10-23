@@ -40,10 +40,10 @@ private val READER_UI: Map<ThemeId, ReaderUi> = ThemeId.entries.associateWith { 
 private fun buildReaderUi(t: ThemeId): ReaderUi = when (t) {
     ThemeId.DARK -> ReaderUi(Color(0xFF111418), Color(0xFFD9DDE0), Color(0xFF8C969D), Color(0xF5111418), Color(0xFFE6EAED), Color(0x1FFFFFFF), K.mint, false)
     ThemeId.LIGHT -> ReaderUi(Color(0xFFF6F5F1), Color(0xFF1D1E20), Color(0xFF6A6C70), Color(0xF7F6F5F1), Color(0xFF1D1E20), Color(0x24000000), Color(0xFF14876A), true)
-    ThemeId.SEPIA -> ReaderUi(Color(0xFFF1E4CF), Color(0xFF3A2E21), Color(0xFF7A6A56), Color(0xF7F1E4CF), Color(0xFF3A2E21), Color(0x2E3C280A), Color(0xFF14876A), true)
+    ThemeId.SEPIA -> ReaderUi(Color(0xFFF1E4CF), Color(0xFF3A2E21), Color(0xFF6E5F4C), Color(0xF7F1E4CF), Color(0xFF3A2E21), Color(0x2E3C280A), Color(0xFF14876A), true)
     ThemeId.BLACK -> ReaderUi(Color(0xFF000000), Color(0xFFC9CED2), Color(0xFF7F898F), Color(0xF7000000), Color(0xFFE6EAED), Color(0x1FFFFFFF), K.mint, false)
-    // Neutral mid grey: dark ink on it (6.8:1) so it stays readable.
-    ThemeId.GRAY -> ReaderUi(Color(0xFF9AA1A6), Color(0xFF16191C), Color(0xFF3C4247), Color(0xF59AA1A6), Color(0xFF16191C), Color(0x24000000), Color(0xFF14876A), true)
+    // Neutral mid grey: dark ink on it (6.8:1) so it stays readable. Muted chrome text is 4.6:1 on the page.
+    ThemeId.GRAY -> ReaderUi(Color(0xFF9AA1A6), Color(0xFF16191C), Color(0xFF31373B), Color(0xF59AA1A6), Color(0xFF16191C), Color(0x24000000), Color(0xFF14876A), true)
 }
 
 /** Generated cover palettes for books with no embedded cover. */

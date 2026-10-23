@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.R
 import app.kairn.data.*
 import app.kairn.ui.kit.*
 import app.kairn.ui.theme.*
@@ -41,7 +43,7 @@ import org.readium.r2.shared.publication.Publication
 @Composable
 internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi, onClick: () -> Unit) =
     Column(Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
-        Icon(icon, label, tint = ui.chromeText, modifier = Modifier.size(22.dp)); Text(label, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Icon(icon, label, tint = ui.chromeText, modifier = Modifier.size(22.dp)); Text(label, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 
 private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition; ordered by page tone
@@ -49,7 +51,7 @@ private val pageModes = listOf("Pages", "Scroll")
 private val columnModes = listOf("One page", "Two pages")
 
 /** What a selection turned into when "Note" was tapped: the quoted text and its Locator JSON. */
-internal class NoteTarget(val quote: String, val locator: String)
+class NoteTarget(val quote: String, val locator: String)
 
 /** The note editor. The quoted text stays visible so it is obvious what the note belongs to. */
 @Composable
@@ -63,13 +65,13 @@ internal fun NoteEditor(target: NoteTarget, initial: String = "", onSave: (Strin
             modifier = Modifier.padding(start = 4.dp, bottom = 14.dp),
         )
     }
-    KField(text, { text = it }, label = "Your note", singleLine = false, minLines = 3)
+    KField(text, { text = it }, label = stringResource(R.string.s_your_note), singleLine = false, minLines = 3)
     Spacer(Modifier.height(16.dp))
-    KButton("Save note", { onSave(text.trim()) }, enabled = text.isNotBlank())
+    KButton(stringResource(R.string.s_save_note), { onSave(text.trim()) }, enabled = text.isNotBlank())
 }
 
 @Composable
-internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
+internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true, onReset: (() -> Unit)? = null) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         readerThemes.forEach { t -> KThemeSwatch(t, prefs.theme == t, { onChange(prefs.copy(theme = t)) }) }
     }
@@ -78,28 +80,30 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     // A phone has no room for two readable columns, so the choice is not offered there, and a value
     // stored on a tablet is not honoured on a phone either (see ReaderActivity.isTablet).
     if (showColumns) {
-        KControl("Columns", if (prefs.twoPage) "Two pages" else "One page") {
+        KControl(stringResource(R.string.s_columns), if (prefs.twoPage) "Two pages" else "One page") {
             KSegmented(columnModes, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
         }
-        Text("Two pages suits a tablet or a wide screen.", style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+        Text(stringResource(R.string.s_two_pages_suits_a_tablet_or_a_wide_scree), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
     }
-    KControl("Text size", "${(prefs.fontScale * 100).toInt()}%") { KSlider(prefs.fontScale.toFloat(), { onChange(prefs.copy(fontScale = it.toDouble())) }, 0.7f..2.5f) }
-    KControl("Line spacing", "%.2f".format(prefs.lineHeight)) { KSlider(prefs.lineHeight.toFloat(), { onChange(prefs.copy(lineHeight = it.toDouble())) }, 1.0f..2.2f) }
-    KControl("Paragraph spacing", "%.1f".format(prefs.paragraphSpacing)) { KSlider(prefs.paragraphSpacing.toFloat(), { onChange(prefs.copy(paragraphSpacing = it.toDouble())) }, 0f..2f) }
-    KControl("Margins", "%.1f".format(prefs.margins)) { KSlider(prefs.margins.toFloat(), { onChange(prefs.copy(margins = it.toDouble())) }, 0.5f..2.5f) }
-    KControl("Warm light", "${(prefs.warmth * 100).toInt()}%") { KSlider(prefs.warmth, { onChange(prefs.copy(warmth = it)) }, accent = K.amber) }
-    KControl("Brightness, this app only", if (prefs.brightness < 0) "System" else "${(prefs.brightness * 100).toInt()}%") { KSlider(if (prefs.brightness < 0) 0.5f else prefs.brightness, { onChange(prefs.copy(brightness = it.coerceAtLeast(0.05f))) }, 0.05f..1f) }
+    KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (prefs.fontScale * 100).toInt())) { KSlider(prefs.fontScale.toFloat(), { onChange(prefs.copy(fontScale = it.toDouble())) }, 0.7f..2.5f) }
+    KControl(stringResource(R.string.s_line_spacing), stringResource(R.string.s_2f).format(prefs.lineHeight)) { KSlider(prefs.lineHeight.toFloat(), { onChange(prefs.copy(lineHeight = it.toDouble())) }, 1.0f..2.2f) }
+    KControl(stringResource(R.string.s_paragraph_spacing), stringResource(R.string.s_1f).format(prefs.paragraphSpacing)) { KSlider(prefs.paragraphSpacing.toFloat(), { onChange(prefs.copy(paragraphSpacing = it.toDouble())) }, 0f..2f) }
+    KControl(stringResource(R.string.s_margins), stringResource(R.string.s_1f).format(prefs.margins)) { KSlider(prefs.margins.toFloat(), { onChange(prefs.copy(margins = it.toDouble())) }, 0.5f..2.5f) }
+    KControl(stringResource(R.string.s_warm_light), stringResource(R.string.value_percent, (prefs.warmth * 100).toInt())) { KSlider(prefs.warmth, { onChange(prefs.copy(warmth = it)) }, accent = K.amber) }
+    KControl(stringResource(R.string.s_brightness_this_app_only), if (prefs.brightness < 0) stringResource(R.string.s_system) else stringResource(R.string.value_percent, (prefs.brightness * 100).toInt())) { KSlider(if (prefs.brightness < 0) 0.5f else prefs.brightness, { onChange(prefs.copy(brightness = it.coerceAtLeast(0.05f))) }, 0.05f..1f) }
     // The slider can only set an explicit level, so without this a book could never go back to following
     // the system brightness once the slider had been touched.
     if (prefs.brightness >= 0f) {
-        KButton("Follow the system brightness", { onChange(prefs.copy(brightness = -1f)) }, style = KButtonStyle.Ghost, small = true)
+        KButton(stringResource(R.string.s_follow_the_system_brightness), { onChange(prefs.copy(brightness = -1f)) }, style = KButtonStyle.Ghost, small = true)
     }
     Spacer(Modifier.height(8.dp))
     KCard {
-        KRow("Justify text") { KSwitch(prefs.justify, { onChange(prefs.copy(justify = it)) }) }
-        KRow("Hyphenation", divider = true) { KSwitch(prefs.hyphens, { onChange(prefs.copy(hyphens = it)) }) }
+        KRow(stringResource(R.string.s_justify_text)) { KSwitch(prefs.justify, { onChange(prefs.copy(justify = it)) }) }
+        KRow(stringResource(R.string.s_hyphenation), divider = true) { KSwitch(prefs.hyphens, { onChange(prefs.copy(hyphens = it)) }) }
     }
-    Text("These settings are remembered for this book.", style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 12.dp))
+    Text(stringResource(R.string.s_these_settings_are_remembered_for_this_b), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 12.dp))
+    // Every slider here is sticky, so a book that has been fiddled with needs a way back to the app defaults.
+    if (onReset != null) KButton(stringResource(R.string.s_reset_this_book_to_your_defaults), onReset, Modifier.padding(top = 10.dp), style = KButtonStyle.Ghost, small = true)
 }
 
 @Composable
@@ -116,7 +120,7 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
         items(flat.size) { i ->
             val (l, d) = flat[i]
             if (i > 0) HorizontalDivider(color = K.line)
-            Text(l.title ?: "Untitled", style = KType.title, modifier = Modifier.fillMaxWidth().clickable { pub?.locatorFromLink(l)?.let(onGo) }.padding(start = (16 + d * 16).dp, end = 16.dp, top = 15.dp, bottom = 15.dp))
+            Text(l.title ?: stringResource(R.string.s_untitled), style = KType.title, modifier = Modifier.fillMaxWidth().clickable { pub?.locatorFromLink(l)?.let(onGo) }.padding(start = (16 + d * 16).dp, end = 16.dp, top = 15.dp, bottom = 15.dp))
         }
     } }
 }
@@ -125,7 +129,7 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
 internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean, onQuery: (String) -> Unit, onMore: () -> Unit, onGo: (Locator) -> Unit) {
     var q by remember { mutableStateOf("") }
     Column(Modifier.heightIn(max = 560.dp).imePadding()) {
-        KField(q, { q = it; onQuery(it) }, placeholder = "Search in this book", leading = Icons.Default.Search)
+        KField(q, { q = it; onQuery(it) }, placeholder = stringResource(R.string.s_search_in_this_book), leading = Icons.Default.Search)
         Spacer(Modifier.height(8.dp))
         // Three states, in order: working, nothing found, a result count. "No matches" over a running
         // search reads as a failed search.
@@ -147,7 +151,7 @@ internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean
         }
         // A cap without a way past it reads as "that is all there is".
         if (canMore && !busy) item {
-            KButton("Show more results", onMore, style = KButtonStyle.Secondary, small = true, modifier = Modifier.padding(top = 10.dp))
+            KButton(stringResource(R.string.s_show_more_results), onMore, style = KButtonStyle.Secondary, small = true, modifier = Modifier.padding(top = 10.dp))
         }
         }
     }

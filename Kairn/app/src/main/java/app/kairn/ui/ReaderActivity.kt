@@ -14,35 +14,13 @@ import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowManager
 import android.widget.FrameLayout
-import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color as CColor
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.ui.unit.sp
 import androidx.core.text.HtmlCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -53,13 +31,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.kairn.KairnApp
+import app.kairn.R
 import app.kairn.data.*
-import app.kairn.ui.kit.*
-import app.kairn.ui.screens.AnnotationsContent
-import app.kairn.ui.theme.*
+import app.kairn.data.ThemeId
+import app.kairn.ui.kit.ToastState
+import app.kairn.ui.theme.K
+import app.kairn.ui.theme.KairnTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -87,9 +67,11 @@ import java.util.UUID
 import org.readium.r2.navigator.preferences.Color as RColor
 import org.readium.r2.navigator.preferences.TextAlign as RTextAlign
 
-private enum class Sheet { NONE, DISPLAY, CONTENTS, SEARCH, NOTES }
-
-class ReaderActivity : AppCompatActivity() {
+/**
+ * The reader's Activity: the navigator, the gestures and the writes.
+ * This class keeps only what needs Android: the fragment container, Readium wiring, input events and the debounced position save.
+ */
+class ReaderActivity : AppCompatActivity(), ReaderActions {
     companion object { const val EXTRA_ID = "book_id" }
 
     private val app get() = application as KairnApp
@@ -98,37 +80,21 @@ class ReaderActivity : AppCompatActivity() {
     private var nav: EpubNavigatorFragment? = null
     private lateinit var container: FragmentContainerView
 
-    // UI state
-    private var bars by mutableStateOf(true)
-    private var sheet by mutableStateOf(Sheet.NONE)
-    private var prefs by mutableStateOf(ReaderPrefs())
-    private var error by mutableStateOf<String?>(null)
-    private var loading by mutableStateOf(true)
-    private var footnote by mutableStateOf<String?>(null)
-    private var jumpBack by mutableStateOf<Locator?>(null)
-    private var noteDraft by mutableStateOf<NoteTarget?>(null)   // a selection waiting for a note body
-    private var noteEdit by mutableStateOf<Mark?>(null)  // an existing note being edited
-    private var chapterTitle by mutableStateOf("")
-    private var bookTitle by mutableStateOf("")
-    private var marks by mutableStateOf<List<Mark>>(emptyList())
-    private var searchResults by mutableStateOf<List<Locator>>(emptyList())
-    private var searchBusy by mutableStateOf(false)   // a search is running off the UI thread
+    /** All screen state; Compose observes these fields, the Activity only mutates them. */
+    private val ui = ReaderUiState()
+    private val toast = ToastState()
+
     private var rtl = false
     private var canScrollChapter = false
     private var loggedScroll = false
-    private var positions: List<Locator> = emptyList()   // R-07: fine-grained seek targets
-    private var positionsPerHref: Map<String, Int> = emptyMap()   // how many of those belong to each chapter
-    private var chapterTitles: Map<String, String> = emptyMap()   // href -> chapter title (for scrubbing)
-    private var chapterWords by mutableIntStateOf(0)      // R-07: words in the current chapter (state: the time-left label reads it)
-    private var chapterHref by mutableStateOf<String?>(null)   // state: the bookmark button reads it to know which chapter it is in
-    private var bookProgress by mutableFloatStateOf(0f)   // state: WHOLE-BOOK progression; the slider and time-left label read it
+    private var positionsPerHref: Map<String, Int> = emptyMap()   // how many positions each chapter holds
+    private val measuredChapters = HashSet<String>()              // each chapter feeds the pace once
     private var searchJob: Job? = null
     private val wordSplit = Regex("\\s+")
-    private val toast = ToastState()                     // short confirmations ("Bookmark added")
     // Every write to this book's record goes through one place; see ReaderWriter.
     private val writer by lazy { ReaderWriter(app.store, bookId) }
 
-    private val exportNotes = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
+    private val exportNotesLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
         // This callback runs on the main thread: annotationsMarkdown() and the write are disk IO, so both run on IO.
         if (u != null && b != null) lifecycleScope.launch {
@@ -153,7 +119,12 @@ class ReaderActivity : AppCompatActivity() {
                 // collectAsState, not .value: a StateFlow read inside composition is not observed, so the
                 // glass and ambient settings would not update while the reader is open.
                 val s by app.store.settings.collectAsState()
-                KairnTheme(glass = s.glass, ambient = s.ambient) { Overlay() }
+                KairnTheme(glass = s.glass, ambient = s.ambient) {
+                    ReaderScreen(
+                        ui = ui, theme = effectiveTheme(ui.prefs), isTablet = isTablet,
+                        toast = toast, act = this@ReaderActivity,
+                    )
+                }
             }
         }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         setContentView(root)
@@ -174,9 +145,9 @@ class ReaderActivity : AppCompatActivity() {
 
     /** The parts of the reader that come straight from the stored record. */
     private fun applyBook(book: Book) {
-        bookTitle = book.title
-        prefs = book.prefs ?: app.store.settings.value.defaults
-        marks = book.marks
+        ui.bookTitle = book.title
+        ui.prefs = book.prefs ?: app.store.settings.value.defaults
+        ui.marks = book.marks
         if (app.store.settings.value.keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
@@ -184,21 +155,21 @@ class ReaderActivity : AppCompatActivity() {
         val t0 = SystemClock.elapsedRealtime()
         // Parsing the EPUB is blocking and this coroutine runs on the main dispatcher: Readium's
         // AssetRetriever and PublicationOpener reference no dispatcher, so this must hop to IO (as
-        // positions() below does).
         val p = withContext(Dispatchers.IO) { app.readium.open(android.net.Uri.parse(book.uri)) }
         if (p == null) {                                    // N-04: message, never a crash
-            writer.markBroken(); error = "bad"; loading = false; return
+            writer.markBroken(); ui.error = "bad"; ui.loading = false; return
         }
         pub = p
+        ui.pub = p                    // state: Contents and the seek fallback read it during composition
         rtl = p.metadata.readingProgression == ReadingProgression.RTL
         // Load the whole-book position list for the seek slider. positions() scans the whole
         // publication and is the slow part of opening: it belongs on IO, never the main thread.
         val tp = SystemClock.elapsedRealtime()
         lifecycleScope.launch {
             val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
-            positions = computed
+            ui.positions = computed
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
-            android.util.Log.i("KairnPerf", "positions n=${positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
+            android.util.Log.i("KairnPerf", "positions n=${ui.positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
         }
         // href -> chapter title, from the table of contents, so scrubbing can name the chapter.
         run {
@@ -211,7 +182,7 @@ class ReaderActivity : AppCompatActivity() {
             }
             walk(p.tableOfContents)
             p.readingOrder.forEach { l -> l.title?.takeIf { it.isNotBlank() }?.let { t -> map.putIfAbsent(l.href.toString(), t) } }
-            chapterTitles = map
+            ui.chapterTitles = map
         }
 
         val factory = EpubNavigatorFactory(p)
@@ -224,14 +195,14 @@ class ReaderActivity : AppCompatActivity() {
         )
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
-            initialPreferences = toEpub(prefs),
+            initialPreferences = toEpub(ui.prefs),
             listener = object : EpubNavigatorFragment.Listener {
                 override fun shouldFollowInternalLink(link: Link, context: HyperlinkNavigator.LinkContext?): Boolean {
                     if (context is HyperlinkNavigator.FootnoteContext) {   // R-08: footnote pop-up
-                        footnote = HtmlCompat.fromHtml(context.noteContent, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+                        ui.footnote = HtmlCompat.fromHtml(context.noteContent, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
                         return false
                     }
-                    jumpBack = nav?.currentLocator?.value                  // R-08: remember where we were
+                    ui.jumpBack = nav?.currentLocator?.value                  // R-08: remember where we were
                     return true
                 }
 
@@ -250,7 +221,7 @@ class ReaderActivity : AppCompatActivity() {
             override fun onTap(event: TapEvent): Boolean {
                 // Scroll mode has no pages: a tap only shows/hides the bars, unless the chapter is
                 // too short to scroll, in which case the edge zones stay live so it is not a dead end.
-                if (prefs.scroll) {
+                if (ui.prefs.scroll) {
                     if (canScrollChapter) { toggleBars(); return true }
                     val w0 = container.width.toFloat(); val x0 = event.point.x
                     when {
@@ -271,27 +242,22 @@ class ReaderActivity : AppCompatActivity() {
         })
 
         // Readium's R2BasicWebView overrides onScrollChanged, so setOnScrollChangeListener never
-        // fires, and WebView.getScrollY() is always 0 (Chromium scrolls internally). Read
-        // window.scrollY via evaluateJavascript, which is what this watcher polls in scroll mode.
         startScrollWatcher(n)
 
         // Timing: how long the whole open took (parse + navigator + first position).
         android.util.Log.i("KairnPerf", "openBook ${SystemClock.elapsedRealtime() - t0}ms title='${book.title.take(32)}'")
 
         // R-09: save the position, debounced. The UI state follows every locator immediately; only
-        // the disk write waits. collectLatest cancels the pending write when the next locator
-        // arrives: a write lands ~0.8 s after the reader settles, with a 5 s ceiling during
-        // continuous scroll.
         lifecycleScope.launch {
             var lastSaved = 0L
             n.currentLocator.collectLatest { loc ->
-                if (loading) loading = false            // first real position: reveal the page
+                if (ui.loading) ui.loading = false        // first real position: reveal the page
                 // WHOLE-BOOK progression, not the chapter's: the slider and the time left are about
                 // the book (progression is the position inside the current resource, not the book).
-                loc.locations.totalProgression?.let { bookProgress = it.toFloat() }
-                chapterTitle = loc.title ?: ""
-                if (loc.href.toString() != chapterHref) { chapterHref = loc.href.toString(); chapterWords = 0; loadChapterWords(loc) }
-                if (jumpBack?.href == loc.href && jumpBack?.locations?.progression == loc.locations.progression) jumpBack = null
+                loc.locations.totalProgression?.let { ui.bookProgress = it.toFloat() }
+                ui.chapterTitle = loc.title ?: ""
+                if (loc.href.toString() != ui.chapterHref) { ui.chapterHref = loc.href.toString(); loadChapterWords(loc) }
+                if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
                 delay(if (SystemClock.elapsedRealtime() - lastSaved >= 5_000) 0 else 800)
                 lastSaved = SystemClock.elapsedRealtime()
                 savePosition(loc)
@@ -302,7 +268,7 @@ class ReaderActivity : AppCompatActivity() {
         lifecycleScope.launch {
             app.store.books.map { list -> list.firstOrNull { it.id == bookId }?.marks }.distinctUntilChanged().collect { m ->
                 m ?: return@collect
-                marks = m
+                ui.marks = m
                 n.applyDecorations(m.filter { it.kind != "bookmark" }.mapNotNull { mk ->
                     runCatching { Decoration(mk.id, Locator.fromJSON(JSONObject(mk.locator))!!, Decoration.Style.Highlight(tint = mk.color)) }.getOrNull()
                 }, "marks")
@@ -318,7 +284,7 @@ class ReaderActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         // The prefs write is debounced: a close inside that window would drop the last change.
-        writer.savePrefs(prefs)
+        writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
     }
     override fun onDestroy() { pub?.close(); super.onDestroy() }
@@ -370,7 +336,7 @@ class ReaderActivity : AppCompatActivity() {
      * and the disk get the settled value ~120 ms later. onPause flushes it, so a quick close cannot lose it.
      */
     private fun updatePrefs(p: ReaderPrefs) {
-        prefs = p
+        ui.prefs = p
         applyJob?.cancel()
         applyJob = lifecycleScope.launch {
             delay(120)
@@ -380,40 +346,40 @@ class ReaderActivity : AppCompatActivity() {
     }
 
     private fun applyPrefs() {
-        nav?.submitPreferences(toEpub(prefs))
-        window.attributes = window.attributes.also { it.screenBrightness = if (prefs.brightness < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else prefs.brightness }
+        nav?.submitPreferences(toEpub(ui.prefs))
+        window.attributes = window.attributes.also { it.screenBrightness = if (ui.prefs.brightness < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else ui.prefs.brightness }
     }
 
     // ---- window (R-11) ----
 
-    private fun toggleBars() { bars = !bars; applyWindow() }
+    override fun toggleBars() { ui.bars = !ui.bars; applyWindow() }
     private fun applyWindow() {
         val c = WindowInsetsControllerCompat(window, window.decorView)
-        if (app.store.settings.value.fullscreen && !bars) {
+        if (app.store.settings.value.fullscreen && !ui.bars) {
             c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             c.hide(WindowInsetsCompat.Type.systemBars())
         } else c.show(WindowInsetsCompat.Type.systemBars())
     }
 
-    // R-07: volume-key page turns
+    // R-07: volume-key page turns. Not while a sheet is open: the search field and the note editor are in
+    // this window, and a page turn must not fire while the reader is typing.
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (app.store.settings.value.volumeKeys && nav != null) when (keyCode) {
+        if (app.store.settings.value.volumeKeys && nav != null && ui.sheet == ReaderSheet.NONE) when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> { nav!!.goBackward(true); return true }
             KeyEvent.KEYCODE_VOLUME_DOWN -> { nav!!.goForward(true); return true }
         }
         return super.onKeyDown(keyCode, event)
     }
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
-        if (app.store.settings.value.volumeKeys && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) true
+        if (app.store.settings.value.volumeKeys && ui.sheet == ReaderSheet.NONE && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) true
         else super.onKeyUp(keyCode, event)
 
     // Scroll-mode horizontal gestures. The pager's own threshold is too eager: a small sideways
-    // wobble while scrolling would jump a chapter. So in scroll mode we detect a deliberate flick
     // ourselves and swallow anything shorter, so the pager never sees it either.
     private var downX = 0f; private var downY = 0f; private var armed = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (!prefs.scroll) return super.dispatchTouchEvent(ev)
+        if (!ui.prefs.scroll) return super.dispatchTouchEvent(ev)
 
         // The threshold comes from Settings > Reading > "Swipe distance".
         val flick = app.store.settings.value.swipeThreshold * resources.displayMetrics.density
@@ -446,7 +412,7 @@ class ReaderActivity : AppCompatActivity() {
         val n = nav ?: return@launch
         val text = runCatching { n.currentSelection() }.getOrNull()?.locator?.text?.highlight ?: return@launch
         val cm = getSystemService(android.content.ClipboardManager::class.java)
-        cm?.setPrimaryClip(android.content.ClipData.newPlainText("Kairn", text))
+        cm?.setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.app_name), text))
     }
 
     /** A-02: add a highlight for the current selection. [done] runs once the mark is saved. */
@@ -479,46 +445,59 @@ class ReaderActivity : AppCompatActivity() {
         val n = nav
         val sel = n?.let { runCatching { it.currentSelection() }.getOrNull() }
         if (sel != null) {
-            noteDraft = NoteTarget(sel.locator.text.highlight.orEmpty(), sel.locator.toJSON().toString())
+            ui.noteDraft = NoteTarget(sel.locator.text.highlight.orEmpty(), sel.locator.toJSON().toString())
             n.clearSelection()
         }
         done()      // the menu must close even when the selection could not be read
     }
 
+    // ---- ReaderActions: the writes and the navigator, reached from the screen ----
+
     /** Notes carry no colour of their own; mint is the colour the Notes list draws for them. */
-    private fun saveNote(target: NoteTarget, text: String) {
+    override fun saveNote(target: NoteTarget, text: String) {
         addMarkTo(Mark(UUID.randomUUID().toString(), "note", K.mint.toArgb(), target.quote, text, target.locator, System.currentTimeMillis()))
-        noteDraft = null
-        toast.show("Note saved")
+        ui.noteDraft = null
+        toast.show(getString(R.string.toast_note_saved))
     }
 
     /** Deleting an annotation is one tap, so it comes with a five-second Undo that puts it back. */
-    private fun deleteMark(m: Mark) {
+    override fun deleteMark(m: Mark) {
         writer.deleteMark(m)
-        val what = when (m.kind) { "note" -> "Note"; "bookmark" -> "Bookmark"; else -> "Highlight" }
-        toast.show("$what deleted", "Undo") { writer.restoreMark(m) }
+        val what = getString(when (m.kind) { "note" -> R.string.kind_note; "bookmark" -> R.string.kind_bookmark; else -> R.string.kind_highlight })
+        toast.show(getString(R.string.toast_deleted, what), getString(R.string.toast_undo)) { writer.restoreMark(m) }
     }
 
-    /** The chapter a mark's locator lives in, for the once-per-chapter bookmark rule. */
-    private fun markHref(m: Mark): String? =
-        runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.href?.toString()
+    override fun updateNote(id: String, text: String) = writer.updateNote(id, text)
+
+    override fun deleteBook() = writer.removeBook()
 
     /**
      * One bookmark per chapter: the top-bar button bookmarks the chapter you are in, and pressing it
      * again removes every bookmark in that chapter.
      */
-    private fun toggleChapterBookmark(bookmarked: Boolean) {
-        val h = chapterHref ?: return
+    override fun toggleBookmark(bookmarked: Boolean) {
+        val h = ui.chapterHref ?: return
         if (!bookmarked) {
             addMark("bookmark", K.mint.toArgb())
-            toast.show("Bookmark added")
+            toast.show(getString(R.string.toast_bookmark_added))
         } else {
             writer.removeBookmarksIn(h, ::markHref)
-            toast.show("Bookmark removed")
+            toast.show(getString(R.string.toast_bookmark_removed))
         }
     }
 
-    private fun goTo(l: Locator) { nav?.go(l, true); sheet = Sheet.NONE }
+    override fun goTo(l: Locator) { nav?.go(l, true); ui.sheet = ReaderSheet.NONE }
+
+    /** R-07: non-animated jump, used to preload the chapter under a dragging slider. */
+    override fun preload(l: Locator) { nav?.go(l, animated = false) }
+
+    override fun setPrefs(p: ReaderPrefs) = updatePrefs(p)
+
+    override fun resetPrefs() = updatePrefs(app.store.settings.value.defaults)
+
+    override fun exportNotes() { exportNotesLauncher.launch("${ui.bookTitle.take(40)}-notes.md") }
+
+    override fun close() = finish()
 
     /**
      * R-03: whether the current chapter is longer than the screen, which decides what a tap in scroll mode
@@ -528,7 +507,7 @@ class ReaderActivity : AppCompatActivity() {
      */
     private fun startScrollWatcher(n: EpubNavigatorFragment) = lifecycleScope.launch {
         repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            snapshotFlow { Triple(prefs.scroll, chapterHref, prefs) }.collectLatest { (scrolling, href, _) ->
+            snapshotFlow { Triple(ui.prefs.scroll, ui.chapterHref, ui.prefs) }.collectLatest { (scrolling, href, _) ->
                 if (!scrolling || href == null) return@collectLatest
                 delay(600)          // let the new chapter lay out before measuring it
                 pollScroll(n)
@@ -566,42 +545,33 @@ class ReaderActivity : AppCompatActivity() {
                 t.trim().split(wordSplit).count { w -> w.any { it.isLetterOrDigit() } }
             }
         }
-        if (words != null && chapterHref == href) chapterWords = words    // ignore a result for a chapter we already left
+        // Feed the book-wide pace once per chapter. A result for a chapter we already left still counts:
+        // it is a real measurement, and the pace is about the book, not about where the reader is now.
+        if (words != null && measuredChapters.add(href)) ui.pace = ui.pace.add(words, positionsPerHref[href] ?: 0)
     }
 
-    /** R-07: "12 min left" for the WHOLE book. The arithmetic lives in ReaderLogic, where it is tested. */
-    private fun timeLeft(bookProgression: Float): String = ReaderLogic.timeLeftLabel(
-        chapterWords,
-        chapterHref?.let { positionsPerHref[it] } ?: 0,
-        positions.size,
-        bookProgression,
-    )
-
-    private var searchCap by mutableIntStateOf(100)   // how many hits the current search asked for
-    private var lastQuery = ""
-
     /** One search at a time: typing cancels the previous query so results cannot land out of order. */
-    private fun onSearchQuery(q: String) {
-        lastQuery = q
-        searchCap = 100
+    override fun search(q: String) {
+        ui.lastQuery = q
+        ui.searchCap = 100
         runSearch(q)
     }
 
     /** "Show more": the sheet asks for another page, so the search runs again with a wider cap. */
-    private fun searchMore() {
-        if (lastQuery.length < 3) return
-        searchCap += 100
-        runSearch(lastQuery)
+    override fun searchMore() {
+        if (ui.lastQuery.length < 3) return
+        ui.searchCap += 100
+        runSearch(ui.lastQuery)
     }
 
     private fun runSearch(q: String) {
         searchJob?.cancel()
-        if (q.length < 3) { searchResults = emptyList(); searchBusy = false; return }
-        val cap = searchCap
+        if (q.length < 3) { ui.searchResults = emptyList(); ui.searchBusy = false; return }
+        val cap = ui.searchCap
         searchJob = lifecycleScope.launch {
             delay(250)
             val p = pub ?: return@launch
-            searchBusy = true
+            ui.searchBusy = true
             // Publication.search() walks the whole book: on the main dispatcher it freezes the reader
             // for as long as the scan takes. The iterator is used and closed off the UI thread.
             val hits = withContext(Dispatchers.IO) {
@@ -617,150 +587,8 @@ class ReaderActivity : AppCompatActivity() {
                     } finally { iter.close() }
                 }.getOrDefault(emptyList())
             }
-            searchBusy = false
-            searchResults = hits
-        }
-    }
-
-    @Composable
-    private fun Overlay() {
-        val ui = readerUi(effectiveTheme(prefs))
-        Box(Modifier.fillMaxSize()) {
-            // R-06: warm-light filter is an app-local tint; it never touches system settings.
-            if (prefs.warmth > 0f) Box(Modifier.fillMaxSize().background(CColor(0xFFFF9A2E).copy(alpha = prefs.warmth * 0.30f)))
-            if (loading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = K.mint)
-            toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 200.dp))
-
-            AnimatedVisibility(bars, Modifier.align(Alignment.TopCenter), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-                Column(Modifier.fillMaxWidth().background(ui.chrome)) {
-                    Row(Modifier.statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        KIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back to library", { finish() }, tint = ui.chromeText)
-                        Text(bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, textAlign = ComposeTextAlign.Center, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        // Highlighting lives in the long-press selection menu; the top bar only carries
-                        // the bookmark toggle, whose icon and label flip when this chapter has one.
-                        val bookmarkHere = remember(marks, chapterHref) {
-                            val h = chapterHref
-                            h != null && ReaderLogic.chapterHasBookmark(marks, h, ::markHref)
-                        }
-                        KIconButton(
-                            if (bookmarkHere) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
-                            if (bookmarkHere) "Remove this chapter's bookmark" else "Bookmark this chapter",
-                            { toggleChapterBookmark(bookmarkHere) },
-                            tint = ui.chromeText,
-                        )
-                    }
-                    HorizontalDivider(color = ui.line)
-                }
-            }
-
-            jumpBack?.let { j ->   // R-08: "Back to where you were"
-                // A short-lived offer: it clears itself after a delay, and any new jump re-arms it.
-                LaunchedEffect(j) { delay(6000); jumpBack = null }
-                Row(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
-                    .clickable { goTo(j); jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text("Back to where you were", color = K.mintInk, fontWeight = FontWeight.ExtraBold)
-                }
-            }
-
-            footnote?.let { note ->   // R-08: footnote card, so you do not lose your page
-                Column(Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 150.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(K.surf2).padding(16.dp)) {
-                    Text("Footnote", color = K.mint, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
-                    Text(note, style = KType.small, modifier = Modifier.padding(bottom = 12.dp))
-                    KButton("Close", { footnote = null }, style = KButtonStyle.Secondary, small = true)
-                }
-            }
-
-            AnimatedVisibility(bars, Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
-                Column(Modifier.fillMaxWidth().background(ui.chrome)) {
-                    HorizontalDivider(color = ui.line)
-                    Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
-                        val ro = pub?.readingOrder.orEmpty()
-                        var drag by remember { mutableStateOf<Float?>(null) }
-                        var expanded by remember { mutableStateOf(false) }
-                        // Preload the chapter under the slider while dragging so releasing feels instant,
-                        // debounced so a fast scrub does not load every chapter it passes over.
-                        // A plain holder, not snapshot state: a Job in mutableStateOf would recompose
-                        // this scope on every scrub tick while dragging.
-                        val preloadJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
-                        fun previewSeek(v: Float) {
-                            preloadJob[0]?.cancel()
-                            preloadJob[0] = lifecycleScope.launch {
-                                delay(220)
-                                val l = positions.getOrNull((v * (positions.size - 1)).toInt()) ?: return@launch
-                                nav?.go(l, animated = false)
-                            }
-                        }
-                        // While scrubbing, the label names the chapter the slider points at.
-                        val preview = drag?.let { v ->
-                            val idx = (v * (positions.size - 1)).toInt()
-                            val loc = positions.getOrNull(idx)
-                            val title = loc?.let { chapterTitles[it.href.toString()] ?: chapterTitles[it.href.toString().substringAfterLast('/')] ?: it.title }
-                            title?.takeIf { it.isNotBlank() }
-                                ?: ro.getOrNull((v * (ro.size - 1)).toInt())?.title?.takeIf { it.isNotBlank() }
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(preview ?: chapterTitle, color = if (preview != null) ui.accent else ui.muted, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                            Text(timeLeft(bookProgress), color = ui.muted, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
-                        }
-                        KSlider(drag ?: bookProgress, { v -> drag = v; previewSeek(v) }, accent = ui.accent, trackColor = ui.line, onFinished = {   // R-07: seek by position
-                            drag?.let { v ->
-                                val l = positions.getOrNull((v * (positions.size - 1)).toInt())
-                                if (l != null) goTo(l)
-                                else pub?.let { p -> ro.getOrNull((v * (ro.size - 1)).toInt())?.let { lk -> p.locatorFromLink(lk)?.let(::goTo) } }
-                            }
-                            drag = null
-                        })
-                        // The bar stays minimal; the tools live behind "Options".
-                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { expanded = !expanded }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = ui.chromeText, modifier = Modifier.size(20.dp))
-                            Text(if (expanded) "Less" else "Options", color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.padding(start = 6.dp))
-                        }
-                        AnimatedVisibility(expanded) {
-                            Row(Modifier.fillMaxWidth()) {
-                                ReaderTool(Icons.AutoMirrored.Filled.List, "Contents", ui) { sheet = Sheet.CONTENTS }
-                                ReaderTool(Icons.Default.Search, "Search", ui) { sheet = Sheet.SEARCH }
-                                ReaderTool(Icons.Default.StickyNote2, "Notes", ui) { sheet = Sheet.NOTES }
-                                ReaderTool(Icons.Default.TextFormat, "Display", ui) { sheet = Sheet.DISPLAY }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (error != null) KSheet({ finish() }, "This book can't be opened") {
-                Text("The file may be damaged or too large. The rest of your data is safe.", style = KType.body.copy(color = K.mut))
-                Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    KButton("Keep it", { finish() })
-                    KButton("Remove from library", { app.store.remove(bookId); finish() }, style = KButtonStyle.Danger)
-                }
-            }
-            noteDraft?.let { t -> KSheet({ noteDraft = null }, "Add a note") { NoteEditor(t) { text -> saveNote(t, text) } } }
-            noteEdit?.let { m ->
-                KSheet({ noteEdit = null }, "Edit note") {
-                    NoteEditor(NoteTarget(m.quote, m.locator), initial = m.note) { text ->
-                        app.store.update(bookId) { b -> b.copy(marks = b.marks.map { if (it.id == m.id) it.copy(note = text) else it }) }
-                        noteEdit = null
-                        toast.show("Note updated")
-                    }
-                }
-            }
-            // Leaving the search sheet drops its hits: reopening it with an empty field must not show
-            // the previous query's results.
-            LaunchedEffect(sheet) { if (sheet != Sheet.SEARCH) { searchResults = emptyList(); searchBusy = false } }
-            if (sheet != Sheet.NONE) KSheet({ sheet = Sheet.NONE }, when (sheet) { Sheet.DISPLAY -> "Display"; Sheet.CONTENTS -> "Contents"; Sheet.SEARCH -> "Search in book"; else -> "Notes and highlights" }) {
-                when (sheet) {
-                    Sheet.DISPLAY -> DisplaySheet(prefs, ::updatePrefs, showColumns = isTablet)
-                    Sheet.CONTENTS -> ContentsSheet(pub, ::goTo)
-                    Sheet.SEARCH -> SearchSheet(searchResults, searchBusy, searchResults.size >= searchCap && lastQuery.length >= 3, ::onSearchQuery, ::searchMore, ::goTo)
-                    Sheet.NOTES -> AnnotationsContent(bookTitle, marks,
-                        onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(::goTo) },
-                        onDelete = { m -> deleteMark(m) },
-                        onEditNote = { m -> noteEdit = m },
-                        onExport = { exportNotes.launch("${bookTitle.take(40)}-notes.md") })   // A-03
-                    Sheet.NONE -> {}
-                }
-            }
-            BackHandler(sheet != Sheet.NONE) { sheet = Sheet.NONE }
+            ui.searchBusy = false
+            ui.searchResults = hits
         }
     }
 }

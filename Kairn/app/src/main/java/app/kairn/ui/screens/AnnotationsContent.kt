@@ -15,9 +15,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import app.kairn.R
 import app.kairn.data.Mark
 import app.kairn.ui.kit.*
 import app.kairn.ui.theme.K
@@ -42,7 +44,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
         LazyRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(markKinds.size) { i -> KChip(markKinds[i].second, filter == i, { filter = i }, count = counts[i]) }
         }
-        if (shown.isEmpty()) Text("Select text and pick a colour to highlight it, tap Note to write a note, or tap the bookmark icon.", style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
+        if (shown.isEmpty()) Text(stringResource(R.string.s_select_text_and_pick_a_colour_to_highlig), style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
         else KCard(Modifier.weight(1f, fill = false)) {
             LazyColumn {
                 items(shown.size, key = { shown[it].id }) { i ->
@@ -52,7 +54,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
                     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable { onGo(m) }.padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.width(4.dp).fillMaxHeight().heightIn(min = 36.dp).clip(RoundedCornerShape(4.dp)).background(if (m.kind == "bookmark") K.mint else Color(m.color)))
                         Column(Modifier.weight(1f)) {
-                            Text(if (m.kind == "bookmark") "Bookmark" + if (m.quote.isNotBlank()) ", ${m.quote}" else "" else m.quote, style = KType.quote, maxLines = 5)
+                            Text(if (m.kind == "bookmark") stringResource(R.string.s_bookmark_label) + if (m.quote.isNotBlank()) ", ${m.quote}" else "" else m.quote, style = KType.quote, maxLines = 5)
                             if (m.note.isNotBlank()) Text(m.note, style = KType.small, modifier = Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(K.bg).clickable { onEditNote(m) }.padding(horizontal = 12.dp, vertical = 9.dp))
                             Text(DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(m.created)), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp))
                         }
@@ -62,16 +64,16 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
             }
         }
         Spacer(Modifier.height(12.dp))
-        KButton("Export notes", onExport, style = KButtonStyle.Secondary)
+        KButton(stringResource(R.string.s_export_notes), onExport, style = KButtonStyle.Secondary)
     }
     // A note the reader typed is the one thing here that cannot be recreated with a tap: confirm first.
     confirm?.let { m ->
         AlertDialog(
             onDismissRequest = { confirm = null },
-            title = { Text("Delete this note?") },
-            text = { Text("The note you wrote will be removed. This can't be undone.") },
-            confirmButton = { TextButton({ onDelete(m); confirm = null }) { Text("Delete", color = K.danger) } },
-            dismissButton = { TextButton({ confirm = null }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.s_delete_this_note)) },
+            text = { Text(stringResource(R.string.s_the_note_you_wrote_will_be_removed_this)) },
+            confirmButton = { TextButton({ onDelete(m); confirm = null }) { Text(stringResource(R.string.s_delete), color = K.danger) } },
+            dismissButton = { TextButton({ confirm = null }) { Text(stringResource(R.string.s_cancel)) } },
             containerColor = K.surf2,
         )
     }

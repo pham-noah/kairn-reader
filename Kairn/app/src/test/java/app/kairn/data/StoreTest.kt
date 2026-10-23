@@ -2,6 +2,7 @@ package app.kairn.data
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import kotlinx.coroutines.runBlocking
@@ -69,5 +70,17 @@ class StoreTest {
         s.saveSettings { it }          // identical value
         s.flush()
         assertEquals(before, f.lastModified())
+    }
+
+    /**
+     * The library draws a placeholder until the first read finishes. An EMPTY library emits nothing on
+     * `books` (the flow de-duplicates equal values), so that finishing has to be observable on its own -
+     * otherwise a first run stays on the placeholder instead of reaching the empty state.
+     */
+    @Test fun `the load gate flips once the first read is done`() {
+        val s = Store.forTesting(tmp.root)
+        assertFalse("not loaded before the first read", s.loaded.value)
+        runBlocking { s.load() }
+        assertTrue("loaded after the first read", s.loaded.value)
     }
 }

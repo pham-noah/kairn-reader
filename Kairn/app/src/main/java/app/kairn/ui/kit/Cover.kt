@@ -13,9 +13,11 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue   // required by `by` delegation
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,11 +64,25 @@ private fun decodeCover(file: File, maxDim: Int = 384): ImageBitmap? = runCatchi
 }.getOrNull()
 
 /**
- * Cover: 2:3, rounded 8/12/12/8, spine highlight, drop shadow, progress strip and status badge
- * (mint check = finished, amber = needs attention); embedded cover if present, else a generated gradient.
+ * Loads (and caches) the bitmap a cell should draw: the cover if the file is there, the full cover as a
+ * fallback while a thumbnail is still being written, null when neither exists.
  *
- * Takes the cover path as a String rather than a File: `File` is unstable to Compose, so a File
- * parameter made every cover cell unskippable. `fallbackPath` does the same for the full-cover fallback.
+ * Off the main thread, and re-decodes only when the file's mtime moved - a warm cache hit costs one stat.
+ */
+private suspend fun loadCover(key: String, cover: File, fallback: File?, hit: CachedCover?): ImageBitmap? =
+    withContext(Dispatchers.IO) {
+        val src = if (cover.exists()) cover else fallback
+        if (src == null || !src.exists()) return@withContext null
+        val stamp = src.lastModified()
+        if (hit != null && hit.stamp == stamp) return@withContext hit.bmp
+        val decoded = decodeCover(src) ?: return@withContext null
+        coverCache.put(key, CachedCover(decoded, stamp))
+        decoded
+    }
+
+/**
+ * Cover: 2:3, rounded 8/12/12/8, spine highlight, drop shadow, progress strip and status badge (mint check = finished, amber = needs attention); embedded cover if present, else a generated gradient.
+ * Takes the cover path as a String rather than a File: `File` is unstable to Compose, so a File parameter made every cover cell unskippable.
  */
 @Composable
 fun KCover(
@@ -78,25 +94,18 @@ fun KCover(
     val fallbackFile = remember(fallbackPath) { fallbackPath?.let { File(it) } }
     val key = book.id
     // Show a cached bitmap instantly (no IO in composition), then re-check the file OFF the main thread and
-    // re-decode if its mtime changed (new cover, restore, thumbnail arriving after the full cover). The grid
     // passes the small thumbnail; until it exists the full cover is used, so a cell is never blank on a first run.
     val hit = remember(coverPath) { coverCache.get(coverPath) }
-    val bmpState by produceState<ImageBitmap?>(initialValue = hit?.bmp, key1 = coverPath) {
-        val loaded = withContext(Dispatchers.IO) {
-            val src = if (coverFile.exists()) coverFile else fallbackFile
-            if (src == null || !src.exists()) return@withContext null
-            val stamp = src.lastModified()
-            if (hit != null && hit.stamp == stamp) return@withContext hit
-            decodeCover(src)?.let { CachedCover(it, stamp) }
-        }
-        if (loaded != null) { coverCache.put(coverPath, loaded); value = loaded.bmp }
-    }
-    val bmp = bmpState
+    // The cached bitmap shows on the first frame; the re-check (mtime, new cover, thumbnail arriving after
+    // the full cover) runs off the main thread and writes the result back into state.
+    var bmp by remember(coverPath) { mutableStateOf(hit?.bmp) }
+    LaunchedEffect(coverPath) { bmp = loadCover(coverPath, coverFile, fallbackFile, hit) }
+    val bitmap = bmp        // local: a delegated property cannot be smart-cast
     val (c1, c2) = coverPalettes[(book.title.hashCode().and(0x7fffffff)) % coverPalettes.size]
     // Memoize the fallback gradient: building a Brush per recomposition, per item, per frame is allocation churn while scrolling.
     val fallbackGrad = remember(key, c1, c2) { Brush.linearGradient(listOf(c1, c2)) }
     Box(modifier.aspectRatio(2f / 3f).clip(shape)) {
-        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        if (bitmap != null) Image(bitmap, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         else {
             Box(Modifier.fillMaxSize().background(fallbackGrad))
             Column(Modifier.fillMaxSize().padding(if (compact) 5.dp else 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
@@ -122,16 +131,6 @@ fun KCover(
 
 /**
  * The Kairn mark used in-app (the Library header, the empty state, onboarding).
- *
- * Drawn to match kairn-mark.svg EXACTLY: same 96-unit coordinate space, same shapes, same colours.
- * The stones are ROUNDED RECTANGLES with rx = height/2 (capsules with straight top and bottom edges),
- * not ellipses. Each stone is rotated about the SVG's own pivot (-2 about 48,72 / 3 about 49,50 /
- * -5 about 51,28) and carries a vertical gradient over its own top..bottom.
- *
- *   1. kairn-mark.svg / kairn-icon.svg   (brand art)
- *   2. res/drawable/ic_cairn.xml          (launcher icon foreground)
- *   3. this composable                    (in-app Canvas)
- * All three are the same drawing; change them together.
  */
 @Composable
 fun CairnMark(size: Int = 30, modifier: Modifier = Modifier) {

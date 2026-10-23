@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import app.kairn.KairnApp
+import app.kairn.R
 import app.kairn.data.Book
 import app.kairn.ui.kit.*
 import app.kairn.ui.screens.*
@@ -39,16 +40,22 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     val settings by app.store.settings.collectAsState()
 
     var tab by remember { mutableStateOf(Tab.Library) }
-    var overlay by remember { mutableStateOf<Overlay?>(if (!app.store.settings.value.onboarded) Overlay.Onboarding else null) }
+    // Decided after the store's first read, never from settings.value here: on a cold start that read has
+    // not finished yet, so it still holds the defaults and every returning reader would get onboarding.
+    var overlay by remember { mutableStateOf<Overlay?>(null) }
+    LaunchedEffect(Unit) {
+        app.store.awaitLoaded()
+        if (!app.store.settings.value.onboarded) overlay = Overlay.Onboarding
+    }
     var shelf by remember { mutableStateOf<String?>(null) }
     val backupUi = remember { BackupUi() }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
 
     val pickBook = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) scope.launch { uris.forEach { app.library.importPicked(it) }; toast.show("Added ${uris.size} ${if (uris.size == 1) "book" else "books"}") }
+        if (uris.isNotEmpty()) scope.launch { uris.forEach { app.library.importPicked(it) }; toast.show(ctx.resources.getQuantityString(R.plurals.books_added, uris.size, uris.size)) }
     }
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
-        if (u != null) { app.library.addFolder(u); scope.launch { app.library.scan(); toast.show("Watching this folder") } }
+        if (u != null) { app.library.addFolder(u); scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_watching_folder)) } }
     }
     val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { u ->
         if (u != null) scope.launch {
@@ -59,7 +66,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                     app.store.saveSettings { it.copy(lastBackup = System.currentTimeMillis(), lastBackupName = name) }
                     backupUi.fileName = name; backupUi.detail = "$n files saved"; backupUi.phase = BackupPhase.Done
                 },
-                { e -> backupUi.detail = e.message ?: "Something went wrong."; backupUi.phase = BackupPhase.Failed },
+                { e -> backupUi.detail = e.message ?: ctx.getString(R.string.toast_something_wrong); backupUi.phase = BackupPhase.Failed },
             )
         }
     }
@@ -83,7 +90,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                             onImportFile = { file, name ->
                                 scope.launch {
                                     val b = app.library.addBook(Uri.fromFile(file), null, name.removeSuffix(".epub"))
-                                    toast.show(if (b.broken) "Could not read $name" else "Added ${b.title}")
+                                    toast.show(if (b.broken) ctx.getString(R.string.toast_could_not_read, name) else ctx.getString(R.string.toast_added, b.title))
                                 }
                             })
                         Overlay.Backup -> BackupScreen(backupUi, app.store, { overlay = null },
@@ -95,7 +102,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                         null -> when (tab) {
                             Tab.Library -> LibraryScreen(app.store, shelf, { shelf = null }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook)
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
-                            Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show("Looking for books…") } })
+                            Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } })
                         }
                     }
                 }
@@ -108,10 +115,10 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                     restoreUri = null
                     scope.launch {
                         app.backup.restore(u, replace).fold(
-                            { toast.show(if (replace) "Restored. A safety copy of your old data was kept." else "Merged. A safety copy of your old data was kept.") },
+                            { toast.show(ctx.getString(if (replace) R.string.toast_restored else R.string.toast_merged)) },
                             // The exception message matters: "nothing was changed" and "restored part-way" are
                             // different outcomes that need different messages.
-                            { e -> toast.show(e.message ?: "Restore failed. Your data is unchanged.") },
+                            { e -> toast.show(e.message ?: ctx.getString(R.string.toast_restore_failed)) },
                         )
                     }
                 }

@@ -13,12 +13,9 @@ import android.view.MenuItem
 import org.readium.r2.navigator.util.BaseActionModeCallback
 
 /**
- * The text-selection menu (the little toolbar after a long-press). Readium delegates the whole menu
- * to the app - BaseActionModeCallback leaves onCreateActionMode abstract - so this supplies Copy
- * *and* Kairn's highlight colours. The platform's own Copy is not added for us here.
- *
- * The callback must leave the ActionMode open until [onHighlight] has read the selection, because
- * finishing the mode clears the WebView selection.
+ * The text-selection menu (the little toolbar after a long-press).
+ * Readium delegates the whole menu to the app - BaseActionModeCallback leaves onCreateActionMode abstract - so this supplies Copy *and* Kairn's highlight colours.
+ * The callback must leave the ActionMode open until [onHighlight] has read the selection, because finishing the mode clears the WebView selection.
  */
 class HighlightActionModeCallback(
     private val colors: List<Pair<String, Int>>,          // (label, ARGB)

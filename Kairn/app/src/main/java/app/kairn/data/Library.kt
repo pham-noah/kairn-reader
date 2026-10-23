@@ -136,7 +136,6 @@ class Library(private val ctx: Context, private val store: Store, private val re
     suspend fun scan(force: Boolean = true) {
         store.awaitLoaded()             // a scan against an unloaded library re-adds everything it finds
         // Automatic callers pass force=false and skip a scan that is already running or finished moments
-        // ago: a scan walks every watched folder and queries MediaStore, and onResume fires every time the
         // reader is closed. Explicit callers (force=true) still never run two scans at once.
         if (!force && (scanLock.isLocked || SystemClock.elapsedRealtime() - lastScanEnd < SCAN_MIN_INTERVAL_MS)) return
         scanLock.withLock {

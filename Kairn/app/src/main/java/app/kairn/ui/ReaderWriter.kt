@@ -9,9 +9,6 @@ import org.readium.r2.shared.publication.Locator
 
 /**
  * Every write the reader makes to the book's own record, in one place.
- *
- * The Activity keeps the screen, the navigator and the gestures; this keeps the rules about what a write
- * means - which fields a position save touches, when a book counts as finished, that a delete is reversible.
  * Every call is cheap on the caller's thread: Store updates memory and queues the disk write itself.
  */
 internal class ReaderWriter(private val store: Store, private val bookId: String) {
@@ -53,6 +50,14 @@ internal class ReaderWriter(private val store: Store, private val bookId: String
 
     /** N-04: the file failed to open. The record stays, so nothing the reader wrote is lost. */
     fun markBroken() = store.get(bookId)?.let { store.put(it.copy(broken = true)) }
+
+    /** A-02: new text for an existing note. */
+    fun updateNote(id: String, text: String) = store.update(bookId) { b ->
+        b.copy(marks = b.marks.map { if (it.id == id) it.copy(note = text) else it })
+    }
+
+    /** Removing the record. The EPUB file itself is never touched - that is the library's rule. */
+    fun removeBook() = store.remove(bookId)
 
     /** A record read straight from the store, for callers that need the current copy. */
     fun book(): Book? = store.get(bookId)
