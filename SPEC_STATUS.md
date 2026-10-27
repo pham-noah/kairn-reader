@@ -59,6 +59,23 @@ reported THREE positions for the whole thing and NO tap appeared to page. That l
 was an artefact of the fixture. Build RTL fixtures from a varied word pool - then you see 15 positions and the
 pages turn. Still unverified: vertical text (not built) and two-page/scroll mode under RTL.
 
+## R-13 image zoom: what a first attempt learned (not shipped)
+
+Three approaches were tried on a device and none was confirmed working, so the feature is NOT in the tree.
+The next attempt starts from these:
+
+- `TapEvent` carries only a `PointF`; there is no image information in the navigator API.
+- Drawing the hit image into a canvas and calling `toDataURL` is the obvious trick and it is a dead end: an
+  image served from Readium's internal scheme taints the canvas and `toDataURL` throws.
+- `document.elementFromPoint(x, y)` returns the PARAGRAPH box for an inline image, and `closest('img')` only
+  climbs ancestors - so it can never find a picture inside a `<p>`. Use `document.elementsFromPoint` and take
+  the first `IMG` in the stack (the fix that was in progress).
+- The bytes should then come from the publication, not the DOM: `Url(imgSrc)` + `publication.get(url)` +
+  `read(LongRange(0, size - 1))`, which is the same path the word counter uses.
+- Fixtures: this test used a dark-mode phone screenshot as the book's picture, which is indistinguishable from
+  the reader's own black page - build the fixture image with bright, asymmetric content so "the image is on
+  screen" and "the overlay opened" are both measurable from a screenshot.
+
 ## Known gaps — read these before trusting the list above
 
 - **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,
