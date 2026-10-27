@@ -215,13 +215,16 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 8 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 14 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
 answering 404 on a bare path, the reader's tap zones - the RIGHT edge pages forward in an LTR book while
-the LEFT edge does in an RTL one - and the search sheet rendering each hit's chapter title above its snippet
-(composed directly with `createComposeRule`, so no Activity, WebView or IME is involved), asserted from the saved position the reader writes (not from the screen, and
+the LEFT edge does in an RTL one, the search sheet rendering each hit's chapter title above its snippet, and
+the Display sheet's per-book writes (choosing two pages emits `twoPage = true` and touches nothing else, the
+reset action reaches its callback, the follow-system-brightness action only exists once a level was set, and
+Columns is absent on a phone). The sheet tests compose with `createComposeRule`, so no Activity, WebView or IME
+is involved - which matters, because adb input cannot type into the real search field. asserted from the saved position the reader writes (not from the screen, and
 not from `progress`, which is legitimately 0.0 at the start of a book - wait for the locator). They speak HTTP over a raw socket on purpose — the app's own policy refuses
 cleartext (the phone only ever listens, the browser is the client) and that policy is enforced by the HTTP
 stack, so an HTTP client in a test fails with "Cleartext HTTP traffic not permitted". CI has no device, so
