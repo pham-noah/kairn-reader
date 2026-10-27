@@ -155,10 +155,12 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 4 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 6 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator: the store writing a record to a real filesystem and reading it back cold, a delete taking the
-file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, and the code gate
-answering 404 on a bare path. They speak HTTP over a raw socket on purpose — the app's own policy refuses
+file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
+answering 404 on a bare path, and the reader's tap zones - the RIGHT edge pages forward in an LTR book while
+the LEFT edge does in an RTL one, asserted from the saved position the reader writes (not from the screen, and
+not from `progress`, which is legitimately 0.0 at the start of a book - wait for the locator). They speak HTTP over a raw socket on purpose — the app's own policy refuses
 cleartext (the phone only ever listens, the browser is the client) and that policy is enforced by the HTTP
 stack, so an HTTP client in a test fails with "Cleartext HTTP traffic not permitted". CI has no device, so
 it COMPILES the instrumented sources (`assembleDebugAndroidTest`) rather than running them.
