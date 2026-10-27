@@ -1,0 +1,6 @@
+0.6.1
+
+- The time left is exact from the first open: a book's word count is measured once at import and kept with it, and it no longer reads high for books that are not in English.
+- Search results say which chapter each hit is in, so you know where a tap will land before you tap it.
+- Two rows that did nothing are gone: Language in Settings, and the dictionary note in About.
+- The reader's tap zones and the library's filters are now covered by on-device tests, and the source tree no longer ships the design mockup.
