@@ -167,24 +167,15 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
             measurePending()                                                            // a chapter measured before this arrived
             android.util.Log.i("KairnPerf", "positions n=${ui.positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
-            // Time left: the cached count, else chapter sizes (no parsing), else one byte pass per chapter.
+            // Import already counted the words. A record imported before that existed is counted once here.
             if (ui.bookWords == 0) {
-                val t1 = SystemClock.elapsedRealtime()
-                val bytes = withContext(Dispatchers.IO) {
-                    p.readingOrder.sumOf { link -> runCatching { p.get(link)?.length() }.getOrNull()?.getOrNull() ?: 0L }
+                val t0w = SystemClock.elapsedRealtime()
+                val words = withContext(Dispatchers.IO) { app.readium.countWords(p) }
+                if (words > 0) {
+                    ui.bookWords = words
+                    writer.saveWords(words)
                 }
-                if (bytes > 0) ui.bookWords = ReaderLogic.estimateWords(bytes)
-                val t2 = SystemClock.elapsedRealtime()
-                val exact = withContext(Dispatchers.IO) { countBookWords(p) }
-                if (exact > 0) {
-                    ui.bookWords = exact
-                    writer.saveWords(exact)
-                }
-                android.util.Log.i(
-                    "KairnPerf",
-                    "words estimate=${ReaderLogic.estimateWords(bytes)} exact=$exact bytes=$bytes " +
-                        "estimate=${t2 - t1}ms exact=${SystemClock.elapsedRealtime() - t2}ms",
-                )
+                android.util.Log.i("KairnPerf", "words=$words ${SystemClock.elapsedRealtime() - t0w}ms (counted on open)")
             }
         }
         // href -> chapter title, from the table of contents, so scrubbing can name the chapter.
@@ -585,24 +576,6 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             if (positionsHere < ReaderLogic.MIN_CHAPTER_POSITIONS) pendingChapter = href to words
             else if (measuredChapters.add(href)) ui.pace = ui.pace.add(words, positionsHere)
         }
-    }
-
-    /**
-     * Every chapter's words, summed, from the RAW bytes: no Content model, no HTML parse, no regex.
-     * The resources belong to the publication, so they are left open for it to close with the asset.
-     */
-    private suspend fun countBookWords(p: Publication): Int {
-        var total = 0
-        for (link in p.readingOrder) {
-            val res = p.get(link) ?: continue
-            // Read exactly what the resource says it holds: a range past the end makes some containers
-            // allocate for the range they were asked for.
-            val size = runCatching { res.length() }.getOrNull()?.getOrNull() ?: continue
-            if (size <= 0L) continue
-            val bytes = runCatching { res.read(LongRange(0, size - 1)) }.getOrNull()?.getOrNull() ?: continue
-            total += ReaderLogic.countWords(bytes)
-        }
-        return total
     }
 
     /** A chapter read before positions() finished, waiting for its share of the book. */

@@ -29,6 +29,22 @@ class ReadiumHelper(ctx: Context) {
         opener.open(asset, allowUserInteraction = false).getOrNull()
     }.getOrNull()
 
+    /**
+     * The publication's word count, from its raw resources: no Content model, no HTML parse, no regex.
+     * Run at import so every later open already knows it.
+     */
+    suspend fun countWords(pub: Publication): Int {
+        var total = 0
+        for (link in pub.readingOrder) {
+            val res = pub.get(link) ?: continue
+            val size = runCatching { res.length() }.getOrNull()?.getOrNull() ?: continue
+            if (size <= 0L) continue
+            val bytes = runCatching { res.read(LongRange(0, size - 1)) }.getOrNull()?.getOrNull() ?: continue
+            total += Words.count(bytes)
+        }
+        return total
+    }
+
     /** Writes the embedded cover AND a small pre-scaled thumbnail for the Library grid. */
     suspend fun saveCover(pub: Publication, store: Store, id: String) {
         runCatching {

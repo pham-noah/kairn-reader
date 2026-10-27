@@ -102,10 +102,4 @@ class ReaderLogicTest {
         assertEquals(3, ReaderLogic.countWords("Tom &amp; Jerry".toByteArray()))
         assertEquals(2, ReaderLogic.countWords("naïve café".toByteArray()))   // 2-byte chars stay one word
     }
-
-    @Test fun the_instant_estimate_is_the_size_over_six() {
-        assertEquals(0, ReaderLogic.estimateWords(0))
-        assertEquals(100, ReaderLogic.estimateWords(600))
-        assertEquals(1_000_000, ReaderLogic.estimateWords(6_000_000))
-    }
 }

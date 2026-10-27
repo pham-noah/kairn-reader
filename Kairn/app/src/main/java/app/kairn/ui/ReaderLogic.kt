@@ -62,34 +62,8 @@ object ReaderLogic {
         return remaining / wpm
     }
 
-    /** English runs ~6 bytes per word in UTF-8 including the space. Only used for the instant estimate. */
-    const val BYTES_PER_WORD = 6.0
-
-    /**
-     * Words in one chapter's raw XHTML, without parsing it: one pass over the bytes, counting runs of
-     * non-whitespace outside <...>. Text nodes are what carry the words, so attributes and tags are skipped.
-     * Parsing a chapter costs a Content model; this costs a scan, which is why the whole book can be counted.
-     */
-    fun countWords(bytes: ByteArray): Int {
-        var words = 0
-        var inTag = false
-        var inWord = false
-        for (b in bytes) {
-            val c = b.toInt() and 0xFF
-            if (inTag) {
-                if (c == '>'.code) inTag = false
-                inWord = false
-                continue
-            }
-            if (c == '<'.code) { inTag = true; inWord = false; continue }
-            val space = c == ' '.code || c == '\t'.code || c == '\n'.code || c == '\r'.code || c == 0x0C
-            if (space) inWord = false else if (!inWord) { inWord = true; words++ }
-        }
-        return words
-    }
-
-    /** Words from a book's total chapter size, for a label that appears immediately. */
-    fun estimateWords(bytes: Long): Int = if (bytes <= 0) 0 else (bytes / BYTES_PER_WORD).toInt()
+    /** Kept here for the reader's own call sites; the counting itself lives in the data layer. */
+    fun countWords(bytes: ByteArray): Int = app.kairn.data.Words.count(bytes)
 
     /** Marks minus one id. Used by every delete, so the "already gone" case is the same everywhere. */
     fun withoutMark(marks: List<Mark>, id: String): List<Mark> = marks.filterNot { it.id == id }

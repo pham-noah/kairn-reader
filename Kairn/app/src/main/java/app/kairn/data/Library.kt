@@ -85,8 +85,10 @@ class Library(private val ctx: Context, private val store: Store, private val re
                 uri = uri.toString(), folder = folder,
             )
             readium.saveCover(pub, store, id)
+            // The word count is a property of the file, measured once here so every open is instant.
+            val words = readium.countWords(pub)
             pub.close()
-            b
+            b.copy(words = words)
         }
         store.put(book)
         book

@@ -65,7 +65,7 @@ reopened once that history exists. A self-hosted F-Droid repository is the plan 
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 49 JVM tests, no device needed
+    ./gradlew :app:testDebugUnitTest          # 48 JVM tests, no device needed
     ./gradlew :app:connectedDebugAndroidTest  # 4 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own

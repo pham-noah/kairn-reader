@@ -33,9 +33,27 @@ against which spec item, what is not, and the things that will bite anyone touch
 
 ## Not built yet
 
-R-04 custom font import · R-12 RTL/vertical verification · R-13 image zoom ·
+R-04 custom font import (blocked: see below) · R-12 RTL/vertical verification (partly) · R-13 image zoom ·
 dictionary pop-up (DEC-13) · all v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
 `licences/`) and the signed minified release path both exist; F-Droid supplies its own signature.
+
+## R-04 custom font import is blocked by Readium 3.0.0, not by effort
+
+`EpubNavigatorFragment.Configuration.fontFamilyDeclarations` exists, and `EpubPreferences.fontFamily` takes a
+`FontFamily` (a value class over String, which is why javap shows it as a String). But
+`FontFamilyDeclaration`, `FontFaceDeclaration` and `FontFaceSource` are all **internal** in 3.0.0 - the
+constructors are in the bytecode and the Kotlin compiler refuses them ("Cannot access 'data class ...' it is
+internal"). So an app cannot declare its own @font-face through the API. The only route left is injecting a
+`<style>` with `evaluateJavascript` on every chapter load, which means re-injecting on each chapter change and
+accepting a flash of unstyled text. Do not start R-04 without choosing that route first.
+
+## R-12 RTL: what is verified and what is not
+
+An Arabic EPUB with `page-progression-direction="rtl"` opens and renders as RTL, and `rtl` is read from
+`metadata.readingProgression`. But on that synthetic book neither the tap zones nor the volume keys advanced a
+page, while the same taps page forward normally on an LTR book (5 h 25 min -> 5 h 24 -> 5 h 22). The synthetic
+book reported 3 positions for the whole text (see the compressed-entry note above), so it cannot be told apart
+from a page-turn bug that only shows on RTL. Re-test R-12 with a real RTL EPUB before claiming it.
 
 ## Known gaps — read these before trusting the list above
 
@@ -96,13 +114,16 @@ Verified against the real 3.0.0 artifacts, not from memory:
 - `savePosition` debounces the disk write while updating the UI immediately.
 - Search pages off ONE live iterator: "show more" pulls the next 100 hits instead of rescanning the book,
   so page five does not cost five full walks.
-- The time left is the book's own word count, not an extrapolation. Readium computes a position count from
-  `ArchiveProperties.entryLength / 1024` (ceil'd) - which is NOT the character count the content service
-  returns, so any words-per-position ratio has to be measured, and a ratio measured on one chapter used to
-  read as many hours too long. Now: `Book.words` is cached with the record (ids are content hashes, so it
-  cannot go stale), the label falls back to the sum of chapter sizes / 6 for the second before the count
-  lands, and the exact count is one byte pass per chapter over the raw XHTML (`ReaderLogic.countWords`
-  skips anything between `<` and `>`), also cached. A later open does no counting at all.
+- The time left is the book's own word count, measured ONCE AT IMPORT: `Library.addBook` calls
+  `ReadiumHelper.countWords`, one byte pass per chapter over the raw XHTML (`data/Words.kt` skips anything
+  between `<` and `>`), and the number is stored in the book record. Every open after that is instant and
+  exact, and there is no words-per-position ratio anywhere.
+  WHY NO RATIO: Readium's position count is `ArchiveProperties.entryLength / 1024` (ceil'd), and for a
+  normal EPUB that entry length behaves like the COMPRESSED size - an Arabic test book of 82 KB of XHTML
+  compressed to a 3 KB file and reported THREE positions for the whole book. Compression ratio varies per
+  chapter, so positions are not proportional to text, and any ratio built on them is noise. A record
+  imported before this existed has `words = 0` and is counted once on first open (`KairnPerf: words=...
+  (counted on open)`), then cached.
 - The ambient wash and the glass shadows are built in `drawWithCache`; the glass avoids
   `Modifier.shadow` so a card does not get its own offscreen render node.
 - Covers are cached in kilobytes against the heap, decoded with `inSampleSize` to ~384 px, and the grid
@@ -127,7 +148,7 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
     ui/nav/  AppShell — the 3 tabs, overlays and system pickers
     ui/screens/ Library, Collections, Add books, Settings, Backup, Onboarding, Annotations
 
-Tests live in `app/src/test` and run on the JVM (49): model round-trips, `Store`'s writer (coalescing,
+Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
 `app/src/androidTest` holds 4 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
