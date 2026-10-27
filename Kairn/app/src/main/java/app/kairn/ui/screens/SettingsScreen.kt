@@ -119,6 +119,5 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
             KRow(stringResource(R.string.s_manrope_and_literata), subtitle = stringResource(R.string.s_sil_open_font_license_bundled_with_the_a), divider = true)
         }
-        Text(stringResource(R.string.s_dictionary_licences_are_still_being_chec), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
     }
 }
