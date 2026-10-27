@@ -41,7 +41,6 @@
     <string name="s_delete_this_note">Delete this note?</string>
     <string name="s_done">Done</string>
     <string name="s_edit_details_collections_and_tags">Edit details, collections and tags</string>
-    <string name="s_english">English</string>
     <string name="s_everything_here_works_without_internet">Everything here works without internet.</string>
     <string name="s_existing_tags">Existing tags</string>
     <string name="s_export_notes">Export notes</string>
@@ -60,7 +59,6 @@
     <string name="s_keep_it">Keep it</string>
     <string name="s_keep_screen_on">Keep screen on</string>
     <string name="s_keeps_both_if_a_book_is_in_both_the_late">Keeps both. If a book is in both, the later position wins.</string>
-    <string name="s_language">Language</string>
     <string name="s_line_spacing">Line spacing</string>
     <string name="s_makes_this_phone_match_the_backup">Makes this phone match the backup.</string>
     <string name="s_manrope_and_literata">Manrope and Literata</string>

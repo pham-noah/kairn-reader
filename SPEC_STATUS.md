@@ -81,6 +81,21 @@ was not even reproducible. Start the next attempt from these facts, all measured
 - Fixtures: build the picture with bright, asymmetric content. A dark-mode screenshot used as the book's image
   is indistinguishable from the reader's own black page, which cost a cycle.
 
+## Audit items closed by measurement, not by opinion
+
+- **Compose skippability** (`app/build/compose_compiler/app_debug-composables.csv`, from a full Kotlin
+  recompile - an incremental build only reports the files it recompiled, so delete `app/build/kotlin-classes`
+  and `app/build/compose_compiler` first): **47 of 50 composables are skippable**. The three that are not are
+  `Header` (a local function inside LibraryScreen), `<get-glass>` (a property getter) and `ambientWash` (a
+  Modifier factory) - none of them a component with parameters to compare. The "Header cannot skip" item in
+  the old audit is therefore a non-issue, and there is nothing left to win here.
+- **N-05, strings**: every UI string is a resource; counts are plurals; the reader chrome, search states,
+  settings groups, sort/status labels, add-books states and onboarding are all covered.
+- **R-12, RTL**: verified on a device with a real Arabic EPUB - it renders right-to-left and the LEFT edge
+  pages forward (30 -> 28 -> 26 -> 24 min), while an LTR book pages forward on the right edge.
+- **Dead affordances**: the About sheet no longer advertises dictionary licences for a feature that does not
+  exist, and Settings no longer carries a "Language - English" row with nothing behind it.
+
 ## Known gaps — read these before trusting the list above
 
 - **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,

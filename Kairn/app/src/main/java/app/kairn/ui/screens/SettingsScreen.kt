@@ -107,8 +107,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
         }
         KGroup(stringResource(R.string.s_group_about)) {
             KCard {
-                KRow(stringResource(R.string.s_language)) { Text(stringResource(R.string.s_english), color = K.mut) }
-                KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
+                KRow(stringResource(R.string.s_open_source_licences), divider = false, onClick = { licences = true }) { KChevron() }
             }
         }
         Text(stringResource(R.string.s_kairn_draft_build_no_account_no_ads_no_t), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
