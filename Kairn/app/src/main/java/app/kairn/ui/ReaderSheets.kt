@@ -127,7 +127,11 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
 }
 
 @Composable
-internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean, onQuery: (String) -> Unit, onMore: () -> Unit, onGo: (Locator) -> Unit) {
+internal fun SearchSheet(
+    results: List<Locator>, busy: Boolean, canMore: Boolean,
+    onQuery: (String) -> Unit, onMore: () -> Unit, onGo: (Locator) -> Unit,
+    chapterTitles: Map<String, String> = emptyMap(),
+) {
     var q by remember { mutableStateOf("") }
     Column(Modifier.heightIn(max = 560.dp).imePadding()) {
         KField(q, { q = it; onQuery(it) }, placeholder = stringResource(R.string.s_search_in_this_book), leading = Icons.Default.Search)
@@ -143,11 +147,16 @@ internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean
         Text(note, style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         LazyColumn { items(results.size) { i ->
             val l = results[i]
+            // Which chapter a hit is in: a snippet alone does not tell you where you would land.
+            val here = chapterTitles[l.href.toString()] ?: chapterTitles[l.href.toString().substringAfterLast('/')]
+            Column(Modifier.fillMaxWidth().clickable { onGo(l) }.padding(vertical = 12.dp, horizontal = 4.dp)) {
+            if (here != null) Text(here, style = KType.label.copy(color = K.dim), maxLines = 1)
             Text(buildAnnotatedString {
                 append("…" + l.text.before?.takeLast(30).orEmpty())
                 withStyle(SpanStyle(background = K.mint.copy(alpha = .3f))) { append(l.text.highlight.orEmpty()) }
                 append(l.text.after?.take(40).orEmpty() + "…")
-            }, color = K.txt, modifier = Modifier.fillMaxWidth().clickable { onGo(l) }.padding(vertical = 12.dp, horizontal = 4.dp))
+            }, color = K.txt)
+            }
         }
         // A cap without a way past it reads as "that is all there is".
         if (canMore && !busy) item {

@@ -260,7 +260,7 @@ internal fun ReaderScreen(
             when (ui.sheet) {
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
-                ReaderSheet.SEARCH -> SearchSheet(ui.searchResults, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3, act::search, act::searchMore, act::goTo)
+                ReaderSheet.SEARCH -> SearchSheet(ui.searchResults, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3, act::search, act::searchMore, act::goTo, ui.chapterTitles)
                 ReaderSheet.NOTES -> AnnotationsContent(ui.bookTitle, ui.marks,
                     onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(act::goTo) },
                     onDelete = act::deleteMark,

@@ -116,7 +116,8 @@ reverted rather than shipped:
   `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner` on the same build answers
   `OK (6 tests)` in 17 s. Installing both APKs once (`adb install -r app-debug.apk` then
   `app-debug-androidTest.apk`) and re-running Gradle then gives 6/6 too. So the Compose test route was never
-  proven broken - the chapter-labelled search change was reverted on a false signal and is worth one more try.
+  proven broken. Retried with the prerequisites above: `SearchSheetTest` passes and the chapter-labelled search
+  results are SHIPPED, guarded by that test. The suite is 8 device tests.
 
 ## Known gaps — read these before trusting the list above
 
@@ -214,11 +215,13 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 6 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
-emulator: the store writing a record to a real filesystem and reading it back cold, a delete taking the
+`app/src/androidTest` holds 8 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
+- see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
-answering 404 on a bare path, and the reader's tap zones - the RIGHT edge pages forward in an LTR book while
-the LEFT edge does in an RTL one, asserted from the saved position the reader writes (not from the screen, and
+answering 404 on a bare path, the reader's tap zones - the RIGHT edge pages forward in an LTR book while
+the LEFT edge does in an RTL one - and the search sheet rendering each hit's chapter title above its snippet
+(composed directly with `createComposeRule`, so no Activity, WebView or IME is involved), asserted from the saved position the reader writes (not from the screen, and
 not from `progress`, which is legitimately 0.0 at the start of a book - wait for the locator). They speak HTTP over a raw socket on purpose — the app's own policy refuses
 cleartext (the phone only ever listens, the browser is the client) and that policy is enforced by the HTTP
 stack, so an HTTP client in a test fails with "Cleartext HTTP traffic not permitted". CI has no device, so
