@@ -119,6 +119,21 @@ reverted rather than shipped:
   proven broken. Retried with the prerequisites above: `SearchSheetTest` passes and the chapter-labelled search
   results are SHIPPED, guarded by that test. The suite is 8 device tests.
 
+## The device suite has been mutation-checked
+
+All 18 device tests passed on their first run, which is exactly when to distrust them. Three behaviours were
+broken on purpose, in one build, and the suite was run (mutation testing):
+
+| broken on purpose | test that caught it |
+|---|---|
+| the search sheet stops printing the chapter name | `SearchSheetTest.a_result_names_the_chapter_it_is_in` |
+| the library's status filter ignores `b.status` | `LibraryScreenTest.the_status_filter_keeps_only_the_matching_books` |
+| the Two-pages segment writes `twoPage = it == 0` | `DisplaySheetTest.choosing_two_pages_emits_a_pref_with_two_pages` |
+
+Result: `Tests run: 18, Failures: 3` - exactly those three, nothing else, and every other test still passed.
+The mutations were reverted and the suite is `OK (18 tests)` again. Repeat this after adding tests: a test that
+cannot fail is worse than no test, and a green suite on the first attempt proves nothing on its own.
+
 ## Known gaps — read these before trusting the list above
 
 - **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,
