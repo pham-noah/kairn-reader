@@ -96,12 +96,13 @@ Verified against the real 3.0.0 artifacts, not from memory:
 - `savePosition` debounces the disk write while updating the UI immediately.
 - Search pages off ONE live iterator: "show more" pulls the next 100 hits instead of rescanning the book,
   so page five does not cost five full walks.
-- The time-left estimate refuses implausible measurements. A chapter needs 250+ words and 2+ positions, and
-  its words-per-position must fall in 60..350 (a reflowable position is ~1024 characters, so a real chapter
-  lands near 170). Outside that band the measurement is dropped rather than extrapolated across the book -
-  one uncovered resource at 500 words per position was reading as "31 hours left" on a novel. A chapter
-  read before `positions()` landed is held and measured when the scan finishes, instead of being measured
-  against zero and lost.
+- The time left is the book's own word count, not an extrapolation. Readium computes a position count from
+  `ArchiveProperties.entryLength / 1024` (ceil'd) - which is NOT the character count the content service
+  returns, so any words-per-position ratio has to be measured, and a ratio measured on one chapter used to
+  read as many hours too long. Now: `Book.words` is cached with the record (ids are content hashes, so it
+  cannot go stale), the label falls back to the sum of chapter sizes / 6 for the second before the count
+  lands, and the exact count is one byte pass per chapter over the raw XHTML (`ReaderLogic.countWords`
+  skips anything between `<` and `>`), also cached. A later open does no counting at all.
 - The ambient wash and the glass shadows are built in `drawWithCache`; the glass avoids
   `Modifier.shadow` so a card does not get its own offscreen render node.
 - Covers are cached in kilobytes against the heap, decoded with `inSampleSize` to ~384 px, and the grid
