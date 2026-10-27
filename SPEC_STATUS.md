@@ -47,13 +47,17 @@ internal"). So an app cannot declare its own @font-face through the API. The onl
 `<style>` with `evaluateJavascript` on every chapter load, which means re-injecting on each chapter change and
 accepting a flash of unstyled text. Do not start R-04 without choosing that route first.
 
-## R-12 RTL: what is verified and what is not
+## R-12 RTL: verified, with one caveat about test books
 
-An Arabic EPUB with `page-progression-direction="rtl"` opens and renders as RTL, and `rtl` is read from
-`metadata.readingProgression`. But on that synthetic book neither the tap zones nor the volume keys advanced a
-page, while the same taps page forward normally on an LTR book (5 h 25 min -> 5 h 24 -> 5 h 22). The synthetic
-book reported 3 positions for the whole text (see the compressed-entry note above), so it cannot be told apart
-from a page-turn bug that only shows on RTL. Re-test R-12 with a real RTL EPUB before claiming it.
+Verified on an emulator with a 7,200-word Arabic EPUB (`dir="rtl"`, `page-progression-direction="rtl"`):
+it opens and renders right-to-left, `rtl` is read from `metadata.readingProgression`, and the tap zones honour
+the direction - the LEFT edge goes FORWARD (30 min -> 28 -> 26 -> 24 across taps) while the same edge goes
+backward in an LTR book (where the right edge pages forward: 5 h 25 -> 5 h 24 -> 5 h 22).
+
+The caveat worth remembering: a test book whose text is one sentence repeated compresses ~27x, so Readium
+reported THREE positions for the whole thing and NO tap appeared to page. That looked like a real RTL bug and
+was an artefact of the fixture. Build RTL fixtures from a varied word pool - then you see 15 positions and the
+pages turn. Still unverified: vertical text (not built) and two-page/scroll mode under RTL.
 
 ## Known gaps — read these before trusting the list above
 
