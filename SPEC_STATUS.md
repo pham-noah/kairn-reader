@@ -96,6 +96,24 @@ was not even reproducible. Start the next attempt from these facts, all measured
 - **Dead affordances**: the About sheet no longer advertises dictionary licences for a feature that does not
   exist, and Settings no longer carries a "Language - English" row with nothing behind it.
 
+## Verifying UI on the emulator: what does NOT work (measured 2026-10-27)
+
+Text-driven UI checks against the reader are unreliable on this AVD, which is why three UI features were
+reverted rather than shipped:
+
+- `adb shell input text "..."` puts roughly TWO characters into the reader's search field and then stops;
+  `adb shell input keyevent 48/36/33` does not reach it at all. The sheet's EditText loses IME focus after the
+  first keystroke, so the field never reaches the three characters a search needs.
+- The Compose-test route bypasses the IME and DOES compile, but it needs three things that are easy to get
+  wrong: `androidTestImplementation(composeBom)` (the BOM in `implementation` does NOT version the test
+  artifacts - "Could not find androidx.compose.ui:ui-test-junit4:."), `androidx.compose.ui:ui-test-junit4` plus
+  `debugImplementation("androidx.compose.ui:ui-test-manifest")`, and a `Locator` for the fixture needs
+  `mediaType = MediaType.XHTML` because that parameter is NON-null ("Null cannot be a value of a non-null type
+  MediaType").
+- With all three in place the instrumentation process CRASHED at discovery ("Starting 0 tests ... Instrumentation
+  run failed due to Process crashed") with nothing in logcat. That is the next thing to solve, and it is
+  cheaper to solve than to keep designing features that cannot be looked at.
+
 ## Known gaps — read these before trusting the list above
 
 - **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,
