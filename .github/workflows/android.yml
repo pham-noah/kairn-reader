@@ -30,6 +30,9 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon --console=plain testDebugUnitTest lintDebug assembleDebug
+          # No device on CI, so the instrumented suite is COMPILED here and run with
+          #   :app:connectedDebugAndroidTest   (see SPEC_STATUS.md)
+          ./gradlew --no-daemon --console=plain assembleDebugAndroidTest
 
       - name: Keep the reports when something fails
         if: failure()

@@ -66,6 +66,7 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 
     ./gradlew :app:assembleDebug
     ./gradlew :app:testDebugUnitTest          # 49 JVM tests, no device needed
+    ./gradlew :app:connectedDebugAndroidTest  # 4 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own
 
