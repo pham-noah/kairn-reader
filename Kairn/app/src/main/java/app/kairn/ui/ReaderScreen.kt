@@ -156,7 +156,6 @@ internal fun ReaderScreen(
         }
 
         ui.jumpBack?.let { j ->   // R-08: "Back to where you were"
-            // A short-lived offer: it clears itself after a delay, and any new jump re-arms it.
             LaunchedEffect(j) { delay(6000); ui.jumpBack = null }
             Row(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
                 .clickable { act.goTo(j); ui.jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -191,7 +190,6 @@ internal fun ReaderScreen(
                             ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())?.let(act::preload)
                         }
                     }
-                    // While scrubbing, the label names the chapter the slider points at.
                     val preview = drag?.let { v ->
                         val idx = (v * (ui.positions.size - 1)).toInt()
                         val loc = ui.positions.getOrNull(idx)

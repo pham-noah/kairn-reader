@@ -63,8 +63,6 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
                     val inside = byCollection[name].orEmpty()
                     KRow(name, subtitle = pluralStringResource(R.plurals.books_count, inside.size, inside.size), divider = i > 0, onClick = { onOpenShelf(name) }) {
                         Row(Modifier.padding(end = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) { inside.take(3).forEach { b -> KCover(b, store.thumbFile(b.id).path, Modifier.width(28.dp), compact = true, fallbackPath = store.coverFile(b.id).path) } }
-                        // The row itself opens the collection; the menu holds rename and delete, which used
-                        // to be impossible once a name existed.
                         KIconButton(Icons.Default.MoreVert, stringResource(R.string.s_rename_or_delete, name), { manage = name to 0 }, tint = K.mut)
                     }
                 }

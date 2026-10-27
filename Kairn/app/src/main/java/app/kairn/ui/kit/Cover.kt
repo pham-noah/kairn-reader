@@ -65,8 +65,6 @@ private fun decodeCover(file: File, maxDim: Int = 384): ImageBitmap? = runCatchi
 
 /**
  * Loads (and caches) the bitmap a cell should draw: the cover if the file is there, the full cover as a
- * fallback while a thumbnail is still being written, null when neither exists.
- *
  * Off the main thread, and re-decodes only when the file's mtime moved - a warm cache hit costs one stat.
  */
 private suspend fun loadCover(key: String, cover: File, fallback: File?, hit: CachedCover?): ImageBitmap? =

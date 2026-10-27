@@ -126,7 +126,6 @@ fun Modifier.glassShadow(elevation: Dp, color: Color = Color.Black, shape: Shape
         // Inset by (most of) the corner radius, so a pill or circle gets no square shadow corners past its curve.
         val r = (shape.createOutline(size, layoutDirection, this) as? Outline.Rounded)?.roundRect?.bottomLeftCornerRadius?.x ?: 0f
         val inset = (r * 0.6f).coerceAtMost(size.width / 2f)
-        // Darkest right under the card edge, fading to nothing.
         val brush = Brush.verticalGradient(
             colors = listOf(color.copy(alpha = 0.34f), color.copy(alpha = 0.10f), Color.Transparent),
             startY = size.height,

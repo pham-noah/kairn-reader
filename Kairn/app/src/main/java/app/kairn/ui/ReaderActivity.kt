@@ -68,10 +68,7 @@ import java.util.UUID
 import org.readium.r2.navigator.preferences.Color as RColor
 import org.readium.r2.navigator.preferences.TextAlign as RTextAlign
 
-/**
- * The reader's Activity: the navigator, the gestures and the writes.
- * This class keeps only what needs Android: the fragment container, Readium wiring, input events and the debounced position save.
- */
+/** The navigator, the input events and the debounced save; everything drawn is ReaderScreen. */
 class ReaderActivity : AppCompatActivity(), ReaderActions {
     companion object { const val EXTRA_ID = "book_id"; private const val PAGE_SIZE = 100 }
 
@@ -106,8 +103,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Pass null: a restored fragment cannot be rebuilt after process death (no factory yet); the
-        // reader reopens from the saved position (R-09) instead.
+        // No restored fragment (there is no factory); the reader reopens from the saved position. R-09
         super.onCreate(null)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         bookId = intent.getStringExtra(EXTRA_ID) ?: return finish()
@@ -119,8 +115,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         root.addView(container, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         root.addView(ComposeView(this).apply {
             setContent {
-                // collectAsState, not .value: a StateFlow read inside composition is not observed, so the
-                // glass and ambient settings would not update while the reader is open.
+                // collectAsState, not .value: a StateFlow read in composition is not observed.
                 val s by app.store.settings.collectAsState()
                 KairnTheme(glass = s.glass, ambient = s.ambient) {
                     ReaderScreen(
@@ -137,8 +132,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             applyBook(book)
             lifecycleScope.launch { openBook(book) }
         } else lifecycleScope.launch {
-            // The record may be missing, or the first library read may not have finished yet - a cold
-            // "Open with" can arrive before it does. Wait for the read, then retry rather than closing.
+            // A cold "Open with" can arrive before the first library read finishes: wait, then retry.
             app.store.awaitLoaded()
             val late = app.store.get(bookId) ?: return@launch finish()
             applyBook(late)
@@ -157,8 +151,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     private suspend fun openBook(book: Book) {
         val t0 = SystemClock.elapsedRealtime()
-        // Parsing the EPUB is blocking and this coroutine runs on the main dispatcher: Readium's
-        // AssetRetriever and PublicationOpener reference no dispatcher, so this must hop to IO (as
+        // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
         val p = withContext(Dispatchers.IO) { app.readium.open(android.net.Uri.parse(book.uri)) }
         if (p == null) {                                    // N-04: message, never a crash
             writer.markBroken(); ui.error = "bad"; ui.loading = false; return
@@ -166,8 +159,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         pub = p
         ui.pub = p                    // state: Contents and the seek fallback read it during composition
         rtl = p.metadata.readingProgression == ReadingProgression.RTL
-        // Load the whole-book position list for the seek slider. positions() scans the whole
-        // publication and is the slow part of opening: it belongs on IO, never the main thread.
+        // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
         val tp = SystemClock.elapsedRealtime()
         lifecycleScope.launch {
             val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
@@ -175,9 +167,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
             measurePending()                                                            // a chapter measured before this arrived
             android.util.Log.i("KairnPerf", "positions n=${ui.positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
-            // Time left, three tiers, cheapest first. (1) The count cached with the book: nothing to do.
-            // (2) Chapter SIZES need no parsing, so the label can appear within a frame of positions.
-            // (3) One byte pass per chapter for the exact number, stored so it is a one-time cost per book.
+            // Time left: the cached count, else chapter sizes (no parsing), else one byte pass per chapter.
             if (ui.bookWords == 0) {
                 val t1 = SystemClock.elapsedRealtime()
                 val bytes = withContext(Dispatchers.IO) {
@@ -212,7 +202,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
 
         val factory = EpubNavigatorFactory(p)
-        // Labels come from resources, in the same order as the palette in Tokens.kt.
+        // Palette order in Tokens.kt decides these labels.
         val colourNames = listOf(R.string.s_colour_amber, R.string.s_colour_mint, R.string.s_colour_rose, R.string.s_colour_blue)
         val colourLabels = K.highlightColors.zip(colourNames).map { (pair, name) -> getString(name) to pair.second.toArgb() }
         val highlightCallback = HighlightActionModeCallback(
@@ -412,8 +402,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         if (app.store.settings.value.volumeKeys && ui.sheet == ReaderSheet.NONE && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) true
         else super.onKeyUp(keyCode, event)
 
-    // Scroll-mode horizontal gestures. The pager's own threshold is too eager: a small sideways
-    // ourselves and swallow anything shorter, so the pager never sees it either.
+    // Scroll mode: the pager pages on a sideways wobble, so a long horizontal drag is handled here.
     private var downX = 0f; private var downY = 0f; private var armed = false; private var tracking = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -424,7 +413,6 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         val swipeOn = app.store.settings.value.swipeChapters
         // Only a touch that STARTS on the book may page it. The bars are Compose content in this same
         // window, so without this a horizontal drag on the seek slider armed the swipe, swallowed the
-        // rest of the drag and paged a chapter instead of seeking.
         val inReadingArea = ev.y < ui.chromeTopPx
         fun flicks(dx: Float, dy: Float) = kotlin.math.abs(dx) > flick && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 3f
         when (ev.actionMasked) {
@@ -547,8 +535,6 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     /**
      * R-03: whether the current chapter is longer than the screen, which decides what a tap in scroll mode
      * does. That only changes when the chapter, the scroll mode or the layout settings change, so this is
-     * evaluated once per change rather than polled four times a second - the JS call is not free, and
-     * polling it while nothing moves was the battery cost of leaving the reader open.
      */
     private fun startScrollWatcher(n: EpubNavigatorFragment) = lifecycleScope.launch {
         repeatOnLifecycle(Lifecycle.State.RESUMED) {

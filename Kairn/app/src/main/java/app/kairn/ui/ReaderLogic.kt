@@ -19,11 +19,7 @@ object ReaderLogic {
 
     /**
      * The guard band for the INTERIM estimate only. Readium counts a position as 1024 units of
-     * ArchiveProperties.entryLength (ReflowableStrategy.ArchiveEntryLength, ceil'd) - which is not the
      * number of characters the content service returns, so the real words-per-position is far higher than
-     * 1024 characters of prose would suggest. The band is therefore wide (a real book lands in the
-     * hundreds); it exists to reject a single absurd measurement, not to describe a normal one.
-     * [minutesLeftInBook] is the accurate path and does not use it at all.
      */
     const val MIN_WORDS_PER_POSITION = 40f
     const val MAX_WORDS_PER_POSITION = 1200f

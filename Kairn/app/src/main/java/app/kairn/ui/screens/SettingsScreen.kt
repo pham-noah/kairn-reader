@@ -75,7 +75,6 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 KRow(stringResource(R.string.s_volume_keys_turn_pages), divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
                 KRow(stringResource(R.string.s_swipe_to_change_chapter), subtitle = stringResource(R.string.s_in_scroll_mode_left_for_next_right_for_p), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
                 if (s.swipeChapters) {
-                    // One compact row: label left, choice right. No subtitle, no stacked layout.
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,

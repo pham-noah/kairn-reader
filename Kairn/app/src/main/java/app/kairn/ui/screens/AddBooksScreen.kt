@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Add books: Wi-Fi transfer (L-04) and watched folders (L-01).
- *
- * The Wi-Fi server belongs to this screen: it starts on the button, and DisposableEffect stops it when
  * the screen closes, so nothing keeps listening in the background.
  */
 @Composable
