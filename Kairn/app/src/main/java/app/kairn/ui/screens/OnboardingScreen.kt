@@ -40,12 +40,12 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
             when (step) {
                 0 -> {
                     CairnMark(64)
-                    Text("Read anywhere.\nNo signal needed.", style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
+                    Text(stringResource(R.string.s_onboarding_promise), style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
                     Text(stringResource(R.string.s_a_quiet_epub_reader_your_books_notes_and), style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
                     Column(Modifier.padding(top = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        listOf("No account, no ads, no tracking", "Works with airplane mode on", "Free, with nothing locked away").forEach {
+                        listOf(R.string.s_bullet_no_account, R.string.s_bullet_airplane, R.string.s_bullet_free).forEach {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Check, null, tint = K.mint, modifier = Modifier.size(20.dp)); Text(it, fontWeight = FontWeight.SemiBold, color = K.txt)
+                                Icon(Icons.Default.Check, null, tint = K.mint, modifier = Modifier.size(20.dp)); Text(stringResource(it), fontWeight = FontWeight.SemiBold, color = K.txt)
                             }
                         }
                     }

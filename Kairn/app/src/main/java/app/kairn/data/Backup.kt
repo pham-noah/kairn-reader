@@ -2,6 +2,7 @@ package app.kairn.data
 
 import android.content.Context
 import android.net.Uri
+import app.kairn.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -21,7 +22,7 @@ class Backup(private val ctx: Context, private val store: Store) {
                 val files = store.root.walkTopDown().filter { it.isFile && !it.name.endsWith(".tmp") }.toMutableList()
                 if (includeBookFiles) files += store.copiesDir.listFiles().orEmpty()
                 val out = ctx.contentResolver.openOutputStream(dest, "w")
-                    ?: error("Could not open that file for writing.")
+                    ?: error(ctx.getString(R.string.s_backup_cannot_open))
                 out.use { raw ->
                     ZipOutputStream(raw.buffered()).use { zip ->
                         files.forEachIndexed { i, f ->
@@ -47,9 +48,7 @@ class Backup(private val ctx: Context, private val store: Store) {
 
             // 1. Validate. Nothing destructive happens until we know this is a Kairn backup. A backup of
             val names = ctx.contentResolver.openInputStream(src)?.use { zipEntryNames(it) }
-            require(isKairnBackup(names)) {
-                "That file isn't a Kairn backup, so nothing was changed."
-            }
+            require(isKairnBackup(names)) { ctx.getString(R.string.s_backup_not_kairn) }
 
             // 2. Safety copy of everything we are about to overwrite.
             val safety = File(ctx.filesDir, "safety-${System.currentTimeMillis()}.zip")
@@ -76,8 +75,14 @@ class Backup(private val ctx: Context, private val store: Store) {
                                 val bytes = zip.readBytes()
                                 when {
                                     name.startsWith("data/books/") -> mergeBook(File(store.root, name.removePrefix("data/")), bytes, replace, store::writeFile)
-                                    name == "data/settings.json" -> if (replace) store.writeFile(File(store.root, "settings.json"), String(bytes))
+                                    // Merge keeps the settings on this phone; it only adopts the backup's when there
+                                    // are none (a fresh install restoring onto an empty app).
+                                    name == "data/settings.json" -> {
+                                        val target = File(store.root, "settings.json")
+                                        if (replace || !target.exists()) store.writeFile(target, String(bytes))
+                                    }
                                     name.startsWith("data/covers/") -> File(store.root, name.removePrefix("data/")).takeIf { replace || !it.exists() }?.writeBytes(bytes)
+                                    name.startsWith("data/thumbs/") -> File(store.root, name.removePrefix("data/")).takeIf { replace || !it.exists() }?.writeBytes(bytes)
                                     name.startsWith("imported/") -> File(store.copiesDir, name.removePrefix("imported/")).takeIf { !it.exists() }?.writeBytes(bytes)
                                 }
                             }
@@ -86,13 +91,24 @@ class Backup(private val ctx: Context, private val store: Store) {
                     }
                 }
                 store.reload()
+                // A replace restore is a mirror of the archive: art whose book is gone is an orphan.
+                if (replace) pruneOrphanArt(store)
             } catch (t: Throwable) {
-                throw IllegalStateException("Restore failed part-way. Your original data is in ${safety.name}.", t)
+                throw IllegalStateException(ctx.getString(R.string.s_restore_failed_partway, safety.name), t)
             }
             safety
         }
     }
 
+    /** Cover and thumbnail files with no book record left to show them. Only called after a replace. */
+    private fun pruneOrphanArt(store: Store) {
+        val live = store.books.value.map { it.id }.toSet()
+        listOf(store.coversDir, store.thumbsDir).forEach { dir ->
+            dir.listFiles()?.forEach { f ->
+                if (f.name.substringBeforeLast('.') !in live) runCatching { f.delete() }
+            }
+        }
+    }
 }
 
 /**

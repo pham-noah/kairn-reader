@@ -34,14 +34,16 @@ against which spec item, what is not, and the things that will bite anyone touch
 ## Not built yet
 
 R-04 custom font import · R-12 RTL/vertical verification · R-13 image zoom ·
-dictionary pop-up (DEC-13) · N-08 contrast audit · bundled Manrope/Literata/Libron fonts (OQ-5: licences
-unchecked) · release signing (DEC-14) · all v1.x items (X-01…X-20).
+dictionary pop-up (DEC-13) · all v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
+`licences/`) and the signed minified release path both exist; F-Droid supplies its own signature.
 
 ## Known gaps — read these before trusting the list above
 
-- **N-05 ("strings in resources") is not actually done.** There are ~65 user-visible string literals in
-  Kotlin, and 15 of the 16 entries in `strings.xml` are unused. Nothing is translated; every string lives
-  in code.
+- **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,
+  10 `<plurals>`), including the reader chrome, the search states, the settings group titles and the
+  selection menu. Three things are deliberately NOT resources: a book's stored fallback title, the HTML
+  upload page the Wi-Fi server serves, and the highlight palette names in `Tokens.kt` (the menu labels
+  them from resources, in palette order).
 - **Notes are written from the selection menu.** Select text, tap Note, type. A note is a `Mark` with
   `kind = "note"`, so it lists, jumps, deletes (with a confirm) and exports like a highlight.
 - **The manifest carries `INTERNET`** (L-04). A listening socket needs it. No network request is made at
@@ -59,6 +61,11 @@ unchecked) · release signing (DEC-14) · all v1.x items (X-01…X-20).
   correctness path.
 
 ## Notes for anyone touching the reader (Readium Kotlin Toolkit 3.0.0)
+
+Scroll-mode chapter flicks may only START on the book: the top/bottom bars are Compose content in the same
+window, so an unfiltered `dispatchTouchEvent` swallowed a drag on the seek slider and paged a chapter
+instead of seeking (`ReaderUiState.chromeTopPx` is the bar's top edge; nothing under it arms a swipe). The
+sheets are their own Dialog window, so their sliders were never affected.
 
 Verified against the real 3.0.0 artifacts, not from memory:
 
@@ -87,6 +94,14 @@ Verified against the real 3.0.0 artifacts, not from memory:
   `addBook`, `scan` and the reader all wait on — without the gate a cold import could overwrite a known
   book's record.
 - `savePosition` debounces the disk write while updating the UI immediately.
+- Search pages off ONE live iterator: "show more" pulls the next 100 hits instead of rescanning the book,
+  so page five does not cost five full walks.
+- The time-left estimate refuses implausible measurements. A chapter needs 250+ words and 2+ positions, and
+  its words-per-position must fall in 60..350 (a reflowable position is ~1024 characters, so a real chapter
+  lands near 170). Outside that band the measurement is dropped rather than extrapolated across the book -
+  one uncovered resource at 500 words per position was reading as "31 hours left" on a novel. A chapter
+  read before `positions()` landed is held and measured when the scan finishes, instead of being measured
+  against zero and lost.
 - The ambient wash and the glass shadows are built in `drawWithCache`; the glass avoids
   `Modifier.shadow` so a card does not get its own offscreen render node.
 - Covers are cached in kilobytes against the heap, decoded with `inSampleSize` to ~384 px, and the grid
@@ -104,11 +119,12 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 
     data/    Models (JSON round-trip), Store (single writer + StateFlows), Library (import, scan,
              content-hash ids), ReadiumHelper (thin Readium wrapper), Backup (zip, validate, merge)
-    ui/      MainActivity, ReaderActivity, ReaderSheets, ReadiumSelection
+    ui/      MainActivity, ReaderActivity (navigator, input, debounced save, search), ReaderScreen (all
+             reader UI from ReaderUiState), ReaderSheets, ReaderWriter, ReaderLogic, ReadiumSelection
     ui/kit/  Buttons, Controls, Surfaces, Navigation, Overlays, Cover
     ui/theme/ Tokens, Type, Surface (glass vs solid), KairnTheme
     ui/nav/  AppShell — the 3 tabs, overlays and system pickers
     ui/screens/ Library, Collections, Add books, Settings, Backup, Onboarding, Annotations
 
-Tests live in `app/src/test` and run on the JVM: model round-trips, `Store`'s writer (coalescing,
+Tests live in `app/src/test` and run on the JVM (49): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.

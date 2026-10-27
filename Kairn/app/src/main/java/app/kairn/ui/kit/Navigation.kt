@@ -69,7 +69,7 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
 @Composable
 fun KSubHeader(title: String, onBack: () -> Unit, subtitle: String? = null) {
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        KIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+        KIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.s_back), onBack)
         Column { Text(title, style = KType.h2); if (subtitle != null) Text(subtitle, style = KType.small) }
     }
 }

@@ -1,0 +1,9 @@
+0.6.0
+
+- The time left is the book's real word count now, counted once and kept with the book, so it no longer reads as hours too long.
+- Dragging the progress slider in scroll mode seeks instead of turning the page.
+- Follow-the-system theme switches while a book is already open.
+- Search results page through the book instead of rescanning it for every page.
+- A restore brings the thumbnails back and leaves no orphaned cover files behind.
+- Every screen's text comes from resources, so a translation is one file away. Counts are plurals.
+- The bookmark toast only appears when the bookmark was really saved.

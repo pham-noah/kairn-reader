@@ -27,7 +27,11 @@ import app.kairn.ui.theme.KType
 import java.text.DateFormat
 import java.util.Date
 
-private val markKinds = listOf(null to "All", "highlight" to "Highlights", "note" to "Notes", "bookmark" to "Bookmarks")   // constant, not rebuilt per recomposition
+// kind (null = every kind) to its filter label resource
+private val markKinds = listOf(
+    null to R.string.s_all, "highlight" to R.string.s_filter_highlights,
+    "note" to R.string.s_filter_notes, "bookmark" to R.string.s_filter_bookmarks,
+)
 
 /** A-02 / A-03: the Notes and highlights list, used inside the reader's Notes sheet. */
 @Composable
@@ -42,7 +46,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
     Column(Modifier.heightIn(max = 560.dp)) {
         Text(bookTitle, style = KType.small, maxLines = 1)
         LazyRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(markKinds.size) { i -> KChip(markKinds[i].second, filter == i, { filter = i }, count = counts[i]) }
+            items(markKinds.size) { i -> KChip(stringResource(markKinds[i].second), filter == i, { filter = i }, count = counts[i]) }
         }
         if (shown.isEmpty()) Text(stringResource(R.string.s_select_text_and_pick_a_colour_to_highlig), style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
         else KCard(Modifier.weight(1f, fill = false)) {
@@ -58,7 +62,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
                             if (m.note.isNotBlank()) Text(m.note, style = KType.small, modifier = Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(K.bg).clickable { onEditNote(m) }.padding(horizontal = 12.dp, vertical = 9.dp))
                             Text(DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(m.created)), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp))
                         }
-                        KIconButton(Icons.Default.Delete, "Delete", { if (m.note.isNotBlank()) confirm = m else onDelete(m) }, tint = K.dim)
+                        KIconButton(Icons.Default.Delete, stringResource(R.string.s_delete_desc), { if (m.note.isNotBlank()) confirm = m else onDelete(m) }, tint = K.dim)
                     }
                 }
             }

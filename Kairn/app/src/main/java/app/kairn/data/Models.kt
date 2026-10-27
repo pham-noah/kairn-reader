@@ -101,6 +101,8 @@ data class Book(
     val progress: Float = 0f,
     val added: Long = System.currentTimeMillis(),
     val lastRead: Long = 0,
+    /** The book's word count, measured once. A property of the file, and ids are content hashes, so it cannot go stale. */
+    val words: Int = 0,
     val marks: List<Mark> = emptyList(),
     val prefs: ReaderPrefs? = null,  // R-10
 ) {
@@ -108,7 +110,7 @@ data class Book(
         .put("uri", uri).put("folder", folder ?: JSONObject.NULL).put("status", status.name)
         .put("tags", JSONArray(tags)).put("collections", JSONArray(collections))
         .put("missing", missing).put("broken", broken).put("locator", locator ?: JSONObject.NULL)
-        .put("progress", progress.toDouble()).put("added", added).put("lastRead", lastRead)
+        .put("progress", progress.toDouble()).put("added", added).put("lastRead", lastRead).put("words", words)
         .put("marks", JSONArray(marks.map { it.toJson() }))
         .put("prefs", prefs?.toJson() ?: JSONObject.NULL)
 
@@ -130,7 +132,7 @@ data class Book(
             missing = o.optBoolean("missing"), broken = o.optBoolean("broken"),
             locator = o.optString("locator").takeIf { it.isNotEmpty() && it != "null" },
             progress = o.optDouble("progress", 0.0).toFloat(), added = o.optLong("added"),
-            lastRead = o.optLong("lastRead"),
+            lastRead = o.optLong("lastRead"), words = o.optInt("words"),
             marks = o.optJSONArray("marks")?.let { a ->
                 (0 until a.length()).mapNotNull { i -> runCatching { Mark.from(a.getJSONObject(i)) }.getOrNull() }
             } ?: emptyList(),

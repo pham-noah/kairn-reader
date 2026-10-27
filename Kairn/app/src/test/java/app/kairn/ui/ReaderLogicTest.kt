@@ -60,4 +60,52 @@ class ReaderLogicTest {
         assertTrue(ReaderLogic.chapterHasBookmark(listOf(elsewhere, inChapter), "ch2", ::hrefOf))
         assertFalse(ReaderLogic.chapterHasBookmark(listOf(elsewhere, highlightHere), "ch2", ::hrefOf))
     }
+
+    /**
+     * A resource the positions scan did not cover the way the content service reads it reports an absurd
+     * words-per-position (60,000 words over 120 positions). Extrapolated across the book that is "31 hours
+     * left" on a novel, which is exactly the number this band exists to refuse.
+     */
+    @Test fun an_absurd_ratio_is_refused_instead_of_extrapolated() {
+        assertEquals(ReaderLogic.Pace(), ReaderLogic.Pace().add(600_000, 120))
+        assertEquals(pace(900, 5), pace(900, 5).add(600_000, 120))
+    }
+
+    @Test fun one_position_cannot_describe_a_ratio() {
+        assertEquals(ReaderLogic.Pace(), ReaderLogic.Pace().add(400, 1))
+    }
+
+    @Test fun the_accumulated_ratio_stays_inside_the_plausible_band() {
+        val wide = pace(500_000, 100)                     // 5,000 words a position: past the ceiling
+        assertEquals(ReaderLogic.MAX_WORDS_PER_POSITION, wide.wordsPerPosition)
+        assertEquals((100 * ReaderLogic.MAX_WORDS_PER_POSITION).toInt() / ReaderLogic.WPM, ReaderLogic.minutesLeft(wide, 100, 0f))
+    }
+
+    /** The exact path: no ratio, so no band and no extrapolation - just the book's own word count. */
+    @Test fun minutes_left_from_the_books_own_word_count() {
+        assertNull(ReaderLogic.minutesLeftInBook(0, 0.5f))
+        assertEquals(0, ReaderLogic.minutesLeftInBook(120_000, 1f))
+        assertEquals(250, ReaderLogic.minutesLeftInBook(120_000, 0.5f))   // 60,000 words at 240 wpm
+        assertEquals(500, ReaderLogic.minutesLeftInBook(120_000, 0f))
+        assertEquals(0, ReaderLogic.minutesLeftInBook(120_000, 1.7f))     // clamped
+    }
+
+    /** The counter works on raw XHTML bytes: markup must not be counted, text must be. */
+    @Test fun words_are_counted_outside_tags_only() {
+        val xhtml = """<?xml version="1.0"?><p class="lead">Hello brave   new world</p><span title="a b c">again</span>"""
+        assertEquals(5, ReaderLogic.countWords(xhtml.toByteArray()))       // hello brave new world again
+        assertEquals(0, ReaderLogic.countWords("<p></p>".toByteArray()))
+        assertEquals(0, ReaderLogic.countWords(ByteArray(0)))
+    }
+
+    @Test fun punctuation_entities_and_multibyte_text_do_not_split_words() {
+        assertEquals(3, ReaderLogic.countWords("Tom &amp; Jerry".toByteArray()))
+        assertEquals(2, ReaderLogic.countWords("naïve café".toByteArray()))   // 2-byte chars stay one word
+    }
+
+    @Test fun the_instant_estimate_is_the_size_over_six() {
+        assertEquals(0, ReaderLogic.estimateWords(0))
+        assertEquals(100, ReaderLogic.estimateWords(600))
+        assertEquals(1_000_000, ReaderLogic.estimateWords(6_000_000))
+    }
 }

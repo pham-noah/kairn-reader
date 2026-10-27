@@ -110,11 +110,8 @@ fun AddBooksScreen(
                     }
                     code?.let { Text(stringResource(R.string.code_is_the_address, it), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp)) }
                     Text(
-                        when {
-                            receivedCount == 0 -> "Waiting for books. Leave this screen open while you send."
-                            receivedCount == 1 -> "1 book received."
-                            else -> "$receivedCount books received."
-                        },
+                        if (receivedCount == 0) stringResource(R.string.s_waiting_for_books)
+                        else pluralStringResource(R.plurals.books_received, receivedCount, receivedCount),
                         style = KType.small, modifier = Modifier.padding(top = 12.dp),
                     )
                     last?.let { Text(stringResource(R.string.last_file, it), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 4.dp)) }
@@ -122,15 +119,18 @@ fun AddBooksScreen(
                     KButton(stringResource(R.string.s_stop_transfer), { wifi.stop(); running = false; address = null }, style = KButtonStyle.Secondary)
                 }
             }
-            KGroup("Folders Kairn watches") {
+            KGroup(stringResource(R.string.s_group_folders_watched)) {
                 if (settings.folders.isEmpty()) Text(stringResource(R.string.s_no_folders_yet_new_epub_files_in_a_watch), style = KType.small, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
                 else KCard {
                     settings.folders.forEachIndexed { i, f ->
                         val n = books.count { it.folder == f.uri }
+                        // Hoisted: stringResource cannot be called from the switch's onChange callback.
+                        val nowWatching = stringResource(R.string.s_watching, f.name)
+                        val stoppedWatching = stringResource(R.string.s_stopped_watching, f.name)
                         KRow(f.name, subtitle = pluralStringResource(R.plurals.books_count, n, n), leading = Icons.Default.Folder, divider = i > 0) {
                             KSwitch(f.enabled, { v ->
                                 store.saveSettings { st -> st.copy(folders = st.folders.map { if (it.uri == f.uri) it.copy(enabled = v) else it }) }
-                                toast.show(if (v) "Watching ${f.name}" else "Stopped watching ${f.name}")
+                                toast.show(if (v) nowWatching else stoppedWatching)
                             })
                         }
                     }

@@ -40,7 +40,8 @@ per chapter, a per-book list to jump from, an undo on every delete, Markdown exp
 
 **Backup** — one zip, optionally with the book files inside; merge or replace on restore.
 
-Every user-facing string is a resource, so a translation is a `values-xx/strings.xml` away.
+Every user-facing string is a resource (counts are plurals), so a translation is a `values-xx/strings.xml`
+away. Data is never localized: book titles, the Wi-Fi upload page and the annotation kinds stay as they are.
 
 ## Privacy
 
@@ -64,7 +65,7 @@ reopened once that history exists. A self-hosted F-Droid repository is the plan 
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 42 JVM tests, no device needed
+    ./gradlew :app:testDebugUnitTest          # 49 JVM tests, no device needed
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own
 

@@ -43,7 +43,8 @@ class BackupUi {
 @Composable
 fun BackupScreen(ui: BackupUi, store: Store, onBack: () -> Unit, onBackupNow: () -> Unit, onRestoreFromFile: () -> Unit) {
     val s by store.settings.collectAsStateWithLifecycle()
-    val last = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(s.lastBackup)) else "Never" }
+    val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(s.lastBackup)) else null }
+    val last = lastDate ?: stringResource(R.string.s_never)
     Column(Modifier.fillMaxSize()) {
         KSubHeader(stringResource(R.string.s_backup_and_restore), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(Dim.screenPad.dp)) {

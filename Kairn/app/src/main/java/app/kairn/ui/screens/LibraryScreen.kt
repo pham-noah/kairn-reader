@@ -44,7 +44,9 @@ import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 
-private enum class SortBy(val label: String) { RECENT("Recently read"), TITLE("Title"), AUTHOR("Author"), ADDED("Date added") }
+private enum class SortBy(@androidx.annotation.StringRes val label: Int) {
+    RECENT(R.string.s_sort_recent), TITLE(R.string.s_sort_title), AUTHOR(R.string.s_sort_author), ADDED(R.string.s_sort_added),
+}
 
 /** Row shapes for the grid, so Lazy can reuse slots when the library list changes. */
 private const val CT_GRID = 0
@@ -70,11 +72,11 @@ private fun knownCollections(books: List<Book>, shelves: List<String>): List<Str
 private fun CollectionChips(
     known: List<String>,
     cols: Set<String>,
-    emptyHint: String = "No collections yet. Make one on the Collections tab.",
+    emptyHint: String? = null,
     onToggle: (String) -> Unit,
 ) {
     if (known.isEmpty()) {
-        Text(emptyHint, style = KType.small, modifier = Modifier.padding(start = 4.dp))
+        Text(emptyHint ?: stringResource(R.string.s_no_collections_hint), style = KType.small, modifier = Modifier.padding(start = 4.dp))
         return
     }
     Box(Modifier.heightIn(max = 168.dp).verticalScroll(rememberScrollState())) {
@@ -124,11 +126,11 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
             Text(b.title, style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(b.author, style = KType.small, maxLines = 1)
             val (t, warn) = when {
-                b.missing -> "File missing. Your place and notes are kept." to true
-                b.broken -> "Can't be opened" to true
-                b.status == Status.FINISHED -> "Finished" to false
-                b.progress > 0f -> "${(b.progress * 100).toInt()}% read" to false
-                else -> "Not started" to false
+                b.missing -> stringResource(R.string.s_list_file_missing) to true
+                b.broken -> stringResource(R.string.s_list_broken) to true
+                b.status == Status.FINISHED -> stringResource(R.string.s_list_finished) to false
+                b.progress > 0f -> stringResource(R.string.s_list_percent_read, (b.progress * 100).toInt()) to false
+                else -> stringResource(R.string.s_list_not_started) to false
             }
             Text(t, fontSize = 14.sp, color = if (warn) K.amber else K.dim, modifier = Modifier.padding(top = 3.dp))
         }
@@ -208,9 +210,9 @@ fun LibraryScreen(
 
     @Composable fun Header() = Column {
         KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(30) }) {
-            KIconButton(Icons.Default.Add, "Add books", onAdd, bordered = true)
-            KIconButton(Icons.Default.Search, "Search library", { searching = !searching; if (!searching) query = "" }, bordered = true)
-            KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, if (grid) "Switch to list view" else "Switch to grid view", { grid = !grid }, bordered = true)
+            KIconButton(Icons.Default.Add, stringResource(R.string.s_add_books), onAdd, bordered = true)
+            KIconButton(Icons.Default.Search, stringResource(R.string.s_search_library), { searching = !searching; if (!searching) query = "" }, bordered = true)
+            KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid }, bordered = true)
         }
         if (searching) KField(query, { query = it }, Modifier.padding(top = 12.dp), placeholder = stringResource(R.string.search_hint), leading = Icons.Default.Search)
         LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -227,9 +229,9 @@ fun LibraryScreen(
             Text(pluralStringResource(R.plurals.books_count, shown.size, shown.size), style = KType.small)
             Box {
                 Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sort.label, color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
+                    Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
                 }
-                val sortItems = remember(sort) { SortBy.entries.map { it.label to (it == sort) } }   // hoisted: a fresh list per recomposition cannot skip
+                val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) }
                 KMenu(sortMenu, { sortMenu = false }, sortItems) { sort = SortBy.entries[it] }
             }
         }
@@ -278,7 +280,7 @@ fun LibraryScreen(
                 Modifier.align(Alignment.TopCenter).fillMaxWidth().background(K.surf).statusBarsPadding().padding(horizontal = Dim.screenPad.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(stringResource(R.string.selected_count, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
                 KButton(stringResource(R.string.s_add_to_collection), { bulkTo = true }, small = true, enabled = picked.isNotEmpty())
                 KButton(stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() }, style = KButtonStyle.Secondary, small = true)
             }
@@ -292,7 +294,7 @@ fun LibraryScreen(
     problem?.let { b ->
         KSheet({ problem = null }, if (b.missing) stringResource(R.string.missing_file) else stringResource(R.string.bad_file_title)) {
             Text(if (b.missing) stringResource(R.string.s_the_file_was_moved_or_deleted_your_place)
-                 else "The file may be damaged or too large. The rest of your data is safe.", style = KType.body.copy(color = K.mut))
+                 else stringResource(R.string.s_bad_file_damaged), style = KType.body.copy(color = K.mut))
             Column(Modifier.padding(top = 16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 KButton(stringResource(R.string.s_keep_it), { problem = null })
                 KButton(stringResource(R.string.s_remove_from_library), { store.remove(b.id); problem = null; toast.show(removedToast) }, style = KButtonStyle.Danger)
@@ -379,7 +381,7 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         store.saveSettings { s -> s.copy(shelves = (s.shelves + n).distinct()) }
         cols = cols + n; newCol = ""; addingCol = false
     }
-    val opts = listOf(Status.NONE to "None", Status.WANT to "Want", Status.READING to "Reading", Status.FINISHED to "Finished")
+    val opts = listOf(Status.NONE to R.string.s_status_none, Status.WANT to R.string.s_want, Status.READING to R.string.s_reading, Status.FINISHED to R.string.s_finished)
     val allBooks by store.books.collectAsStateWithLifecycle()
     val settings by store.settings.collectAsStateWithLifecycle()
     // Everything that exists: shelves made on the Collections tab plus any a book arrived carrying.
@@ -389,9 +391,9 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
     KSheet(onDone, stringResource(R.string.s_edit_details)) {
         KField(title, { title = it }, label = stringResource(R.string.s_title)); KField(author, { author = it }, label = stringResource(R.string.s_author))
         Text(stringResource(R.string.s_status), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
-        KSegmented(opts.map { it.second }, opts.indexOfFirst { it.first == status }, { status = opts[it].first })
+        KSegmented(opts.map { stringResource(it.second) }, opts.indexOfFirst { it.first == status }, { status = opts[it].first })
         Text(stringResource(R.string.tab_collections), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
-        CollectionChips(known, cols, "No collections yet. Make one here.") { name -> cols = if (name in cols) cols - name else cols + name }
+        CollectionChips(known, cols, stringResource(R.string.s_no_collections_here)) { name -> cols = if (name in cols) cols - name else cols + name }
         if (addingCol) {
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) { KField(newCol, { newCol = it }, placeholder = stringResource(R.string.s_new_collection_name)) }
@@ -400,7 +402,7 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         } else KButton(stringResource(R.string.s_new_collection), { addingCol = true }, Modifier.padding(top = 10.dp), style = KButtonStyle.Secondary, small = true)
         if (knownTags.isNotEmpty()) {
             Text(stringResource(R.string.s_existing_tags), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
-            CollectionChips(knownTags, split(tags).toSet(), "No tags yet.") { t ->
+            CollectionChips(knownTags, split(tags).toSet(), stringResource(R.string.s_no_tags_yet)) { t ->
                 val cur = split(tags).toSet()
                 tags = (if (t in cur) cur - t else cur + t).joinToString(", ")
             }

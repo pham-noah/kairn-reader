@@ -59,6 +59,9 @@ internal class ReaderWriter(private val store: Store, private val bookId: String
     /** Removing the record. The EPUB file itself is never touched - that is the library's rule. */
     fun removeBook() = store.remove(bookId)
 
+    /** The measured word count, kept with the book so the count is a one-time cost per book. */
+    fun saveWords(n: Int) = store.update(bookId) { if (it.words == n) it else it.copy(words = n) }
+
     /** A record read straight from the store, for callers that need the current copy. */
     fun book(): Book? = store.get(bookId)
 }

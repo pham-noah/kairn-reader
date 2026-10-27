@@ -19,6 +19,8 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
  */
 class HighlightActionModeCallback(
     private val colors: List<Pair<String, Int>>,          // (label, ARGB)
+    private val copyLabel: String,
+    private val noteLabel: String,
     private val onCopy: () -> Unit,
     private val onHighlight: (color: Int, done: () -> Unit) -> Unit,
     private val onNote: (done: () -> Unit) -> Unit,
@@ -45,10 +47,10 @@ class HighlightActionModeCallback(
     // SHOW_AS_ACTION_ALWAYS is the point: the colour swatches must be visible without the overflow menu.
     @SuppressLint("AlwaysShowAction")
     override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
-        menu.add(Menu.NONE, COPY_ID, 0, "Copy").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        menu.add(Menu.NONE, COPY_ID, 0, copyLabel).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         // A note is the other thing worth doing to a selection, so it sits with Copy rather than in an
         // overflow menu the reader would have to find.
-        menu.add(Menu.NONE, NOTE_ID, 1, "Note").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        menu.add(Menu.NONE, NOTE_ID, 1, noteLabel).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         colors.forEachIndexed { i, (label, argb) ->
             val id = Menu.FIRST + 100 + i
             byItemId[id] = argb

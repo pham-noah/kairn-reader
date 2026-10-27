@@ -64,7 +64,9 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                 { n ->
                     val name = DocumentFile.fromSingleUri(ctx, u)?.name ?: "kairn-backup.zip"
                     app.store.saveSettings { it.copy(lastBackup = System.currentTimeMillis(), lastBackupName = name) }
-                    backupUi.fileName = name; backupUi.detail = "$n files saved"; backupUi.phase = BackupPhase.Done
+                    backupUi.fileName = name
+                    backupUi.detail = ctx.resources.getQuantityString(R.plurals.files_saved, n, n)
+                    backupUi.phase = BackupPhase.Done
                 },
                 { e -> backupUi.detail = e.message ?: ctx.getString(R.string.toast_something_wrong); backupUi.phase = BackupPhase.Failed },
             )

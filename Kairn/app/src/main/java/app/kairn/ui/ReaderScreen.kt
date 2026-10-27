@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.graphics.Color as CColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
@@ -71,7 +73,7 @@ internal class ReaderUiState {
     var marks by mutableStateOf<List<Mark>>(emptyList())
     var searchResults by mutableStateOf<List<Locator>>(emptyList())
     var searchBusy by mutableStateOf(false)
-    var searchCap by mutableIntStateOf(100)                 // how many hits the current search asked for
+    var searchMoreAvailable by mutableStateOf(false)         // the last page came back full, so more may exist
     var lastQuery by mutableStateOf("")
     // Snapshot state on purpose: positions() finishes AFTER the first locator and the bottom bar reads
     // these, so as plain fields the seek scale and "min left" would stay blank until an unrelated repaint.
@@ -79,6 +81,12 @@ internal class ReaderUiState {
     var chapterTitles by mutableStateOf<Map<String, String>>(emptyMap())
     var chapterHref by mutableStateOf<String?>(null)
     var bookProgress by mutableFloatStateOf(0f)             // WHOLE-BOOK progression
+    /** The book's own word count, counted once after open. 0 until it lands. */
+    var bookWords by mutableIntStateOf(0)
+    var night by mutableStateOf(false)                      // follow-system, held as state so it can change live
+    // Top edge of the reader's bottom bar in window coordinates. A scroll-mode swipe may only start above
+    // it: the bar's slider is Compose content in this same window, and intercepting its drag paged a chapter.
+    var chromeTopPx by mutableFloatStateOf(Float.MAX_VALUE)
 }
 
 /**
@@ -128,7 +136,7 @@ internal fun ReaderScreen(
         AnimatedVisibility(ui.bars, Modifier.align(Alignment.TopCenter), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
             Column(Modifier.fillMaxWidth().background(colors.chrome)) {
                 Row(Modifier.statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    KIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back to library", { act.close() }, tint = colors.chromeText)
+                    KIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.s_back_to_library), { act.close() }, tint = colors.chromeText)
                     Text(ui.bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, textAlign = ComposeTextAlign.Center, color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     // Highlighting lives in the long-press selection menu; the top bar only carries the
                     // bookmark toggle, whose icon and label flip when this chapter has one.
@@ -138,7 +146,7 @@ internal fun ReaderScreen(
                     }
                     KIconButton(
                         if (bookmarkHere) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
-                        if (bookmarkHere) "Remove this chapter's bookmark" else "Bookmark this chapter",
+                        if (bookmarkHere) stringResource(R.string.s_remove_chapter_bookmark) else stringResource(R.string.s_bookmark_this_chapter),
                         { act.toggleBookmark(bookmarkHere) },
                         tint = colors.chromeText,
                     )
@@ -164,8 +172,10 @@ internal fun ReaderScreen(
             }
         }
 
+        // While the bars are hidden there is nothing to protect (and the bar is out of composition).
+        LaunchedEffect(ui.bars) { if (!ui.bars) ui.chromeTopPx = Float.MAX_VALUE }
         AnimatedVisibility(ui.bars, Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
-            Column(Modifier.fillMaxWidth().background(colors.chrome)) {
+            Column(Modifier.fillMaxWidth().background(colors.chrome).onGloballyPositioned { ui.chromeTopPx = it.positionInRoot().y }) {
                 HorizontalDivider(color = colors.line)
                 Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
                     val ro = ui.pub?.readingOrder.orEmpty()
@@ -190,7 +200,9 @@ internal fun ReaderScreen(
                             ?: ro.getOrNull((v * (ro.size - 1)).toInt())?.title?.takeIf { it.isNotBlank() }
                     }
                     // Formatting is a resource job (i18n); the arithmetic stays in ReaderLogic, where it is tested.
-                    val minsLeft = ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress)
+                    // Exact once the book has been counted; the measured pace is the interim estimate.
+                    val minsLeft = ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress)
+                        ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress)
                     val timeLeft = when {
                         minsLeft == null -> ""
                         minsLeft <= 0 -> stringResource(R.string.time_left_under_a_min)
@@ -216,10 +228,10 @@ internal fun ReaderScreen(
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
-                            ReaderTool(Icons.AutoMirrored.Filled.List, "Contents", colors) { ui.sheet = ReaderSheet.CONTENTS }
-                            ReaderTool(Icons.Default.Search, "Search", colors) { ui.sheet = ReaderSheet.SEARCH }
-                            ReaderTool(Icons.Default.StickyNote2, "Notes", colors) { ui.sheet = ReaderSheet.NOTES }
-                            ReaderTool(Icons.Default.TextFormat, "Display", colors) { ui.sheet = ReaderSheet.DISPLAY }
+                            ReaderTool(Icons.AutoMirrored.Filled.List, stringResource(R.string.s_tool_contents), colors) { ui.sheet = ReaderSheet.CONTENTS }
+                            ReaderTool(Icons.Default.Search, stringResource(R.string.s_tool_search), colors) { ui.sheet = ReaderSheet.SEARCH }
+                            ReaderTool(Icons.Default.StickyNote2, stringResource(R.string.s_tool_notes), colors) { ui.sheet = ReaderSheet.NOTES }
+                            ReaderTool(Icons.Default.TextFormat, stringResource(R.string.s_tool_display), colors) { ui.sheet = ReaderSheet.DISPLAY }
                         }
                     }
                 }
@@ -245,12 +257,12 @@ internal fun ReaderScreen(
         }
         // Leaving the search sheet drops its hits: reopening it with an empty field must not show
         // the previous query's results.
-        LaunchedEffect(ui.sheet) { if (ui.sheet != ReaderSheet.SEARCH) { ui.searchResults = emptyList(); ui.searchBusy = false } }
+        LaunchedEffect(ui.sheet) { if (ui.sheet != ReaderSheet.SEARCH) { ui.searchResults = emptyList(); ui.searchBusy = false; ui.searchMoreAvailable = false } }
         if (ui.sheet != ReaderSheet.NONE) KSheet({ ui.sheet = ReaderSheet.NONE }, when (ui.sheet) { ReaderSheet.DISPLAY -> stringResource(R.string.s_display); ReaderSheet.CONTENTS -> stringResource(R.string.s_contents); ReaderSheet.SEARCH -> stringResource(R.string.s_search_in_book); else -> stringResource(R.string.s_notes_and_highlights) }) {
             when (ui.sheet) {
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
-                ReaderSheet.SEARCH -> SearchSheet(ui.searchResults, ui.searchBusy, ui.searchResults.size >= ui.searchCap && ui.lastQuery.length >= 3, act::search, act::searchMore, act::goTo)
+                ReaderSheet.SEARCH -> SearchSheet(ui.searchResults, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3, act::search, act::searchMore, act::goTo)
                 ReaderSheet.NOTES -> AnnotationsContent(ui.bookTitle, ui.marks,
                     onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(act::goTo) },
                     onDelete = act::deleteMark,

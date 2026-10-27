@@ -61,6 +61,7 @@ import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.publication.services.content.content
 import org.readium.r2.shared.publication.services.positions
+import org.readium.r2.shared.publication.services.search.SearchIterator
 import org.readium.r2.shared.publication.services.search.search
 import org.readium.r2.shared.util.AbsoluteUrl
 import java.util.UUID
@@ -72,7 +73,7 @@ import org.readium.r2.navigator.preferences.TextAlign as RTextAlign
  * This class keeps only what needs Android: the fragment container, Readium wiring, input events and the debounced position save.
  */
 class ReaderActivity : AppCompatActivity(), ReaderActions {
-    companion object { const val EXTRA_ID = "book_id" }
+    companion object { const val EXTRA_ID = "book_id"; private const val PAGE_SIZE = 100 }
 
     private val app get() = application as KairnApp
     private lateinit var bookId: String
@@ -110,6 +111,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         super.onCreate(null)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         bookId = intent.getStringExtra(EXTRA_ID) ?: return finish()
+        // Held as state: the manifest handles uiMode itself, so a day/night switch must land here.
+        ui.night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 
         container = FragmentContainerView(this).apply { id = View.generateViewId() }
         val root = FrameLayout(this)
@@ -121,7 +124,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 val s by app.store.settings.collectAsState()
                 KairnTheme(glass = s.glass, ambient = s.ambient) {
                     ReaderScreen(
-                        ui = ui, theme = effectiveTheme(ui.prefs), isTablet = isTablet,
+                        ui = ui, theme = effectiveTheme(ui.prefs, s.autoSwitch), isTablet = isTablet,
                         toast = toast, act = this@ReaderActivity,
                     )
                 }
@@ -146,6 +149,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     /** The parts of the reader that come straight from the stored record. */
     private fun applyBook(book: Book) {
         ui.bookTitle = book.title
+        ui.bookWords = book.words                      // cached: no counting at all on a second open
         ui.prefs = book.prefs ?: app.store.settings.value.defaults
         ui.marks = book.marks
         if (app.store.settings.value.keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -169,7 +173,29 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
             ui.positions = computed
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
+            measurePending()                                                            // a chapter measured before this arrived
             android.util.Log.i("KairnPerf", "positions n=${ui.positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
+            // Time left, three tiers, cheapest first. (1) The count cached with the book: nothing to do.
+            // (2) Chapter SIZES need no parsing, so the label can appear within a frame of positions.
+            // (3) One byte pass per chapter for the exact number, stored so it is a one-time cost per book.
+            if (ui.bookWords == 0) {
+                val t1 = SystemClock.elapsedRealtime()
+                val bytes = withContext(Dispatchers.IO) {
+                    p.readingOrder.sumOf { link -> runCatching { p.get(link)?.length() }.getOrNull()?.getOrNull() ?: 0L }
+                }
+                if (bytes > 0) ui.bookWords = ReaderLogic.estimateWords(bytes)
+                val t2 = SystemClock.elapsedRealtime()
+                val exact = withContext(Dispatchers.IO) { countBookWords(p) }
+                if (exact > 0) {
+                    ui.bookWords = exact
+                    writer.saveWords(exact)
+                }
+                android.util.Log.i(
+                    "KairnPerf",
+                    "words estimate=${ReaderLogic.estimateWords(bytes)} exact=$exact bytes=$bytes " +
+                        "estimate=${t2 - t1}ms exact=${SystemClock.elapsedRealtime() - t2}ms",
+                )
+            }
         }
         // href -> chapter title, from the table of contents, so scrubbing can name the chapter.
         run {
@@ -186,8 +212,13 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
 
         val factory = EpubNavigatorFactory(p)
+        // Labels come from resources, in the same order as the palette in Tokens.kt.
+        val colourNames = listOf(R.string.s_colour_amber, R.string.s_colour_mint, R.string.s_colour_rose, R.string.s_colour_blue)
+        val colourLabels = K.highlightColors.zip(colourNames).map { (pair, name) -> getString(name) to pair.second.toArgb() }
         val highlightCallback = HighlightActionModeCallback(
-            K.highlightColors.map { (n, c) -> n to c.toArgb() },
+            colourLabels,
+            copyLabel = getString(R.string.s_menu_copy),
+            noteLabel = getString(R.string.s_menu_note),
             onCopy = { copySelection() },
             // All named: a trailing lambda now binds to onNote, which is the last parameter.
             onHighlight = { c, done -> highlightSelection(c) { done() } },
@@ -281,22 +312,29 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     /** Cheap on the caller's thread: the writer hands the record to the store, which queues the disk write. */
     private fun savePosition(loc: Locator) = writer.savePosition(loc)
 
+    /** configChanges covers uiMode/orientation, so the Activity is not recreated: re-apply here. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        ui.night = newConfig.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        applyPrefs()
+    }
+
     override fun onPause() {
         super.onPause()
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
     }
-    override fun onDestroy() { pub?.close(); super.onDestroy() }
+    override fun onDestroy() { closeSearch(); pub?.close(); super.onDestroy() }
 
     // ---- preferences (R-03, R-04, R-05, R-06, R-10) ----
 
     /** Tablet = the OS threshold (600dp shortest side). Two-page columns are a wide-screen idea. */
     private val isTablet: Boolean get() = resources.configuration.smallestScreenWidthDp >= 600
 
-    private fun effectiveTheme(p: ReaderPrefs): ThemeId {
-        if (!app.store.settings.value.autoSwitch) return p.theme
-        val night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    private fun effectiveTheme(p: ReaderPrefs, autoSwitch: Boolean): ThemeId {
+        if (!autoSwitch) return p.theme
+        val night = ui.night
         // Exhaustive on purpose: an `else` arm would silently fold a future ThemeId into
         // LIGHT/DARK instead of failing to compile.
         return when (p.theme) {
@@ -308,7 +346,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     }
 
     private fun toEpub(p: ReaderPrefs): EpubPreferences {
-        val t = effectiveTheme(p)
+        val t = effectiveTheme(p, app.store.settings.value.autoSwitch)
         // BLACK and GRAY are not Readium themes: they are explicit page/ink colours laid over a
         // base theme (GRAY sits on the LIGHT base, because its ink is dark).
         val bg = when (t) { ThemeId.BLACK -> RColor(0xFF000000.toInt()); ThemeId.GRAY -> RColor(0xFF9AA1A6.toInt()); else -> null }
@@ -376,24 +414,28 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     // Scroll-mode horizontal gestures. The pager's own threshold is too eager: a small sideways
     // ourselves and swallow anything shorter, so the pager never sees it either.
-    private var downX = 0f; private var downY = 0f; private var armed = false
+    private var downX = 0f; private var downY = 0f; private var armed = false; private var tracking = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (!ui.prefs.scroll) return super.dispatchTouchEvent(ev)
+        if (!ui.prefs.scroll || ui.sheet != ReaderSheet.NONE) return super.dispatchTouchEvent(ev)
 
         // The threshold comes from Settings > Reading > "Swipe distance".
         val flick = app.store.settings.value.swipeThreshold * resources.displayMetrics.density
         val swipeOn = app.store.settings.value.swipeChapters
+        // Only a touch that STARTS on the book may page it. The bars are Compose content in this same
+        // window, so without this a horizontal drag on the seek slider armed the swipe, swallowed the
+        // rest of the drag and paged a chapter instead of seeking.
+        val inReadingArea = ev.y < ui.chromeTopPx
+        fun flicks(dx: Float, dy: Float) = kotlin.math.abs(dx) > flick && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 3f
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { downX = ev.x; downY = ev.y; armed = false }
+            MotionEvent.ACTION_DOWN -> { downX = ev.x; downY = ev.y; armed = false; tracking = inReadingArea }
             MotionEvent.ACTION_MOVE -> {
-                val dx = ev.x - downX; val dy = ev.y - downY
-                if (!armed && kotlin.math.abs(dx) > flick && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 3f) armed = true
+                if (tracking && !armed && flicks(ev.x - downX, ev.y - downY)) armed = true
             }
             MotionEvent.ACTION_UP -> {
                 val dx = ev.x - downX; val dy = ev.y - downY
-                val wasArmed = armed; armed = false
-                if (wasArmed || (kotlin.math.abs(dx) > flick && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 3f)) {
+                val wasArmed = armed; armed = false; val wasTracking = tracking; tracking = false
+                if (wasTracking && (wasArmed || flicks(dx, dy))) {
                     if (swipeOn) {
                         // Left drag shows the next chapter; right drag the previous one.
                         if (dx < 0) nav?.goForward(true) else nav?.goBackward(true)
@@ -401,7 +443,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                     return true                                  // consumed: the pager never sees it
                 }
             }
-            MotionEvent.ACTION_CANCEL -> { armed = false }
+            MotionEvent.ACTION_CANCEL -> { armed = false; tracking = false }
         }
         // Past the decision point: keep swallowing, so a wobbling scroll never pages.
         return if (armed) true else super.dispatchTouchEvent(ev)
@@ -424,15 +466,18 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         done()
     }
 
-    private fun addMark(kind: String, color: Int) = lifecycleScope.launch {
-        val n = nav ?: return@launch
+    /** Returns whether a mark was actually written, so the toast cannot announce a failed write. */
+    private fun addMark(kind: String, color: Int, onDone: (Boolean) -> Unit = {}) = lifecycleScope.launch {
+        val n = nav ?: return@launch onDone(false)
         if (kind == "bookmark") {
             val loc = n.currentLocator.value
             addMarkTo(Mark(UUID.randomUUID().toString(), kind, color, loc.title ?: "", "", loc.toJSON().toString(), System.currentTimeMillis()))
+            onDone(true)
         } else {
-            val sel = runCatching { n.currentSelection() }.getOrNull() ?: return@launch   // the other two sites guard this experimental API
+            val sel = runCatching { n.currentSelection() }.getOrNull() ?: return@launch onDone(false)   // the other two sites guard this experimental API
             addMarkTo(Mark(UUID.randomUUID().toString(), kind, color, sel.locator.text.highlight ?: "", "", sel.locator.toJSON().toString(), System.currentTimeMillis()))
             n.clearSelection()
+            onDone(true)
         }
     }
     private fun addMarkTo(m: Mark) = writer.addMark(m)
@@ -478,8 +523,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun toggleBookmark(bookmarked: Boolean) {
         val h = ui.chapterHref ?: return
         if (!bookmarked) {
-            addMark("bookmark", K.mint.toArgb())
-            toast.show(getString(R.string.toast_bookmark_added))
+            val added = getString(R.string.toast_bookmark_added)
+            addMark("bookmark", K.mint.toArgb()) { ok -> if (ok) toast.show(added) }
         } else {
             writer.removeBookmarksIn(h, ::markHref)
             toast.show(getString(R.string.toast_bookmark_removed))
@@ -547,48 +592,110 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
         // Feed the book-wide pace once per chapter. A result for a chapter we already left still counts:
         // it is a real measurement, and the pace is about the book, not about where the reader is now.
-        if (words != null && measuredChapters.add(href)) ui.pace = ui.pace.add(words, positionsPerHref[href] ?: 0)
+        if (words != null) {
+            val positionsHere = positionsPerHref[href] ?: 0
+            // positions() lands AFTER the first chapter is read, so hold the word count until it does
+            // instead of measuring against zero (which silently dropped the chapter for good).
+            if (positionsHere < ReaderLogic.MIN_CHAPTER_POSITIONS) pendingChapter = href to words
+            else if (measuredChapters.add(href)) ui.pace = ui.pace.add(words, positionsHere)
+        }
+    }
+
+    /**
+     * Every chapter's words, summed, from the RAW bytes: no Content model, no HTML parse, no regex.
+     * The resources belong to the publication, so they are left open for it to close with the asset.
+     */
+    private suspend fun countBookWords(p: Publication): Int {
+        var total = 0
+        for (link in p.readingOrder) {
+            val res = p.get(link) ?: continue
+            // Read exactly what the resource says it holds: a range past the end makes some containers
+            // allocate for the range they were asked for.
+            val size = runCatching { res.length() }.getOrNull()?.getOrNull() ?: continue
+            if (size <= 0L) continue
+            val bytes = runCatching { res.read(LongRange(0, size - 1)) }.getOrNull()?.getOrNull() ?: continue
+            total += ReaderLogic.countWords(bytes)
+        }
+        return total
+    }
+
+    /** A chapter read before positions() finished, waiting for its share of the book. */
+    private var pendingChapter: Pair<String, Int>? = null
+
+    private fun measurePending() {
+        val pending = pendingChapter ?: return
+        val positionsHere = positionsPerHref[pending.first] ?: return
+        if (positionsHere < ReaderLogic.MIN_CHAPTER_POSITIONS) return
+        pendingChapter = null
+        if (measuredChapters.add(pending.first)) ui.pace = ui.pace.add(pending.second, positionsHere)
+    }
+
+    /** The live iterator of the current query, so "show more" pulls the next page instead of rescanning. */
+    @Volatile private var searchIter: SearchIterator? = null
+
+    private fun closeSearch() {
+        val it = searchIter ?: return
+        searchIter = null
+        runCatching { it.close() }
     }
 
     /** One search at a time: typing cancels the previous query so results cannot land out of order. */
     override fun search(q: String) {
-        ui.lastQuery = q
-        ui.searchCap = 100
-        runSearch(q)
-    }
-
-    /** "Show more": the sheet asks for another page, so the search runs again with a wider cap. */
-    override fun searchMore() {
-        if (ui.lastQuery.length < 3) return
-        ui.searchCap += 100
-        runSearch(ui.lastQuery)
-    }
-
-    private fun runSearch(q: String) {
         searchJob?.cancel()
-        if (q.length < 3) { ui.searchResults = emptyList(); ui.searchBusy = false; return }
-        val cap = ui.searchCap
+        closeSearch()
+        ui.lastQuery = q
+        ui.searchResults = emptyList()
+        ui.searchMoreAvailable = false
+        if (q.length < 3) { ui.searchBusy = false; return }
         searchJob = lifecycleScope.launch {
             delay(250)
             val p = pub ?: return@launch
             ui.searchBusy = true
             // Publication.search() walks the whole book: on the main dispatcher it freezes the reader
-            // for as long as the scan takes. The iterator is used and closed off the UI thread.
-            val hits = withContext(Dispatchers.IO) {
+            // for as long as the scan takes. The iterator is created and pulled off the UI thread.
+            val page = withContext(Dispatchers.IO) {
                 runCatching {
-                    val iter = p.search(q) ?: return@runCatching emptyList<Locator>()
-                    try {
-                        val out = mutableListOf<Locator>()
-                        while (out.size < cap) {
-                            val page = iter.next().getOrNull() ?: break    // Try<LocatorCollection, SearchError>
-                            out += page.locators
-                        }
-                        out
-                    } finally { iter.close() }
-                }.getOrDefault(emptyList())
+                    val iter = p.search(q)
+                    if (iter == null) emptyList<Locator>() to false
+                    else { searchIter = iter; pull(iter, PAGE_SIZE) }
+                }.getOrNull()
             }
             ui.searchBusy = false
-            ui.searchResults = hits
+            if (page == null) return@launch
+            ui.searchResults = page.first
+            ui.searchMoreAvailable = page.second
         }
     }
+
+    /** "Show more": the next page from the SAME iterator, not a fresh scan of the whole book. */
+    override fun searchMore() {
+        val iter = searchIter ?: return
+        if (ui.searchBusy || ui.lastQuery.length < 3) return
+        searchJob = lifecycleScope.launch {
+            ui.searchBusy = true
+            val page = withContext(Dispatchers.IO) { runCatching { pull(iter, PAGE_SIZE) }.getOrNull() }
+            ui.searchBusy = false
+            if (page == null) return@launch
+            ui.searchResults = ui.searchResults + page.first
+            ui.searchMoreAvailable = page.second
+        }
+    }
+
+    /**
+     * Pulls up to [want] hits. Second = whether the page came back FULL, which is the only evidence that
+     * more hits may exist (a short page is the end of the book, not a cap).
+     * Bounded by collections as well as hits: an iterator answering with empty pages must not spin.
+     */
+    private suspend fun pull(iter: SearchIterator, want: Int): Pair<List<Locator>, Boolean> {
+        val out = mutableListOf<Locator>()
+        var rounds = 0
+        while (out.size < want && rounds < 64) {
+            rounds++
+            val page = iter.next().getOrNull() ?: return out to false    // Try<LocatorCollection, SearchError>
+            if (page.locators.isEmpty()) continue
+            out += page.locators
+        }
+        return out to (out.size >= want)
+    }
+
 }

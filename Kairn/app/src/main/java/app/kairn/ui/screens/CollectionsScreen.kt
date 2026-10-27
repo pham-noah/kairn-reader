@@ -37,7 +37,7 @@ import app.kairn.ui.theme.KType
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
-    val kinds = remember { listOf("Collection", "Tag") }   // hoisted: inline listOf is a new instance per recomposition
+    val kinds = listOf(R.string.s_kind_collection, R.string.s_kind_tag)
     val books by store.books.collectAsStateWithLifecycle()
     val settings by store.settings.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf<Int?>(null) }   // 0 = collection, 1 = tag
@@ -56,7 +56,7 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
 
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = Dim.screenPad.dp).padding(bottom = 24.dp)) {
         KScreenHeader(stringResource(R.string.tab_collections), Modifier.padding(top = 16.dp)) { KButton(stringResource(R.string.s_new), { creating = 0 }, style = KButtonStyle.Secondary, small = true) }
-        KGroup("Your collections") {
+        KGroup(stringResource(R.string.s_group_your_collections)) {
             if (collections.isEmpty()) Text(stringResource(R.string.s_no_collections_yet_a_collection_groups_b), style = KType.small, modifier = Modifier.padding(horizontal = 4.dp))
             else KCard {
                 collections.forEachIndexed { i, name ->
@@ -65,12 +65,12 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
                         Row(Modifier.padding(end = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) { inside.take(3).forEach { b -> KCover(b, store.thumbFile(b.id).path, Modifier.width(28.dp), compact = true, fallbackPath = store.coverFile(b.id).path) } }
                         // The row itself opens the collection; the menu holds rename and delete, which used
                         // to be impossible once a name existed.
-                        KIconButton(Icons.Default.MoreVert, "Rename or delete $name", { manage = name to 0 }, tint = K.mut)
+                        KIconButton(Icons.Default.MoreVert, stringResource(R.string.s_rename_or_delete, name), { manage = name to 0 }, tint = K.mut)
                     }
                 }
             }
         }
-        KGroup("Tags") {
+        KGroup(stringResource(R.string.s_group_tags)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 tags.forEach { t ->
                     val n = byTag[t]?.size ?: 0
@@ -91,7 +91,7 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
         var kind by remember { mutableIntStateOf(first) }
         var name by remember { mutableStateOf("") }
         KSheet({ creating = null }, stringResource(R.string.s_new)) {
-            KSegmented(kinds, kind, { kind = it })
+            KSegmented(kinds.map { stringResource(it) }, kind, { kind = it })
             Text(if (kind == 0) stringResource(R.string.s_a_collection_groups_books_you_choose_lik) else stringResource(R.string.s_a_tag_is_a_quick_label_a_book_can_have_m), style = KType.small, modifier = Modifier.padding(start = 4.dp, top = 10.dp))
             KField(name, { name = it }, placeholder = if (kind == 0) stringResource(R.string.s_collection_name) else stringResource(R.string.s_tag_name))
             Spacer(Modifier.height(16.dp))

@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -47,8 +48,8 @@ internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi,
     }
 
 private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition; ordered by page tone
-private val pageModes = listOf("Pages", "Scroll")
-private val columnModes = listOf("One page", "Two pages")
+private val pageModes = listOf(R.string.s_pages, R.string.s_scroll)
+private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
 
 /** What a selection turned into when "Note" was tapped: the quoted text and its Locator JSON. */
 class NoteTarget(val quote: String, val locator: String)
@@ -76,12 +77,12 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
         readerThemes.forEach { t -> KThemeSwatch(t, prefs.theme == t, { onChange(prefs.copy(theme = t)) }) }
     }
     Spacer(Modifier.height(16.dp))
-    KSegmented(pageModes, if (prefs.scroll) 1 else 0, { onChange(prefs.copy(scroll = it == 1)) })
+    KSegmented(pageModes.map { stringResource(it) }, if (prefs.scroll) 1 else 0, { onChange(prefs.copy(scroll = it == 1)) })
     // A phone has no room for two readable columns, so the choice is not offered there, and a value
     // stored on a tablet is not honoured on a phone either (see ReaderActivity.isTablet).
     if (showColumns) {
-        KControl(stringResource(R.string.s_columns), if (prefs.twoPage) "Two pages" else "One page") {
-            KSegmented(columnModes, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
+        KControl(stringResource(R.string.s_columns), if (prefs.twoPage) stringResource(R.string.s_two_pages) else stringResource(R.string.s_one_page)) {
+            KSegmented(columnModes.map { stringResource(it) }, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
         }
         Text(stringResource(R.string.s_two_pages_suits_a_tablet_or_a_wide_scree), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
     }
@@ -134,11 +135,10 @@ internal fun SearchSheet(results: List<Locator>, busy: Boolean, canMore: Boolean
         // Three states, in order: working, nothing found, a result count. "No matches" over a running
         // search reads as a failed search.
         val note = when {
-            busy -> "Searching…"
-            q.length < 3 -> "Type at least three letters."
-            results.isEmpty() -> "No matches."
-            results.size == 1 -> "1 match"
-            else -> "${results.size} matches"
+            busy -> stringResource(R.string.s_searching)
+            q.length < 3 -> stringResource(R.string.s_type_three_letters)
+            results.isEmpty() -> stringResource(R.string.s_no_matches)
+            else -> pluralStringResource(R.plurals.matches_found, results.size, results.size)
         }
         Text(note, style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         LazyColumn { items(results.size) { i ->

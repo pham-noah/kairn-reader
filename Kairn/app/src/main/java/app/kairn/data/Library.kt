@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.SystemClock
 import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
+import app.kairn.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -55,7 +56,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         // Same location and already known: no hashing needed (Store.put also skips identical records).
         store.findByUri(uri.toString())?.let { return@withContext if (!it.missing) it else it.copy(missing = false).also(store::put) }
 
-        val fallback = displayName ?: uri.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub") ?: "Untitled"
+        val fallback = displayName ?: uri.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub") ?: ctx.getString(R.string.s_untitled)
         val contentId = contentId(uri)
         val legacyId = legacyIdFor(uri.toString())
         val id = contentId ?: legacyId
@@ -115,14 +116,24 @@ class Library(private val ctx: Context, private val store: Store, private val re
                 uri.toString(), null, broken = true,
             )
         }
-        addBook(Uri.fromFile(dest), null, name.removeSuffix(".epub"))
+        val destUri = Uri.fromFile(dest).toString()
+        val before = store.books.value.map { it.id to it.uri }.toMap()
+        val book = addBook(Uri.fromFile(dest), null, name.removeSuffix(".epub"))
+        // The book was already known: the record now points at this copy, so the previous private copy is an
+        // orphan. Deleting only THIS book's previous file keeps a concurrent Wi-Fi upload safe.
+        val previous = before[book.id]
+        if (previous != null && previous != book.uri) {
+            val old = Uri.parse(previous).path?.let { File(it) }
+            if (old != null && old.parentFile == store.copiesDir) runCatching { old.delete() }
+        }
+        return@withContext book
     }
 
     fun addFolder(tree: Uri) {
         runCatching {
             ctx.contentResolver.takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val name = DocumentFile.fromTreeUri(ctx, tree)?.name ?: "Folder"
+        val name = DocumentFile.fromTreeUri(ctx, tree)?.name ?: ctx.getString(R.string.s_folder)
         store.saveSettings { s ->
             if (s.folders.any { it.uri == tree.toString() }) s
             else s.copy(folders = s.folders + WatchedFolder(tree.toString(), name))

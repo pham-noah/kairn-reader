@@ -36,23 +36,24 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
     val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
-    val surfaceOpts = remember { listOf("Glass", "Solid") }
+    val surfaceOpts = listOf(R.string.s_surface_glass, R.string.s_surface_solid)
     // Derived, not a parallel literal list: names and values feed one KSegmented, so they cannot drift
     // out of order.
     val ambientNames = remember(ambients) { ambients.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
     val themeNames = remember(themes) { themes.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
-    val autoOpts = remember { listOf("Off", "System") }
-    val swipeNames = remember { listOf("Short", "Medium", "Long") }
+    val autoOpts = listOf(R.string.s_auto_off, R.string.s_auto_system)
+    val swipeNames = listOf(R.string.s_swipe_short, R.string.s_swipe_medium, R.string.s_swipe_long)
     val swipeVals = remember { listOf(28, 48, 80) }
-    val last = remember(s.lastBackup) { if (s.lastBackup > 0) "Last backup " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(s.lastBackup)) else "No backup yet" }
+    val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(s.lastBackup)) else null }
+    val last = if (lastDate != null) stringResource(R.string.s_last_backup_on, lastDate) else stringResource(R.string.s_no_backup_yet)
     val folders = s.folders.count { it.enabled }
 
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = Dim.screenPad.dp).padding(bottom = 24.dp)) {
         Text(stringResource(R.string.tab_settings), style = KType.h1, modifier = Modifier.padding(top = 16.dp))
-        KGroup("Appearance") {
+        KGroup(stringResource(R.string.s_group_appearance)) {
             KCard(padding = 16) {
                 Text(stringResource(R.string.s_surface), style = SectionTitle, modifier = Modifier.padding(bottom = 10.dp))
-                KSegmented(surfaceOpts, if (s.glass) 0 else 1, { i -> store.saveSettings { it.copy(glass = i == 0) } })
+                KSegmented(surfaceOpts.map { stringResource(it) }, if (s.glass) 0 else 1, { i -> store.saveSettings { it.copy(glass = i == 0) } })
                 Text(if (s.glass) stringResource(R.string.s_translucent_panels_with_a_light_sheen_th) else stringResource(R.string.s_flat_opaque_panels_the_earlier_look), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
                 if (s.glass) {
                     Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
@@ -63,11 +64,11 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 KSegmented(themeNames, themes.indexOf(s.theme), { i -> store.saveSettings { it.copy(theme = themes[i], defaults = it.defaults.copy(theme = themes[i])) } })
                 Text(stringResource(R.string.s_switch_automatically), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
-                KSegmented(autoOpts, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
+                KSegmented(autoOpts.map { stringResource(it) }, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
                 Text(if (s.autoSwitch) stringResource(R.string.s_follows_your_phone_s_light_and_dark_sett) else stringResource(R.string.s_kairn_opens_in_the_theme_you_pick_above), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
             }
         }
-        KGroup("Reading") {
+        KGroup(stringResource(R.string.s_group_reading)) {
             KCard {
                 KRow(stringResource(R.string.s_keep_screen_on), subtitle = stringResource(R.string.s_while_a_book_is_open)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
                 KRow(stringResource(R.string.s_full_screen), subtitle = stringResource(R.string.s_hide_the_status_bar_with_the_bars), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
@@ -82,7 +83,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                     ) {
                         Text(stringResource(R.string.s_swipe_distance), style = KType.title)
                         KSegmented(
-                            swipeNames,
+                            swipeNames.map { stringResource(it) },
                             when { s.swipeThreshold <= 34 -> 0; s.swipeThreshold <= 62 -> 1; else -> 2 },
                             { i -> store.saveSettings { it.copy(swipeThreshold = swipeVals[i]) } },
                             modifier = Modifier.width(180.dp),
@@ -91,7 +92,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 }
             }
         }
-        KGroup("Library") {
+        KGroup(stringResource(R.string.s_group_library)) {
             KCard {
                 KRow(stringResource(R.string.s_find_books_on_this_device), subtitle = stringResource(R.string.s_scan_for_epubs_already_on_your_phone_lik)) {
                     KSwitch(s.autoDetect, { v ->
@@ -102,10 +103,10 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 KRow(stringResource(R.string.s_watched_folders), subtitle = pluralStringResource(R.plurals.folders_count, folders, folders), divider = true, onClick = onWatchedFolders) { KChevron() }
             }
         }
-        KGroup("Your data") {
+        KGroup(stringResource(R.string.s_group_your_data)) {
             KCard { KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup) { KChevron() } }
         }
-        KGroup("About") {
+        KGroup(stringResource(R.string.s_group_about)) {
             KCard {
                 KRow(stringResource(R.string.s_language)) { Text(stringResource(R.string.s_english), color = K.mut) }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
