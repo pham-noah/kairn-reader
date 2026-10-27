@@ -110,9 +110,13 @@ reverted rather than shipped:
   `debugImplementation("androidx.compose.ui:ui-test-manifest")`, and a `Locator` for the fixture needs
   `mediaType = MediaType.XHTML` because that parameter is NON-null ("Null cannot be a value of a non-null type
   MediaType").
-- With all three in place the instrumentation process CRASHED at discovery ("Starting 0 tests ... Instrumentation
-  run failed due to Process crashed") with nothing in logcat. That is the next thing to solve, and it is
-  cheaper to solve than to keep designing features that cannot be looked at.
+- **CORRECTION:** the "Starting 0 tests ... Instrumentation run failed due to Process crashed" that ended that
+  attempt is ENVIRONMENTAL, not the Compose library. It reproduces on the plain suite too: `connectedDebugAndroidTest`
+  run against an AVD that has just had the app uninstalled fails at discovery, while
+  `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner` on the same build answers
+  `OK (6 tests)` in 17 s. Installing both APKs once (`adb install -r app-debug.apk` then
+  `app-debug-androidTest.apk`) and re-running Gradle then gives 6/6 too. So the Compose test route was never
+  proven broken - the chapter-labelled search change was reverted on a false signal and is worth one more try.
 
 ## Known gaps — read these before trusting the list above
 
