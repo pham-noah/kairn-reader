@@ -59,22 +59,27 @@ reported THREE positions for the whole thing and NO tap appeared to page. That l
 was an artefact of the fixture. Build RTL fixtures from a varied word pool - then you see 15 positions and the
 pages turn. Still unverified: vertical text (not built) and two-page/scroll mode under RTL.
 
-## R-13 image zoom: what a first attempt learned (not shipped)
+## R-13 image zoom: two attempts, not shipped, and what is now proven
 
-Three approaches were tried on a device and none was confirmed working, so the feature is NOT in the tree.
-The next attempt starts from these:
+The feature is NOT in the tree. Both attempts ran on a device; neither could be confirmed, and the second one
+was not even reproducible. Start the next attempt from these facts, all measured rather than assumed:
 
-- `TapEvent` carries only a `PointF`; there is no image information in the navigator API.
-- Drawing the hit image into a canvas and calling `toDataURL` is the obvious trick and it is a dead end: an
-  image served from Readium's internal scheme taints the canvas and `toDataURL` throws.
-- `document.elementFromPoint(x, y)` returns the PARAGRAPH box for an inline image, and `closest('img')` only
-  climbs ancestors - so it can never find a picture inside a `<p>`. Use `document.elementsFromPoint` and take
-  the first `IMG` in the stack (the fix that was in progress).
-- The bytes should then come from the publication, not the DOM: `Url(imgSrc)` + `publication.get(url)` +
-  `read(LongRange(0, size - 1))`, which is the same path the word counter uses.
-- Fixtures: this test used a dark-mode phone screenshot as the book's picture, which is indistinguishable from
-  the reader's own black page - build the fixture image with bright, asymmetric content so "the image is on
-  screen" and "the overlay opened" are both measurable from a screenshot.
+- **`EpubNavigatorFragment.evaluateJavascript` must be called on the MAIN dispatcher.** Wrapped in
+  `withContext(Dispatchers.IO)` it throws and returns `null` - which looked exactly like "the DOM found no
+  image" for two full build cycles. The scroll poll never left the main thread either.
+- `TapEvent` carries only a `PointF`; the navigator API has no image information.
+- The canvas trick is a dead end: `toDataURL` throws on a tainted canvas, which is what an image served from
+  Readium's internal scheme gives you.
+- `document.elementFromPoint(x, y)` returns the PARAGRAPH box for an inline image; `closest('img')` only
+  climbs ancestors and can never find a picture inside a `<p>`. `document.elementsFromPoint` DOES return the
+  stack (`tags: img|p|body|html` in the probe) - but in the next identical run, at the same point, it
+  returned no `img` at all, and when it did the element had an EMPTY `src` (`any:1`, `nw:0`). So the hit test
+  is not stable across a restored reading position and image load timing. That instability is the real
+  blocker, not the lookup mechanism.
+- The bytes should come from the publication, not the DOM: `Url(imgSrc)` + `publication.get(url)` +
+  `read(LongRange(0, size - 1))`, the same path the word counter uses.
+- Fixtures: build the picture with bright, asymmetric content. A dark-mode screenshot used as the book's image
+  is indistinguishable from the reader's own black page, which cost a cycle.
 
 ## Known gaps — read these before trusting the list above
 
