@@ -267,6 +267,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 // WHOLE-BOOK progression, not the chapter's: the slider and the time left are about
                 // the book (progression is the position inside the current resource, not the book).
                 loc.locations.totalProgression?.let { ui.bookProgress = it.toFloat() }
+                loc.locations.progression?.let { ui.chapterProgress = it.toFloat() }
                 ui.chapterTitle = loc.title ?: ""
                 if (loc.href.toString() != ui.chapterHref) { ui.chapterHref = loc.href.toString(); loadChapterWords(loc) }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
@@ -570,6 +571,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         // Feed the book-wide pace once per chapter. A result for a chapter we already left still counts:
         // it is a real measurement, and the pace is about the book, not about where the reader is now.
         if (words != null) {
+            if (href == ui.chapterHref) ui.chapterWords = words      // the chapter on screen, for its own time left
             val positionsHere = positionsPerHref[href] ?: 0
             // positions() lands AFTER the first chapter is read, so hold the word count until it does
             // instead of measuring against zero (which silently dropped the chapter for good).

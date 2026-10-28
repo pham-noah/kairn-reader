@@ -24,7 +24,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -127,9 +129,18 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
 /** Slider: 6dp track, 24dp pale thumb. [accent] is amber for the warm-light slider. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun KSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float> = 0f..1f, modifier: Modifier = Modifier, accent: Color = K.mint, onFinished: (() -> Unit)? = null, trackColor: Color = K.track) {
+fun KSlider(
+    value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float> = 0f..1f, modifier: Modifier = Modifier,
+    accent: Color = K.mint, onFinished: (() -> Unit)? = null, trackColor: Color = K.track,
+    description: String? = null, stateText: String? = null,
+) {
     Slider(
-        value, onChange, modifier.heightIn(min = 32.dp), valueRange = range, onValueChangeFinished = onFinished,
+        value, onChange,
+        modifier.heightIn(min = 32.dp).then(
+            if (description == null) Modifier
+            else Modifier.semantics { contentDescription = description; stateDescription = stateText.orEmpty() },
+        ),
+        valueRange = range, onValueChangeFinished = onFinished,
         colors = SliderDefaults.colors(thumbColor = Color(0xFFF1F4F5), activeTrackColor = accent, inactiveTrackColor = trackColor),
         thumb = { Box(Modifier.size(24.dp).shadow(2.dp, CircleShape).background(Color(0xFFF1F4F5), CircleShape)) },
     )

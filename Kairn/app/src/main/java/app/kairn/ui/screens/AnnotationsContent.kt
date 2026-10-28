@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
@@ -28,6 +29,11 @@ import java.text.DateFormat
 import java.util.Date
 
 // kind (null = every kind) to its filter label resource
+/** Where a mark sits in the book, for reading order. A locator without locations sorts first. */
+private fun positionOf(m: Mark): Double = runCatching {
+    org.json.JSONObject(m.locator).optJSONObject("locations")?.optDouble("totalProgression", 0.0) ?: 0.0
+}.getOrDefault(0.0)
+
 private val markKinds = listOf(
     null to R.string.s_all, "highlight" to R.string.s_filter_highlights,
     "note" to R.string.s_filter_notes, "bookmark" to R.string.s_filter_bookmarks,
@@ -38,15 +44,28 @@ private val markKinds = listOf(
 fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Unit, onDelete: (Mark) -> Unit, onEditNote: (Mark) -> Unit, onExport: () -> Unit) {
     var filter by remember { mutableIntStateOf(0) }
     var confirm by remember { mutableStateOf<Mark?>(null) }
+    var query by remember { mutableStateOf("") }
+    var byPosition by remember { mutableStateOf(false) }
     val kind = markKinds[filter].first
     // Filtered list and chip counts change only with the marks or the filter, not per recomposition.
-    val shown = remember(marks, kind) { marks.filter { kind == null || it.kind == kind }.sortedBy { it.created } }
+    val shown = remember(marks, kind, query, byPosition) {
+        marks.filter { kind == null || it.kind == kind }
+            .filter { query.isBlank() || it.quote.contains(query, true) || it.note.contains(query, true) }
+            .let { list -> if (byPosition) list.sortedBy { positionOf(it) } else list.sortedBy { it.created } }
+    }
     val counts = remember(marks) { markKinds.map { (k, _) -> marks.count { k == null || it.kind == k } } }
 
     Column(Modifier.heightIn(max = 560.dp)) {
         Text(bookTitle, style = KType.small, maxLines = 1)
         LazyRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(markKinds.size) { i -> KChip(stringResource(markKinds[i].second), filter == i, { filter = i }, count = counts[i]) }
+        }
+        KField(query, { query = it }, placeholder = stringResource(R.string.s_filter_marks), leading = Icons.Default.Search)
+        Row(Modifier.padding(top = 8.dp)) {
+            KChip(
+                stringResource(if (byPosition) R.string.s_sort_by_position else R.string.s_sort_by_date),
+                byPosition, { byPosition = !byPosition },
+            )
         }
         if (shown.isEmpty()) Text(stringResource(R.string.s_select_text_and_pick_a_colour_to_highlig), style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
         else KCard(Modifier.weight(1f, fill = false)) {

@@ -131,10 +131,16 @@ internal fun SearchSheet(
     results: List<Locator>, busy: Boolean, canMore: Boolean,
     onQuery: (String) -> Unit, onMore: () -> Unit, onGo: (Locator) -> Unit,
     chapterTitles: Map<String, String> = emptyMap(),
+    chapterOnly: Boolean = false,
+    onChapterOnly: (Boolean) -> Unit = {},
+    showChapterFilter: Boolean = false,
 ) {
     var q by remember { mutableStateOf("") }
     Column(Modifier.heightIn(max = 560.dp).imePadding()) {
         KField(q, { q = it; onQuery(it) }, placeholder = stringResource(R.string.s_search_in_this_book), leading = Icons.Default.Search)
+        if (showChapterFilter) Row(Modifier.padding(top = 8.dp)) {
+            KChip(stringResource(R.string.s_this_chapter_only), chapterOnly, { onChapterOnly(!chapterOnly) })
+        }
         Spacer(Modifier.height(8.dp))
         // Three states, in order: working, nothing found, a result count. "No matches" over a running
         // search reads as a failed search.

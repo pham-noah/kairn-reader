@@ -102,7 +102,8 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                             },
                             onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) })
                         null -> when (tab) {
-                            Tab.Library -> LibraryScreen(app.store, shelf, { shelf = null }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook)
+                            Tab.Library -> LibraryScreen(app.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
+                                onBackup = { overlay = Overlay.Backup })
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
                             Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } })
                         }

@@ -65,6 +65,13 @@ object ReaderLogic {
     /** Kept here for the reader's own call sites; the counting itself lives in the data layer. */
     fun countWords(bytes: ByteArray): Int = app.kairn.data.Words.count(bytes)
 
+    /** Minutes left in the chapter on screen: its own word count, times what is left of it. */
+    fun minutesLeftInChapter(chapterWords: Int, chapterProgression: Float, wpm: Int = WPM): Int? {
+        if (chapterWords <= 0) return null
+        val remaining = ((1f - chapterProgression.coerceIn(0f, 1f)) * chapterWords).toInt()
+        return remaining / wpm
+    }
+
     /** Marks minus one id. Used by every delete, so the "already gone" case is the same everywhere. */
     fun withoutMark(marks: List<Mark>, id: String): List<Mark> = marks.filterNot { it.id == id }
 

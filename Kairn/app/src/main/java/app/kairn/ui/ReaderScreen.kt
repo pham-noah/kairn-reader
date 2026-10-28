@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color as CColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
@@ -80,6 +82,9 @@ internal class ReaderUiState {
     var positions by mutableStateOf<List<Locator>>(emptyList())
     var chapterTitles by mutableStateOf<Map<String, String>>(emptyMap())
     var chapterHref by mutableStateOf<String?>(null)
+    var chapterProgress by mutableFloatStateOf(0f)          // how far into THIS chapter
+    var chapterWords by mutableIntStateOf(0)                // this chapter's word count, once measured
+    var searchChapterOnly by mutableStateOf(false)          // S-01: search only the chapter on screen
     var bookProgress by mutableFloatStateOf(0f)             // WHOLE-BOOK progression
     /** The book's own word count, counted once after open. 0 until it lands. */
     var bookWords by mutableIntStateOf(0)
@@ -197,10 +202,12 @@ internal fun ReaderScreen(
                         title?.takeIf { it.isNotBlank() }
                             ?: ro.getOrNull((v * (ro.size - 1)).toInt())?.title?.takeIf { it.isNotBlank() }
                     }
-                    // Formatting is a resource job (i18n); the arithmetic stays in ReaderLogic, where it is tested.
-                    // Exact once the book has been counted; the measured pace is the interim estimate.
-                    val minsLeft = ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress)
-                        ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress)
+                    // Tap the label to switch between the whole book and the chapter you are in.
+                    var chapterTime by remember { mutableStateOf(false) }
+                    val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress)
+                        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress)
+                            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress)
+                    val timeHint = stringResource(if (chapterTime) R.string.s_time_in_chapter else R.string.s_time_in_book)
                     val timeLeft = when {
                         minsLeft == null -> ""
                         minsLeft <= 0 -> stringResource(R.string.time_left_under_a_min)
@@ -209,9 +216,14 @@ internal fun ReaderScreen(
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(preview ?: ui.chapterTitle, color = if (preview != null) colors.accent else colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                        Text(timeLeft, color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(
+                            timeLeft, color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                            modifier = Modifier.padding(start = 8.dp).clickable { chapterTime = !chapterTime }
+                                .semantics { contentDescription = timeHint },
+                        )
                     }
-                    KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line, onFinished = {   // R-07: seek by position
+                    KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
+                        description = stringResource(R.string.s_reading_progress), stateText = timeLeft, onFinished = {   // R-07: seek by position
                         drag?.let { v ->
                             val l = ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())
                             if (l != null) act.goTo(l)
@@ -260,7 +272,18 @@ internal fun ReaderScreen(
             when (ui.sheet) {
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
-                ReaderSheet.SEARCH -> SearchSheet(ui.searchResults, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3, act::search, act::searchMore, act::goTo, ui.chapterTitles)
+                ReaderSheet.SEARCH -> {
+                    val here = ui.chapterHref
+                    val shown = if (ui.searchChapterOnly && here != null) ui.searchResults.filter { it.href.toString() == here }
+                                else ui.searchResults
+                    SearchSheet(
+                        shown, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3,
+                        act::search, act::searchMore, act::goTo, ui.chapterTitles,
+                        chapterOnly = ui.searchChapterOnly,
+                        onChapterOnly = { ui.searchChapterOnly = it },
+                        showChapterFilter = here != null,
+                    )
+                }
                 ReaderSheet.NOTES -> AnnotationsContent(ui.bookTitle, ui.marks,
                     onGo = { m -> runCatching { Locator.fromJSON(JSONObject(m.locator)) }.getOrNull()?.let(act::goTo) },
                     onDelete = act::deleteMark,

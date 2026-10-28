@@ -161,11 +161,12 @@ data class AppSettings(
     val shelves: List<String> = emptyList(),  // collections created before any book is in them
     val extraTags: List<String> = emptyList(),
     val lastBackup: Long = 0,                 // DS-01: shown on the Backup screen
+    val lastNudge: Long = 0,                  // when the "you have not backed up" card was dismissed
     val lastBackupName: String = "",
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
-        .put("lastBackup", lastBackup).put("lastBackupName", lastBackupName)
+        .put("lastBackup", lastBackup).put("lastBackupName", lastBackupName).put("lastNudge", lastNudge)
         .put("keepScreenOn", keepScreenOn).put("fullscreen", fullscreen).put("volumeKeys", volumeKeys)
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
         .put("autoDetect", autoDetect)
@@ -202,6 +203,7 @@ data class AppSettings(
                 shelves = o.optJSONArray("shelves")?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(),
                 extraTags = o.optJSONArray("extraTags")?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(),
                 lastBackup = o.optLong("lastBackup", 0),
+                lastNudge = o.optLong("lastNudge", 0),
                 lastBackupName = o.optString("lastBackupName"),
             )
         }

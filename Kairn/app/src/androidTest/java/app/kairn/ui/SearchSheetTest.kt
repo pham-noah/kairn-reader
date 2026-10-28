@@ -3,7 +3,9 @@ package app.kairn.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,5 +55,19 @@ class SearchSheetTest {
         }
         compose.onNodeWithText("Chapter One").assertDoesNotExist()
         compose.onNodeWithText("whale", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun the_chapter_filter_is_a_toggle_that_reports_back() {
+        var only = false
+        compose.setContent {
+            SearchSheet(
+                results = listOf(hit("OEBPS/c1.xhtml")), busy = false, canMore = false,
+                onQuery = {}, onMore = {}, onGo = {}, chapterTitles = mapOf("OEBPS/c1.xhtml" to "Chapter One"),
+                chapterOnly = only, onChapterOnly = { only = it }, showChapterFilter = true,
+            )
+        }
+        compose.onNodeWithText("This chapter only").performClick()
+        assertEquals(true, only)
     }
 }

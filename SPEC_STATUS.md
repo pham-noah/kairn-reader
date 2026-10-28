@@ -134,6 +134,23 @@ Result: `Tests run: 18, Failures: 3` - exactly those three, nothing else, and ev
 The mutations were reverted and the suite is `OK (18 tests)` again. Repeat this after adding tests: a test that
 cannot fail is worse than no test, and a green suite on the first attempt proves nothing on its own.
 
+## Features added 2026-10-27 (the nine-item batch)
+
+- **Selection mode does more than file books**: the bar also marks the picked books finished and removes them
+  (behind a confirm dialog - a mis-tap would take the notes with it).
+- **Sort has a direction**: an arrow beside the sort label reverses whatever the natural order of that sort is.
+- **Collections are one tap from the library**: a chip row of every collection in the header sets the shelf
+  filter (`onShelf`, which replaced `onClearShelf` in `LibraryScreen`'s signature).
+- **Search has a scope**: "This chapter only" filters hits to the resource you are reading. It is a client-side
+  `href` filter, not a second search.
+- **Tap the time left** to switch between whole-book and chapter remaining (`ReaderLogic.minutesLeftInChapter`,
+  from the chapter's own word count and its `locations.progression`).
+- **Notes can be searched and sorted by position** instead of by date created: reading order is what reviewing a
+  book wants.
+- **The progress slider is labelled for TalkBack** (`KSlider(description, stateText)`); it announced nothing before.
+- **A backup nudge** appears in the library when the last backup is over 30 days old, and "Later" is stored in
+  `AppSettings.lastNudge` so it does not nag.
+
 ## Known gaps — read these before trusting the list above
 
 - **N-05 is done.** Every user-facing UI string resolves through `res/values/strings.xml` (~290 entries,
@@ -230,7 +247,7 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 18 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 20 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
@@ -239,8 +256,9 @@ the LEFT edge does in an RTL one, the search sheet rendering each hit's chapter 
 the Display sheet's per-book writes (choosing two pages emits `twoPage = true` and touches nothing else, the
 reset action reaches its callback, the follow-system-brightness action only exists once a level was set, and
 Columns is absent on a phone), and the library screen - the empty state instead of a blank grid, a stored book
-reaching the grid with its author, the status filter keeping only matching books, and a removal reaching the
-store with the grid following. The screen tests compose with `createComposeRule` over a real `Store` on a temp
+reaching the grid with its author, the status filter keeping only matching books, a removal reaching the store
+with the grid following, the selection bar finishing the books you picked, and the search sheet's chapter filter
+reporting its toggle. The screen tests compose with `createComposeRule` over a real `Store` on a temp
 directory, so no Activity, WebView or IME is involved - which matters, because adb input cannot type into the
 real search field. asserted from the saved position the reader writes (not from the screen, and
 not from `progress`, which is legitimately 0.0 at the start of a book - wait for the locator). They speak HTTP over a raw socket on purpose — the app's own policy refuses

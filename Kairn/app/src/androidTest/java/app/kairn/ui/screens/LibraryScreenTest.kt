@@ -2,14 +2,18 @@ package app.kairn.ui.screens
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.kairn.data.Book
 import app.kairn.data.Status
 import app.kairn.data.Store
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,7 +39,7 @@ class LibraryScreenTest {
 
     private fun screen(store: Store) = compose.setContent {
         LibraryScreen(
-            store = store, shelf = null, onClearShelf = {},
+            store = store, shelf = null, onShelf = {},
             onOpen = {}, onAdd = {}, onPickFolder = {}, onPickBook = {},
         )
     }
@@ -80,4 +84,17 @@ class LibraryScreenTest {
         compose.waitForIdle()
         compose.onNodeWithText("Gone Soon").assertDoesNotExist()
     }
+
+    @Test
+    fun the_selection_bar_can_finish_the_books_you_picked() {
+        val store = store()
+        store.put(Book("s1", "Pick Me", "", "content://example/s.epub"))
+        screen(store)
+        compose.onNodeWithText("Pick Me").performTouchInput { longClick() }        // opens the action sheet
+        compose.onNodeWithText("Select several books").performClick()               // into selection mode with it picked
+        compose.onNodeWithContentDescription("Mark as finished").performClick()
+        compose.waitForIdle()
+        assertEquals(Status.FINISHED, store.get("s1")?.status)
+    }
 }
+

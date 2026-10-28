@@ -21,8 +21,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -140,8 +142,9 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(
-    store: Store, shelf: String?, onClearShelf: () -> Unit,
+    store: Store, shelf: String?, onShelf: (String?) -> Unit,
     onOpen: (Book) -> Unit, onAdd: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
+    onBackup: () -> Unit = {},
 ) {
     val toast = LocalToast.current
     val ctx = LocalContext.current
@@ -157,6 +160,7 @@ fun LibraryScreen(
     var grid by remember { mutableStateOf(true) }
     var sort by remember { mutableStateOf(SortBy.RECENT) }
     var sortMenu by remember { mutableStateOf(false) }
+    var sortFlipped by remember(sort) { mutableStateOf(false) }
     var problem by remember { mutableStateOf<Book?>(null) }
     var actions by remember { mutableStateOf<Book?>(null) }
     var editing by remember { mutableStateOf<Book?>(null) }
@@ -165,6 +169,7 @@ fun LibraryScreen(
     var selecting by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
     var bulkTo by remember { mutableStateOf(false) }
+    var confirmBulkRemove by remember { mutableStateOf(false) }
     val shelves by store.settings.collectAsStateWithLifecycle()
     val knownCols = remember(books, shelves.shelves) { knownCollections(books, shelves.shelves) }
 
@@ -187,11 +192,14 @@ fun LibraryScreen(
             books.filter { b ->
                 (shelf == null || shelf in b.collections || shelf in b.tags) && (status == null || b.status == status) &&
                     (query.isBlank() || b.title.contains(query, true) || b.author.contains(query, true))
-            }.sortedWith(when (sort) {
-                SortBy.RECENT -> compareByDescending<Book> { it.lastRead }.thenByDescending { it.added }
-                SortBy.TITLE -> compareBy { it.title.lowercase() }
-                SortBy.AUTHOR -> compareBy { it.author.lowercase() }
-                SortBy.ADDED -> compareByDescending { it.added }
+            }.sortedWith(run {
+                val natural: Comparator<Book> = when (sort) {
+                    SortBy.RECENT -> compareByDescending<Book> { it.lastRead }.thenByDescending { it.added }
+                    SortBy.TITLE -> compareBy { it.title.lowercase() }
+                    SortBy.AUTHOR -> compareBy { it.author.lowercase() }
+                    SortBy.ADDED -> compareByDescending { it.added }
+                }
+                if (sortFlipped) natural.reversed() else natural
             })
         }
     }
@@ -216,12 +224,32 @@ fun LibraryScreen(
         }
         if (searching) KField(query, { query = it }, Modifier.padding(top = 12.dp), placeholder = stringResource(R.string.search_hint), leading = Icons.Default.Search)
         LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (shelf != null) item { KChip(shelf, true, onClearShelf) }
+            if (shelf != null) item { KChip(shelf, true, { onShelf(null) }) }
             item { KChip(stringResource(R.string.s_all), status == null, { status = null }, count = books.size) }
             // Every status that can be set has a chip, so any new value is filterable instead of folding
             // into Finished.
             items(Status.entries.filter { it != Status.NONE }) { s ->
                 KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
+            }
+        }
+        // Collections are one tap away instead of two screens: the same chips the sheets use.
+        if (knownCols.isNotEmpty()) LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(knownCols.size) { i ->
+                val name = knownCols[i]
+                KChip(name, shelf == name, { onShelf(if (shelf == name) null else name) })
+            }
+        }
+        // A backup is the one chore that costs you your notes if you skip it for long enough.
+        val quiet = maxOf(shelves.lastBackup, shelves.lastNudge)
+        if (books.isNotEmpty() && System.currentTimeMillis() - quiet > 30L * 24 * 60 * 60 * 1000) {
+            KCard(Modifier.padding(top = 14.dp)) {
+                Text(stringResource(R.string.s_backup_nudge), style = KType.title)
+                Text(stringResource(R.string.s_backup_nudge_body), style = KType.small, modifier = Modifier.padding(top = 2.dp))
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KButton(stringResource(R.string.s_back_up_now), onBackup, small = true)
+                    KButton(stringResource(R.string.s_later), { store.saveSettings { it.copy(lastNudge = System.currentTimeMillis()) } },
+                        style = KButtonStyle.Secondary, small = true)
+                }
             }
         }
         if (cb != null && !filtering) ContinueCard(cb, store, onOpen)
@@ -233,6 +261,11 @@ fun LibraryScreen(
                 }
                 val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) }
                 KMenu(sortMenu, { sortMenu = false }, sortItems) { sort = SortBy.entries[it] }
+                KIconButton(
+                    if (sortFlipped) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                    stringResource(R.string.s_reverse_sort),
+                    { sortFlipped = !sortFlipped },
+                )
             }
         }
     }
@@ -263,13 +296,13 @@ fun LibraryScreen(
             LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Header() }
-                if (shown.isEmpty() && filtering) item(span = { GridItemSpan(maxLineSpan) }) { NoMatches { query = ""; status = null; onClearShelf() } }
+                if (shown.isEmpty() && filtering) item(span = { GridItemSpan(maxLineSpan) }) { NoMatches { query = ""; status = null; onShelf(null) } }
                 items(shown, key = { it.id }, contentType = { CT_GRID }) { b -> GridBookCell(b, store, actions_, b.id in picked) }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().statusBarsPadding().imePadding(), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 item { Header() }
-                if (shown.isEmpty() && filtering) item { NoMatches { query = ""; status = null; onClearShelf() } }
+                if (shown.isEmpty() && filtering) item { NoMatches { query = ""; status = null; onShelf(null) } }
                 items(shown, key = { it.id }, contentType = { CT_LIST }) { b -> ListBookRow(b, store, actions_, b.id in picked) }
             }
         }
@@ -281,6 +314,14 @@ fun LibraryScreen(
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                // Picking several books is only worth it if the bar can also finish or remove them.
+                KIconButton(Icons.Default.CheckCircle, stringResource(R.string.s_mark_as_finished), {
+                    val n = picked.size
+                    picked.forEach { id -> store.update(id) { it.copy(status = Status.FINISHED) } }
+                    toast.show(ctx.resources.getQuantityString(R.plurals.books_marked_finished, n, n))
+                    selecting = false; picked = emptySet()
+                }, tint = K.mint)
+                KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
                 KButton(stringResource(R.string.s_add_to_collection), { bulkTo = true }, small = true, enabled = picked.isNotEmpty())
                 KButton(stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() }, style = KButtonStyle.Secondary, small = true)
             }
@@ -311,6 +352,21 @@ fun LibraryScreen(
                 { store.update(b.id) { it.copy(status = if (it.status == Status.FINISHED) Status.READING else Status.FINISHED) }; actions = null })
             KAction(stringResource(R.string.s_remove_from_library), Icons.Default.Delete, { store.remove(b.id); actions = null; toast.show(removedToast) }, danger = true)
         }
+    }
+    if (confirmBulkRemove) {
+        val n = picked.size
+        AlertDialog(
+            onDismissRequest = { confirmBulkRemove = false },
+            title = { Text(stringResource(R.string.s_remove_from_library)) },
+            text = { Text(pluralStringResource(R.plurals.books_removed, n, n)) },
+            confirmButton = {
+                TextButton({ picked.forEach { id -> store.remove(id) }; confirmBulkRemove = false; selecting = false; picked = emptySet(); toast.show(removedToast) }) {
+                    Text(stringResource(R.string.s_remove), color = K.danger)
+                }
+            },
+            dismissButton = { TextButton({ confirmBulkRemove = false }) { Text(stringResource(R.string.s_cancel)) } },
+            containerColor = K.surf2,
+        )
     }
     if (bulkTo) KSheet({ bulkTo = false }, stringResource(R.string.s_add_to_collection)) {
         Text(pluralStringResource(R.plurals.books_picked, picked.size, picked.size), style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))

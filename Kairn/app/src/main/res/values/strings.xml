@@ -312,4 +312,24 @@
         <item quantity="one">%1$d match</item>
         <item quantity="other">%1$d matches</item>
     </plurals>
+    <string name="s_reverse_sort">Reverse the sort order</string>
+    <string name="s_remove">Remove</string>
+    <string name="s_this_chapter_only">This chapter only</string>
+    <string name="s_sort_by_position">By position</string>
+    <string name="s_sort_by_date">By date</string>
+    <string name="s_filter_marks">Filter notes and highlights</string>
+    <string name="s_backup_nudge">You have not backed up in a while.</string>
+    <string name="s_backup_nudge_body">One zip holds your places, notes and highlights.</string>
+    <string name="s_later">Later</string>
+    <string name="s_time_in_chapter">Chapter time left</string>
+    <string name="s_time_in_book">Book time left</string>
+    <plurals name="books_marked_finished">
+        <item quantity="one">%1$d book marked finished</item>
+        <item quantity="other">%1$d books marked finished</item>
+    </plurals>
+    <plurals name="books_removed">
+        <item quantity="one">Remove %1$d book from the library? Its file is not touched.</item>
+        <item quantity="other">Remove %1$d books from the library? Their files are not touched.</item>
+    </plurals>
+    <string name="s_reading_progress">Reading progress</string>
 </resources>
