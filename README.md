@@ -28,7 +28,8 @@ to true black, plus any custom page and ink pair. Warm light; brightness for thi
 system; full screen. A whole-book progress slider and an honest time left, worked out from the book's real
 word count at your reading speed. Two-page columns on a tablet; contents; footnote pop-ups with a "back to
 where you were" chip. Read aloud speaks the chapter you are in, from the place you are at, and carries on
-into the next one.
+into the next one: pause and resume from the toolbar, speed in the sheet behind the `1.0×` chip. Auto
+scroll pauses while your finger is on the page and picks up again when you lift it.
 
 **Library** — grid or list; search over titles and over the text inside every book; sort, reading status,
 collections and tags you can rename or delete; add several books to one collection at once; watched folders;

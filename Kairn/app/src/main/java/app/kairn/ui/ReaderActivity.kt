@@ -108,8 +108,12 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val tts by lazy {
         ReaderTts(
             this,
-            onState = { playing -> ui.ttsPlaying = playing },
-            onChapterEnd = { ui.ttsPlaying = false; lifecycleScope.launch { nav?.goForward(true) } },
+            onStarted = { ui.ttsStarting = false },
+            onEnded = { ui.ttsStarting = false; advanceWithTts() },
+            onFailed = {
+                ui.ttsOn = false; ui.ttsStarting = false
+                Toast.makeText(this, getString(R.string.s_tts_unavailable), Toast.LENGTH_LONG).show()
+            },
         )
     }
 
@@ -161,6 +165,9 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             applyBook(late)
             openBook(late)
         }
+        // Bind text-to-speech while the book is already open: the engine's cold bind is seconds long, and
+        // paying for it inside the tap is what made "Read aloud" read as a dead button.
+        lifecycleScope.launch { delay(1200); tts.warm() }
     }
 
     /** The parts of the reader that come straight from the stored record. */
@@ -298,7 +305,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 if (loc.href.toString() != ui.chapterHref) {
                     ui.chapterHref = loc.href.toString()
                     loadChapterWords(loc)
-                    if (ui.ttsPlaying) speakChapter(loc)          // follow the reader into the next chapter
+                    if (ui.ttsOn && !ui.ttsStarting) speakChapter(loc)   // follow the reader into the next chapter
                 }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
                 delay(if (SystemClock.elapsedRealtime() - lastSaved >= 5_000) 0 else 800)
@@ -334,6 +341,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun onPause() {
         super.onPause()
         tts.stop()                                   // never reads on in the background
+        ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
         stopAutoScroll()
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
@@ -394,23 +402,25 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     // One JS interval moves the page inside the WebView: a per-frame Kotlin round-trip would be a wake-up
     // and a hop across the bridge every 16 ms. The loop below only watches for the end of the chapter.
     private var autoJob: Job? = null
+    private var autoHold: Job? = null
+    private var autoHeld = false                 // a finger is on the page: no drift, and no page turn
+
+    private fun autoStep() = (ui.prefs.scrollSpeed * resources.displayMetrics.density / 50f).coerceAtLeast(0.5f)
+    private fun autoJs(step: Float) = "window.__kairnAuto && clearInterval(window.__kairnAuto);" +
+        "window.__kairnAuto = setInterval(function(){ window.scrollBy(0, $step) }, 20)"
 
     override fun toggleAutoScroll() {
         if (autoJob != null) { stopAutoScroll(); return }
-        if (!ui.prefs.scroll) {
-            Toast.makeText(this, getString(R.string.s_auto_scroll_needs_scroll_mode), Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (!ui.prefs.scroll) return                 // the toggle is only shown in scroll mode
         ui.autoScrolling = true
         autoJob = lifecycleScope.launch {
             val n = nav ?: return@launch
-            val step = (ui.prefs.scrollSpeed * resources.displayMetrics.density / 50f).coerceAtLeast(0.5f)
-            n.evaluateJavascript("window.__kairnAuto && clearInterval(window.__kairnAuto);" +
-                "window.__kairnAuto = setInterval(function(){ window.scrollBy(0, $step) }, 20)")
+            n.evaluateJavascript(autoJs(autoStep()))
             var last = -1f
             var still = 0
             while (isActive) {
                 delay(1500)
+                if (autoHeld) { last = -1f; still = 0; continue }   // held still by a finger, not by the bottom
                 val y = n.evaluateJavascript("window.scrollY")?.toFloatOrNull() ?: -1f
                 still = if (y == last) still + 1 else 0
                 last = y
@@ -419,9 +429,30 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
     }
 
+    /** A finger on the page stops the drift so the reader can look at something. */
+    private fun holdAutoScroll() {
+        if (autoJob == null || autoHeld) return
+        autoHeld = true
+        lifecycleScope.launch { nav?.evaluateJavascript("clearInterval(window.__kairnAuto)") }
+    }
+
+    /** It comes back a moment after the finger leaves, so a tap does not restart it under the next tap. */
+    private fun releaseAutoScroll() {
+        if (autoJob == null || !autoHeld) return
+        autoHold?.cancel()
+        autoHold = lifecycleScope.launch {
+            delay(700)
+            autoHeld = false
+            nav?.evaluateJavascript(autoJs(autoStep()))
+        }
+    }
+
     private fun stopAutoScroll() {
         autoJob?.cancel()
         autoJob = null
+        autoHold?.cancel()
+        autoHold = null
+        autoHeld = false
         ui.autoScrolling = false
         lifecycleScope.launch { nav?.evaluateJavascript("clearInterval(window.__kairnAuto)") }
     }
@@ -477,6 +508,11 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private var downX = 0f; private var downY = 0f; private var armed = false; private var tracking = false
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        // Before the scroll-mode gate: holding the page must stop the drift in any mode it can run in.
+        if (autoJob != null) when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> holdAutoScroll()
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseAutoScroll()
+        }
         if (!ui.prefs.scroll || ui.sheet != ReaderSheet.NONE) return super.dispatchTouchEvent(ev)
 
         // The threshold comes from Settings > Reading > "Swipe distance".
@@ -590,18 +626,51 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
     }
 
-    /** Play / stop the chapter being read aloud (or read from the current position). */
+    /** Play / pause / resume the chapter being read aloud (or read from the current position). */
     override fun toggleTts() {
-        if (ui.ttsPlaying) { tts.stop(); return }
-        val loc = nav?.currentLocator?.value ?: return
-        speakChapter(loc)
+        when {
+            ui.ttsOn && ui.ttsPaused -> { ui.ttsPaused = false; ui.ttsStarting = false; tts.resume() }
+            ui.ttsOn -> { ui.ttsPaused = true; tts.pause() }
+            else -> {
+                val loc = nav?.currentLocator?.value ?: return
+                // Show the stop state on the tap, not when the engine finally speaks: a cold bind is seconds
+                // long and an unchanged button reads as a dead tap.
+                ui.ttsOn = true; ui.ttsStarting = true; ui.ttsPaused = false
+                speakChapter(loc)
+            }
+        }
+    }
+
+    override fun stopTts() {
+        tts.stop()
+        ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
+        ui.sheet = ReaderSheet.NONE
+    }
+
+    override fun setSpeechRate(rate: Float) {
+        updatePrefs(ui.prefs.copy(speechRate = rate.coerceIn(0.6f, 2f)))
+        tts.setRate(ui.prefs.speechRate)
     }
 
     private fun speakChapter(loc: Locator) = lifecycleScope.launch {
         val p = pub ?: return@launch
-        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() } ?: return@launch
+        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
+        if (text.isNullOrBlank()) {
+            ui.ttsOn = false; ui.ttsStarting = false
+            Toast.makeText(this@ReaderActivity, getString(R.string.s_tts_chapter_failed), Toast.LENGTH_LONG).show()
+            return@launch
+        }
         val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
-        tts.speak(text.substring(from))
+        tts.speak(text.substring(from), ui.prefs.speechRate)
+    }
+
+    /** The chapter ended by itself: turn the page and keep reading, unless this was the last one. */
+    private fun advanceWithTts() {
+        val n = nav ?: run { ui.ttsOn = false; return }
+        val here = n.currentLocator.value?.href?.toString()
+        val last = pub?.readingOrder?.lastOrNull()?.href?.toString()
+        if (here == null || here == last) { ui.ttsOn = false; return }
+        lifecycleScope.launch { n.goForward(true) }
     }
 
     override fun goTo(l: Locator) { nav?.go(l, true); ui.sheet = ReaderSheet.NONE }

@@ -73,6 +73,17 @@ private fun ColourDot(argb: Int, selected: Boolean, onClick: () -> Unit) = Box(
 }
 private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
 
+/** Reading aloud: the speed, and the way out. Pause and resume stay on the bar, one tap from the page. */
+@Composable
+internal fun TtsSheet(prefs: ReaderPrefs, onRate: (Float) -> Unit, onStop: () -> Unit) {
+    KControl(stringResource(R.string.s_speech_rate), stringResource(R.string.s_speech_rate_value, prefs.speechRate)) {
+        KSlider(prefs.speechRate, onRate, 0.6f..2f)
+    }
+    Text(stringResource(R.string.s_speech_rate_hint), style = KType.small.copy(color = K.dim),
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 16.dp))
+    KButton(stringResource(R.string.s_stop_reading), onStop, style = KButtonStyle.Secondary)
+}
+
 /** What a selection turned into when "Note" was tapped: the quoted text and its Locator JSON. */
 class NoteTarget(val quote: String, val locator: String)
 

@@ -10,6 +10,8 @@ against which spec item, what is not, and the things that will bite anyone touch
 | EPUB open + render via Readium | R-01 |
 | Page / scroll mode | R-03 |
 | Font size, line + paragraph spacing, margins, justify, hyphenation (live) | R-04 (partly) |
+| Typeface choice: the publication's own, or the system serif, sans or mono | R-04 (partly) |
+| Custom page and ink pair, laid over any theme, per book | R-05 |
 | Light / sepia / grey / dark / true black, dark default, follow-system option | R-05, DEC-4 |
 | Warm-light overlay and in-app brightness (system settings untouched) | R-06 |
 | Tap zones (reading-direction aware), volume keys, chapter list, progress slider | R-07 (partly) |
@@ -20,11 +22,14 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Watched folders (per-folder switch), missing-not-removed, picker import, "Open with" | L-01, L-02, L-03, L-05 |
 | Auto-detect: sweeps the device for EPUBs, like Lithium (settings toggle) | L-01 |
 | Whole-book time left, fine-grained seek (by position, real word-count estimate) | R-07 |
+| Reading speed setting, so the time left uses your own pace | R-07 |
+| Auto scroll at a per-book speed; holds still while a finger is on the page | R-03 |
+| Read aloud: the chapter on screen from where you are, pause and resume, speed, on into the next chapter | — |
 | Two-page column mode (per book, tablet width only) | R-14 |
 | Covers + metadata from the file; edit title/author | L-06 |
-| Grid/list, search, sort | L-07 |
+| Grid/list, search, sort; search over titles and over the text inside every book | L-07 |
 | Collections, tags, status; rename and delete a collection or a tag | L-08 |
-| Highlights (4 colours), notes (written and edited), bookmarks, per-book list with jump, undo on delete, Markdown export | A-01, A-02, A-03 |
+| Highlights (six colours), notes (written and edited), bookmarks, per-book list with jump, undo on delete, Markdown export | A-01, A-02, A-03 |
 | Full-text search in book, a page of results at a time | S-01 |
 | Backup (one zip, optional book files) and restore (safety copy, merge or replace) | DS-01, DEC-12 |
 | Bad/missing file messages, never a crash | N-04 |

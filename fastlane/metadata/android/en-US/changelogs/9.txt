@@ -1,0 +1,7 @@
+0.7.5
+
+- Read aloud: Pause and Resume on the toolbar, and a speed control behind the 1.0x chip.
+- Read aloud carries on past the end of a chapter again, and starts much sooner after a tap.
+- Read aloud and Auto scroll are on the reader's toolbar, not buried under Options.
+- Auto scroll holds still while your finger is on the page and picks up when you lift it.
+- Auto scroll's toggle only appears on books set to Scroll, so it can never do nothing.

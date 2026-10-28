@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color as CColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
@@ -46,7 +47,7 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 
 /** The reader's sheets. */
-internal enum class ReaderSheet { NONE, DISPLAY, CONTENTS, SEARCH, NOTES }
+internal enum class ReaderSheet { NONE, DISPLAY, CONTENTS, SEARCH, NOTES, TTS }
 
 /**
  * Everything the reader screen draws, in one observable holder.
@@ -85,7 +86,9 @@ internal class ReaderUiState {
     var chapterProgress by mutableFloatStateOf(0f)          // how far into THIS chapter
     var chapterWords by mutableIntStateOf(0)                // this chapter's word count, once measured
     var searchChapterOnly by mutableStateOf(false)          // S-01: search only the chapter on screen
-    var ttsPlaying by mutableStateOf(false)                 // the chapter is being read aloud
+    var ttsOn by mutableStateOf(false)                      // reading aloud is on (the engine may still be starting)
+    var ttsStarting by mutableStateOf(false)                // tapped, but the engine has not produced audio yet
+    var ttsPaused by mutableStateOf(false)                  // reading aloud, held at the word it reached
     var autoScrolling by mutableStateOf(false)              // the page is scrolling by itself
     var bookProgress by mutableFloatStateOf(0f)             // WHOLE-BOOK progression
     /** The book's own word count, counted once after open. 0 until it lands. */
@@ -115,6 +118,8 @@ internal interface ReaderActions {
     fun exportNotes()
     fun search(query: String)
     fun toggleTts()
+    fun stopTts()
+    fun setSpeechRate(rate: Float)
     fun toggleAutoScroll()
     fun searchMore()
 }
@@ -235,10 +240,45 @@ internal fun ReaderScreen(
                         }
                         drag = null
                     })
-                    // The bar stays minimal; the tools live behind "Options".
-                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { expanded = !expanded }, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
-                        Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_options), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
+                    // The bar stays minimal: "Options" holds the four sheets, and the two reading modes sit
+                    // beside it as toggles with a visible state. They are not tools and they are not hidden -
+                    // a mode that moves the page must be visible while it moves it.
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
+                            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
+                            Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_options), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
+                        }
+                        // While it is reading, the speed takes the auto scroll slot - the two never make sense
+                        // together - so the row never grows past what fits on a phone.
+                        if (ui.ttsOn) {
+                            ModePill(null, stringResource(R.string.s_speech_rate_value, ui.prefs.speechRate), false, colors) { ui.sheet = ReaderSheet.TTS }
+                            Spacer(Modifier.width(6.dp))
+                        } else if (ui.prefs.scroll) {
+                            // Auto scroll exists only in scroll mode, so outside it the toggle is not shown at all.
+                            ModePill(
+                                if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
+                                stringResource(if (ui.autoScrolling) R.string.s_auto_scrolling else R.string.s_auto_scroll),
+                                ui.autoScrolling, colors, act::toggleAutoScroll,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        ModePill(
+                            when {
+                                ui.ttsOn && ui.ttsPaused -> Icons.Default.PlayArrow
+                                ui.ttsOn -> Icons.Default.Pause
+                                else -> Icons.Default.VolumeUp
+                            },
+                            stringResource(
+                                when {
+                                    ui.ttsStarting -> R.string.s_tts_starting
+                                    ui.ttsOn && ui.ttsPaused -> R.string.s_resume
+                                    ui.ttsOn -> R.string.s_pause
+                                    else -> R.string.s_read_aloud
+                                },
+                            ),
+                            ui.ttsOn, colors, act::toggleTts,
+                        )
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
@@ -246,16 +286,6 @@ internal fun ReaderScreen(
                             ReaderTool(Icons.Default.Search, stringResource(R.string.s_tool_search), colors) { ui.sheet = ReaderSheet.SEARCH }
                             ReaderTool(Icons.Default.StickyNote2, stringResource(R.string.s_tool_notes), colors) { ui.sheet = ReaderSheet.NOTES }
                             ReaderTool(Icons.Default.TextFormat, stringResource(R.string.s_tool_display), colors) { ui.sheet = ReaderSheet.DISPLAY }
-                            ReaderTool(
-                                if (ui.ttsPlaying) Icons.Default.Stop else Icons.Default.VolumeUp,
-                                stringResource(if (ui.ttsPlaying) R.string.s_stop_reading else R.string.s_read_aloud),
-                                colors,
-                            ) { act.toggleTts() }
-                            ReaderTool(
-                                if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
-                                stringResource(if (ui.autoScrolling) R.string.s_stop_scrolling else R.string.s_auto_scroll),
-                                colors,
-                            ) { act.toggleAutoScroll() }
                         }
                     }
                 }
@@ -282,8 +312,15 @@ internal fun ReaderScreen(
         // Leaving the search sheet drops its hits: reopening it with an empty field must not show
         // the previous query's results.
         LaunchedEffect(ui.sheet) { if (ui.sheet != ReaderSheet.SEARCH) { ui.searchResults = emptyList(); ui.searchBusy = false; ui.searchMoreAvailable = false } }
-        if (ui.sheet != ReaderSheet.NONE) KSheet({ ui.sheet = ReaderSheet.NONE }, when (ui.sheet) { ReaderSheet.DISPLAY -> stringResource(R.string.s_display); ReaderSheet.CONTENTS -> stringResource(R.string.s_contents); ReaderSheet.SEARCH -> stringResource(R.string.s_search_in_book); else -> stringResource(R.string.s_notes_and_highlights) }) {
+        if (ui.sheet != ReaderSheet.NONE) KSheet({ ui.sheet = ReaderSheet.NONE }, when (ui.sheet) {
+            ReaderSheet.DISPLAY -> stringResource(R.string.s_display)
+            ReaderSheet.CONTENTS -> stringResource(R.string.s_contents)
+            ReaderSheet.SEARCH -> stringResource(R.string.s_search_in_book)
+            ReaderSheet.TTS -> stringResource(R.string.s_reading_aloud)
+            else -> stringResource(R.string.s_notes_and_highlights)
+        }) {
             when (ui.sheet) {
+                ReaderSheet.TTS -> TtsSheet(ui.prefs, act::setSpeechRate, act::stopTts)
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
                 ReaderSheet.SEARCH -> {
@@ -307,5 +344,25 @@ internal fun ReaderScreen(
             }
         }
         BackHandler(ui.sheet != ReaderSheet.NONE) { ui.sheet = ReaderSheet.NONE }
+    }
+}
+
+/**
+ * One reading mode as a toggle: its own state is on the bar, so starting or stopping it never needs a sheet.
+ */
+@Composable
+private fun ModePill(icon: ImageVector?, label: String, live: Boolean, colors: ReaderUi, onClick: () -> Unit) {
+    val tint = if (live) K.mint else colors.chromeText
+    Row(
+        Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+            .background(if (live) K.mint.copy(alpha = 0.16f) else CColor.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp)
+            .semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+        Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
     }
 }
