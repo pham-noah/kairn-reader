@@ -242,7 +242,8 @@ fun LibraryScreen(
         // A backup is the one chore that costs you your notes if you skip it for long enough.
         val quiet = maxOf(shelves.lastBackup, shelves.lastNudge)
         if (books.isNotEmpty() && System.currentTimeMillis() - quiet > 30L * 24 * 60 * 60 * 1000) {
-            KCard(Modifier.padding(top = 14.dp)) {
+            // padding: a KCard has none by default, so text sits flush against the rounded clip.
+            KCard(Modifier.padding(top = 14.dp), padding = 16) {
                 Text(stringResource(R.string.s_backup_nudge), style = KType.title)
                 Text(stringResource(R.string.s_backup_nudge_body), style = KType.small, modifier = Modifier.padding(top = 2.dp))
                 Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
