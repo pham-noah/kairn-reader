@@ -36,6 +36,7 @@ import app.kairn.data.*
 import app.kairn.data.ThemeId
 import app.kairn.ui.kit.ToastState
 import app.kairn.ui.theme.K
+import app.kairn.ui.theme.readerUi
 import app.kairn.ui.theme.KairnTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -119,8 +120,9 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 val s by app.store.settings.collectAsState()
                 KairnTheme(glass = s.glass, ambient = s.ambient) {
                     ReaderScreen(
-                        ui = ui, theme = effectiveTheme(ui.prefs, s.autoSwitch), isTablet = isTablet,
-                        toast = toast, act = this@ReaderActivity,
+                        ui = ui,
+                        colors = readerUi(effectiveTheme(ui.prefs, s.autoSwitch), ui.prefs.pageColor, ui.prefs.inkColor),
+                        isTablet = isTablet, toast = toast, act = this@ReaderActivity, wpm = s.readingWpm,
                     )
                 }
             }
@@ -194,7 +196,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
         val factory = EpubNavigatorFactory(p)
         // Palette order in Tokens.kt decides these labels.
-        val colourNames = listOf(R.string.s_colour_amber, R.string.s_colour_mint, R.string.s_colour_rose, R.string.s_colour_blue)
+        val colourNames = listOf(
+            R.string.s_colour_amber, R.string.s_colour_mint, R.string.s_colour_rose,
+            R.string.s_colour_blue, R.string.s_colour_violet, R.string.s_colour_sand,
+        )
         val colourLabels = K.highlightColors.zip(colourNames).map { (pair, name) -> getString(name) to pair.second.toArgb() }
         val highlightCallback = HighlightActionModeCallback(
             colourLabels,
@@ -329,15 +334,24 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     private fun toEpub(p: ReaderPrefs): EpubPreferences {
         val t = effectiveTheme(p, app.store.settings.value.autoSwitch)
-        // BLACK and GRAY are not Readium themes: they are explicit page/ink colours laid over a
-        // base theme (GRAY sits on the LIGHT base, because its ink is dark).
-        val bg = when (t) { ThemeId.BLACK -> RColor(0xFF000000.toInt()); ThemeId.GRAY -> RColor(0xFF9AA1A6.toInt()); else -> null }
-        val ink = when (t) { ThemeId.BLACK -> RColor(0xFFDADDE0.toInt()); ThemeId.GRAY -> RColor(0xFF16191C.toInt()); else -> null }
+        // BLACK and GRAY are not Readium themes: they are explicit page/ink colours laid over a base theme.
+        // GRAY is charcoal (8.5:1 for body text), so it sits on the DARK base, like BLACK does.
+        // A custom page/ink pair from the Display sheet wins over both.
+        val bg = p.pageColor?.let { RColor(it) } ?: when (t) {
+            ThemeId.BLACK -> RColor(0xFF000000.toInt())
+            ThemeId.GRAY -> RColor(0xFF3A4045.toInt())
+            else -> null
+        }
+        val ink = p.inkColor?.let { RColor(it) } ?: when (t) {
+            ThemeId.BLACK -> RColor(0xFFDADDE0.toInt())
+            ThemeId.GRAY -> RColor(0xFFE4E8EB.toInt())
+            else -> null
+        }
         return EpubPreferences(
             theme = when (t) {   // exhaustive: BLACK/GRAY carry their colours explicitly below
-                ThemeId.LIGHT, ThemeId.GRAY -> Theme.LIGHT
+                ThemeId.LIGHT -> Theme.LIGHT
                 ThemeId.SEPIA -> Theme.SEPIA
-                ThemeId.DARK, ThemeId.BLACK -> Theme.DARK
+                ThemeId.DARK, ThemeId.BLACK, ThemeId.GRAY -> Theme.DARK
             },
             backgroundColor = bg,
             textColor = ink,

@@ -126,12 +126,12 @@ internal fun markHref(m: Mark): String? =
 @Composable
 internal fun ReaderScreen(
     ui: ReaderUiState,
-    theme: ThemeId,
+    colors: ReaderUi,
     isTablet: Boolean,
     toast: ToastState,
     act: ReaderActions,
+    wpm: Int = ReaderLogic.WPM,
 ) {
-    val colors = readerUi(theme)
     Box(Modifier.fillMaxSize()) {
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
         if (ui.prefs.warmth > 0f) Box(Modifier.fillMaxSize().background(CColor(0xFFFF9A2E).copy(alpha = ui.prefs.warmth * 0.30f)))
@@ -204,9 +204,9 @@ internal fun ReaderScreen(
                     }
                     // Tap the label to switch between the whole book and the chapter you are in.
                     var chapterTime by remember { mutableStateOf(false) }
-                    val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress)
-                        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress)
-                            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress)
+                    val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress, wpm)
+                        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress, wpm)
+                            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress, wpm)
                     val timeHint = stringResource(if (chapterTime) R.string.s_time_in_chapter else R.string.s_time_in_book)
                     val timeLeft = when {
                         minsLeft == null -> ""

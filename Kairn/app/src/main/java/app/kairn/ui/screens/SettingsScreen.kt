@@ -32,6 +32,7 @@ private val SmallDim = KType.small.copy(color = K.dim)
 @Composable
 fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit) {
     val s by store.settings.collectAsStateWithLifecycle()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     var licences by remember { mutableStateOf(false) }
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
     val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
@@ -44,6 +45,8 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
     val autoOpts = listOf(R.string.s_auto_off, R.string.s_auto_system)
     val swipeNames = listOf(R.string.s_swipe_short, R.string.s_swipe_medium, R.string.s_swipe_long)
     val swipeVals = remember { listOf(28, 48, 80) }
+    val speeds = remember { listOf(180, 240, 300, 360) }
+    val speedNames = listOf(R.string.s_speed_slow, R.string.s_speed_normal, R.string.s_speed_fast, R.string.s_speed_vfast)
     val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(s.lastBackup)) else null }
     val last = if (lastDate != null) stringResource(R.string.s_last_backup_on, lastDate) else stringResource(R.string.s_no_backup_yet)
     val folders = s.folders.count { it.enabled }
@@ -73,6 +76,20 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
                 KRow(stringResource(R.string.s_keep_screen_on), subtitle = stringResource(R.string.s_while_a_book_is_open)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
                 KRow(stringResource(R.string.s_full_screen), subtitle = stringResource(R.string.s_hide_the_status_bar_with_the_bars), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
                 KRow(stringResource(R.string.s_volume_keys_turn_pages), divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
+                // The time left is a guess about how fast YOU read; this is that guess.
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(stringResource(R.string.s_reading_speed), style = KType.title)
+                    KSegmented(
+                        speedNames.map { stringResource(it) },
+                        speeds.indexOf(s.readingWpm).coerceAtLeast(0),
+                        { i -> store.saveSettings { it.copy(readingWpm = speeds[i]) } },
+                        modifier = Modifier.width(240.dp),
+                    )
+                }
                 KRow(stringResource(R.string.s_swipe_to_change_chapter), subtitle = stringResource(R.string.s_in_scroll_mode_left_for_next_right_for_p), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
                 if (s.swipeChapters) {
                     Row(
@@ -107,7 +124,14 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
         }
         KGroup(stringResource(R.string.s_group_about)) {
             KCard {
-                KRow(stringResource(R.string.s_open_source_licences), divider = false, onClick = { licences = true }) { KChevron() }
+                KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
+                // No network code of our own: the browser opens the tracker.
+                KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
+                    runCatching {
+                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/pham-noah/kairn-reader/issues")))
+                    }
+                }) { KChevron() }
             }
         }
         Text(stringResource(R.string.s_kairn_draft_build_no_account_no_ads_no_t), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))

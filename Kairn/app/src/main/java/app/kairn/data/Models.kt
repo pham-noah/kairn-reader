@@ -54,11 +54,14 @@ data class ReaderPrefs(
     val scroll: Boolean = false,               // R-03
     val warmth: Float = 0f,                    // R-06, 0..1, app-local overlay
     val brightness: Float = -1f,               // R-06, -1 = follow system
+    val pageColor: Int? = null,                // a custom page colour laid over the theme
+    val inkColor: Int? = null,                 // and the ink that goes with it
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("fontScale", fontScale)
         .put("lineHeight", lineHeight).put("paragraphSpacing", paragraphSpacing)
         .put("margins", margins).put("justify", justify).put("hyphens", hyphens).put("twoPage", twoPage)
         .put("scroll", scroll).put("warmth", warmth.toDouble()).put("brightness", brightness.toDouble())
+        .put("pageColor", pageColor ?: JSONObject.NULL).put("inkColor", inkColor ?: JSONObject.NULL)
 
     companion object {
         fun from(o: JSONObject?, base: ReaderPrefs = ReaderPrefs()): ReaderPrefs {
@@ -75,6 +78,8 @@ data class ReaderPrefs(
                 scroll = o.optBoolean("scroll", base.scroll),
                 warmth = o.optDouble("warmth", base.warmth.toDouble()).toFloat(),
                 brightness = o.optDouble("brightness", base.brightness.toDouble()).toFloat(),
+                pageColor = o.optInt("pageColor", 0).takeIf { it != 0 } ?: base.pageColor,
+                inkColor = o.optInt("inkColor", 0).takeIf { it != 0 } ?: base.inkColor,
             )
         }
     }
@@ -162,11 +167,12 @@ data class AppSettings(
     val extraTags: List<String> = emptyList(),
     val lastBackup: Long = 0,                 // DS-01: shown on the Backup screen
     val lastNudge: Long = 0,                  // when the "you have not backed up" card was dismissed
+    val readingWpm: Int = 240,               // the reader's own pace, for "min left"
     val lastBackupName: String = "",
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
-        .put("lastBackup", lastBackup).put("lastBackupName", lastBackupName).put("lastNudge", lastNudge)
+        .put("lastBackup", lastBackup).put("lastBackupName", lastBackupName).put("lastNudge", lastNudge).put("readingWpm", readingWpm)
         .put("keepScreenOn", keepScreenOn).put("fullscreen", fullscreen).put("volumeKeys", volumeKeys)
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
         .put("autoDetect", autoDetect)
@@ -204,6 +210,7 @@ data class AppSettings(
                 extraTags = o.optJSONArray("extraTags")?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(),
                 lastBackup = o.optLong("lastBackup", 0),
                 lastNudge = o.optLong("lastNudge", 0),
+                readingWpm = o.optInt("readingWpm", 240),
                 lastBackupName = o.optString("lastBackupName"),
             )
         }

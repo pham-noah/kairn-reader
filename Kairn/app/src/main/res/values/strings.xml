@@ -332,4 +332,16 @@
         <item quantity="other">Remove %1$d books from the library? Their files are not touched.</item>
     </plurals>
     <string name="s_reading_progress">Reading progress</string>
+    <string name="s_custom_colours">Custom colours</string>
+    <string name="s_custom_colours_hint">Overrides the page and ink for this book only.</string>
+    <string name="s_theme_colours">Use the theme colours</string>
+    <string name="s_colour_violet">Violet</string>
+    <string name="s_colour_sand">Sand</string>
+    <string name="s_reading_speed">Reading speed</string>
+    <string name="s_speed_slow">Slow</string>
+    <string name="s_speed_normal">Normal</string>
+    <string name="s_speed_fast">Fast</string>
+    <string name="s_speed_vfast">Very fast</string>
+    <string name="s_report_problem">Report a problem</string>
+    <string name="s_report_problem_hint">Opens the issue tracker in a browser</string>
 </resources>

@@ -5,6 +5,8 @@
 
 package app.kairn.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,6 +54,23 @@ internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi,
 
 private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition; ordered by page tone
 private val pageModes = listOf(R.string.s_pages, R.string.s_scroll)
+// A custom page and ink: ten tones and five inks make forty readable pairs without a colour wheel.
+private val pageTones = listOf(0xFFF6F5F1, 0xFFEDE7DC, 0xFFD8D2C6, 0xFFBFC4C0, 0xFF8E959B,
+                               0xFF6A737A, 0xFF4A5158, 0xFF3A4045, 0xFF24282C, 0xFF101214).map(Long::toInt)
+private val inkTones = listOf(0xFF14171A, 0xFF3B4147, 0xFF6A7178, 0xFFD8DEE3, 0xFFF4F6F8).map(Long::toInt)
+
+@Composable
+private fun ColourDot(argb: Int, selected: Boolean, onClick: () -> Unit) = Box(
+    Modifier.heightIn(min = 48.dp).width(30.dp).clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick)
+        .semantics { this.selected = selected },
+    contentAlignment = Alignment.Center,
+) {
+    Box(
+        Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape)
+            .background(Color(argb))
+            .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else Color(0x66FFFFFF), androidx.compose.foundation.shape.CircleShape),
+    )
+}
 private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
 
 /** What a selection turned into when "Note" was tapped: the quoted text and its Locator JSON. */
@@ -75,6 +97,19 @@ internal fun NoteEditor(target: NoteTarget, initial: String = "", onSave: (Strin
 internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true, onReset: (() -> Unit)? = null) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         readerThemes.forEach { t -> KThemeSwatch(t, prefs.theme == t, { onChange(prefs.copy(theme = t)) }) }
+    }
+    // Sits on top of the theme: the swatch row still decides the chrome, these two decide the page.
+    Text(stringResource(R.string.s_custom_colours), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 14.dp, bottom = 2.dp))
+    Text(stringResource(R.string.s_custom_colours_hint), style = KType.small.copy(color = K.dim))
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        pageTones.forEach { c -> ColourDot(c, prefs.pageColor == c, { onChange(prefs.copy(pageColor = if (prefs.pageColor == c) null else c)) }) }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        inkTones.forEach { c -> ColourDot(c, prefs.inkColor == c, { onChange(prefs.copy(inkColor = if (prefs.inkColor == c) null else c)) }) }
+    }
+    if (prefs.pageColor != null || prefs.inkColor != null) {
+        KButton(stringResource(R.string.s_theme_colours), { onChange(prefs.copy(pageColor = null, inkColor = null)) },
+            style = KButtonStyle.Ghost, small = true)
     }
     Spacer(Modifier.height(16.dp))
     KSegmented(pageModes.map { stringResource(it) }, if (prefs.scroll) 1 else 0, { onChange(prefs.copy(scroll = it == 1)) })
