@@ -72,6 +72,40 @@ object ReaderLogic {
         return remaining / wpm
     }
 
+    /** TTS engines take about 4000 characters per utterance; chunk well under that. */
+    const val TTS_CHUNK = 3000
+
+    /** Sentences packed into utterances no longer than [TTS_CHUNK]. Nothing is dropped. */
+    fun ttsChunks(text: String): List<String> {
+        val clean = text.replace(Regex("[ \t]+"), " ").trim()
+        if (clean.isEmpty()) return emptyList()
+        val sentences = clean.split(Regex("(?<=[.!?\u2026])\\s+|\\n+")).filter { it.isNotBlank() }
+        val out = mutableListOf<String>()
+        val sb = StringBuilder()
+        for (sentence in sentences) {
+            var piece = sentence
+            while (piece.length > TTS_CHUNK) {                 // one monstrous "sentence"
+                if (sb.isNotEmpty()) { out += sb.toString(); sb.clear() }
+                out += piece.take(TTS_CHUNK)
+                piece = piece.drop(TTS_CHUNK)
+            }
+            if (sb.length + piece.length + 1 > TTS_CHUNK) { out += sb.toString(); sb.clear() }
+            if (sb.isNotEmpty()) sb.append(' ')
+            sb.append(piece)
+        }
+        if (sb.isNotEmpty()) out += sb.toString()
+        return out
+    }
+
+    /** Where in the chapter to start speaking: the reader's progression, snapped forward to a sentence. */
+    fun ttsStartOffset(text: String, progression: Float): Int {
+        if (text.isEmpty()) return 0
+        val rough = (progression.coerceIn(0f, 1f) * text.length).toInt().coerceIn(0, text.length - 1)
+        if (rough == 0) return 0
+        val end = Regex("[.!?\u2026]\\s").find(text, rough)?.range?.last ?: return rough
+        return (end + 1).coerceIn(0, text.length - 1)
+    }
+
     /** Marks minus one id. Used by every delete, so the "already gone" case is the same everywhere. */
     fun withoutMark(marks: List<Mark>, id: String): List<Mark> = marks.filterNot { it.id == id }
 

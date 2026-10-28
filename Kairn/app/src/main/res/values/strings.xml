@@ -344,4 +344,6 @@
     <string name="s_speed_vfast">Very fast</string>
     <string name="s_report_problem">Report a problem</string>
     <string name="s_report_problem_hint">Opens the issue tracker in a browser</string>
+    <string name="s_read_aloud">Read aloud</string>
+    <string name="s_stop_reading">Stop reading</string>
 </resources>

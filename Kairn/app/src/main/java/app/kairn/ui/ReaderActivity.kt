@@ -92,6 +92,17 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val wordSplit = Regex("\\s+")
     // Every write to this book's record goes through one place; see ReaderWriter.
     private val writer by lazy { ReaderWriter(app.store, bookId) }
+    /**
+     * Reads the chapter aloud. Tapping play speaks from the reader's own position; when a chapter runs out
+     * the page turns and the next one starts, which is also what happens if the reader turns it themselves.
+     */
+    private val tts by lazy {
+        ReaderTts(
+            this,
+            onState = { playing -> ui.ttsPlaying = playing },
+            onChapterEnd = { ui.ttsPlaying = false; lifecycleScope.launch { nav?.goForward(true) } },
+        )
+    }
 
     private val exportNotesLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
@@ -274,7 +285,11 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 loc.locations.totalProgression?.let { ui.bookProgress = it.toFloat() }
                 loc.locations.progression?.let { ui.chapterProgress = it.toFloat() }
                 ui.chapterTitle = loc.title ?: ""
-                if (loc.href.toString() != ui.chapterHref) { ui.chapterHref = loc.href.toString(); loadChapterWords(loc) }
+                if (loc.href.toString() != ui.chapterHref) {
+                    ui.chapterHref = loc.href.toString()
+                    loadChapterWords(loc)
+                    if (ui.ttsPlaying) speakChapter(loc)          // follow the reader into the next chapter
+                }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
                 delay(if (SystemClock.elapsedRealtime() - lastSaved >= 5_000) 0 else 800)
                 lastSaved = SystemClock.elapsedRealtime()
@@ -308,11 +323,12 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     override fun onPause() {
         super.onPause()
+        tts.stop()                                   // never reads on in the background
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
     }
-    override fun onDestroy() { closeSearch(); pub?.close(); super.onDestroy() }
+    override fun onDestroy() { closeSearch(); tts.shutdown(); pub?.close(); super.onDestroy() }
 
     // ---- preferences (R-03, R-04, R-05, R-06, R-10) ----
 
@@ -523,6 +539,20 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             writer.removeBookmarksIn(h, ::markHref)
             toast.show(getString(R.string.toast_bookmark_removed))
         }
+    }
+
+    /** Play / stop the chapter being read aloud (or read from the current position). */
+    override fun toggleTts() {
+        if (ui.ttsPlaying) { tts.stop(); return }
+        val loc = nav?.currentLocator?.value ?: return
+        speakChapter(loc)
+    }
+
+    private fun speakChapter(loc: Locator) = lifecycleScope.launch {
+        val p = pub ?: return@launch
+        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() } ?: return@launch
+        val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
+        tts.speak(text.substring(from))
     }
 
     override fun goTo(l: Locator) { nav?.go(l, true); ui.sheet = ReaderSheet.NONE }

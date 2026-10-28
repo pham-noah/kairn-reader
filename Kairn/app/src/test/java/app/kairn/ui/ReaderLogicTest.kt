@@ -102,4 +102,35 @@ class ReaderLogicTest {
         assertEquals(3, ReaderLogic.countWords("Tom &amp; Jerry".toByteArray()))
         assertEquals(2, ReaderLogic.countWords("naïve café".toByteArray()))   // 2-byte chars stay one word
     }
+
+    /** TTS input: sentences packed under the engine's per-utterance cap, nothing lost. */
+    @Test fun tts_chunks_keep_every_word_and_stay_under_the_cap() {
+        val text = (1..400).joinToString(" ") { "sentence number $it ends here." }
+        val chunks = ReaderLogic.ttsChunks(text)
+        assertTrue("expected more than one chunk", chunks.size > 1)
+        assertTrue("a chunk is too long", chunks.all { it.length <= ReaderLogic.TTS_CHUNK })
+        val joined = chunks.joinToString(" ")
+        assertEquals(400, Regex("number").findAll(joined).count())
+    }
+
+    @Test fun one_monstrous_sentence_is_split_rather_than_dropped() {
+        val text = "x".repeat(ReaderLogic.TTS_CHUNK * 2 + 5)
+        val chunks = ReaderLogic.ttsChunks(text)
+        assertTrue(chunks.all { it.length <= ReaderLogic.TTS_CHUNK })
+        assertEquals(text.length, chunks.sumOf { it.length })
+    }
+
+    @Test fun an_empty_chapter_produces_no_speech() {
+        assertTrue(ReaderLogic.ttsChunks("   \n  ").isEmpty())
+    }
+
+    /** Play from where the reader is: the offset lands just after a sentence, never mid-word. */
+    @Test fun tts_starts_at_the_readers_position_snapped_to_a_sentence() {
+        val text = "First sentence here. Second sentence here. Third sentence here."
+        assertEquals(0, ReaderLogic.ttsStartOffset(text, 0f))
+        val at = ReaderLogic.ttsStartOffset(text, 0.45f)          // inside the second sentence
+        assertTrue("landed mid-word: ${text.substring(at)}", text.substring(at).startsWith("Third") ||
+            text.substring(at).startsWith("Second"))
+        assertEquals(0, ReaderLogic.ttsStartOffset("", 0.5f))
+    }
 }
