@@ -8,64 +8,71 @@ folder, or let it find the EPUBs already on your device.
 ![Library](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/01-library.png)
 ![Reading](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/02-reader.png)
 
-## What sets it apart
+## Why it is built this way
 
-- **Nothing phones home.** The only network code is the LAN transfer server, and it only listens. No
-  analytics, no crash reporting, no update check, no outgoing connection.
+- **Nothing phones home.** The only network code is the LAN transfer server, and it only listens - no
+  analytics, no crash reporting, no update check, no outgoing request.
 - **Your data is files, not a database.** Positions, highlights, notes and settings are plain JSON in the
-  app's folder, one file per book. Any text editor opens them.
-- **A moved book keeps its history.** Books are identified by their contents, so renaming or moving a file
+  app's folder, one file per book.
+- **A moved book keeps its history.** Books are identified by their content, so renaming or moving a file
   keeps every highlight and your place in it.
-- **A restore cannot leave you worse off.** One zip; the archive is validated before anything is touched, a
-  safety copy is taken, and the app says plainly what happened.
+- **A restore cannot leave you worse off.** One zip, validated before anything is touched, with a safety
+  copy taken first and a plain statement of what happened.
 
-## Features
+## Reading
 
-**Reading** — page or scroll, with auto scroll at a speed you set per book. Typeface (the publication's own,
-or the system's serif, sans or mono), text size, line and paragraph spacing, margins, justification,
-hyphenation — all per book, and one action puts a book back on the app defaults. Five page tones from light
-to true black, plus any custom page and ink pair. Warm light; brightness for this app alone or from the
-system; full screen. A whole-book progress slider and an honest time left, worked out from the book's real
-word count at your reading speed. Two-page columns on a tablet; contents; footnote pop-ups with a "back to
-where you were" chip. Read aloud speaks the chapter you are in, from the place you are at, and carries on
-into the next one: pause and resume from the toolbar, speed in the sheet behind the `1.0×` chip. The
-sentence being spoken is marked, and in page mode the page turns to keep up with it. Auto
-scroll pauses while your finger is on the page and picks up again when you lift it.
+- Page or scroll, with auto scroll at a speed you set per book. Auto scroll holds still while your finger is
+  on the page and picks up when you lift it.
+- Read aloud from where you are, and it carries on into the next chapter. Pause and resume land on the word
+  you left; speed runs 0.6x to 2.0x per book. It marks the sentence it is speaking, and in page mode the
+  page turns to keep up with it.
+- Typeface, text size, line and paragraph spacing, margins, justification and hyphenation - per book, with
+  one action to put a book back on your defaults.
+- Five page tones from light to true black, plus any custom page and ink pair. Warm light; brightness for
+  this app alone or from the system; full screen.
+- A whole-book progress slider, and a time left worked out from the book's real word count at your reading
+  speed. Two-page columns on a tablet; contents; footnote pop-ups with a "back to where you were" chip.
 
-**Library** — grid or list; search over titles and over the text inside every book; sort, reading status,
-collections and tags you can rename or delete; add several books to one collection at once; watched folders;
-a scan for the EPUBs already on your device; generated covers for books without one; "Open with" from any
-file manager.
+## Library
 
-**Sending books** — a page you open from a computer on the same Wi-Fi. Drop EPUBs on it and they land in the
-library. The address carries a four-digit code.
+Grid or list; search over titles and over the text inside every book; sort, reading status, collections and
+tags you can rename or delete; add several books to one collection at once; watched folders; a scan for the
+EPUBs already on your device; generated covers for books without one; "Open with" from any file manager.
 
-**Notes and highlights** — six highlight colours, notes typed on a selection and edited later, one bookmark
-per chapter, a per-book list to jump from, an undo on every delete, Markdown export.
+## Notes, highlights, backup
 
-**Backup** — one zip, optionally with the book files inside; merge or replace on restore.
+Six highlight colours, notes typed on a selection and edited later, one bookmark per chapter, a per-book
+list to jump from, an undo on every delete, Markdown export. Backup is one zip, optionally with the book
+files inside; restore merges or replaces.
 
-Every user-facing string is a resource (counts are plurals), so a translation is a `values-xx/strings.xml`
-away. Data is never localized: book titles, the Wi-Fi upload page and the annotation kinds stay as they are.
+## Sending books
+
+Open the transfer page, then drop EPUBs on it from a browser on the same Wi-Fi. The address carries a
+four-digit code, and nothing else on the network can reach it.
 
 ## Privacy
 
-Nothing touches the network unless you start the Wi-Fi transfer. Even then Kairn only listens: your
-computer's browser makes the request, the server lives only while that screen is open, and it needs the code
-shown on screen. No analytics, no crash reporting, no ads, no account, no update check.
+Nothing touches the network unless you start the Wi-Fi transfer. Even then Kairn only listens: the computer
+makes the request, the server lives only while that screen is open, and it will not answer without the code
+shown on screen.
 
 `INTERNET` is requested because a socket needs it even to listen. `MANAGE_EXTERNAL_STORAGE` is optional: it
 lets the scan see EPUBs already on the device, and the folder picker covers everything else.
 
 ## Install
 
-**Not in the main F-Droid repository yet.** The submission was closed on project age — reviewers want about
-three months of active development, and the app was days old when it was filed. The same merge request can be
-reopened once that history exists. A self-hosted F-Droid repository is the plan for the gap.
+**The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** It is
+signed with a debug key on purpose, so it installs over an earlier Kairn and keeps your library. A
+store-signed build cannot install over it - take a backup in the app before switching.
 
-**Today**, build it from source; the recipe is below. Android 8.0 or newer.
+**F-Droid:** not in the main repository yet. The submission
+([!52993](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52993)) was closed on project age; reviewers
+want about three months of work behind an app, and Kairn was days old when it was filed. The same merge
+request can be reopened once that history exists.
 
-## Building
+Android 8.0 or newer.
+
+## Build and test
 
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
@@ -75,19 +82,16 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own
 
-[SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0 API traps, the performance work,
-and which spec item maps to what.
+Every user-facing string is a resource and every count is a plural, so a translation is a
+`values-xx/strings.xml` away. [SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0
+API traps, the performance work, and which spec item maps to what.
 
-## Roadmap
+## What is next
 
-Dictionary and share from the selection menu · image zoom · right-to-left and vertical text · text and Word
-files imported alongside EPUBs.
+Dictionary and share from the selection menu · right-to-left and vertical text · text and Word files
+imported alongside EPUBs.
 
-## Credits
+## Credits and licence
 
 [Readium Kotlin Toolkit](https://github.com/readium/kotlin-toolkit) (BSD-3-Clause) and AndroidX (Apache-2.0).
-No proprietary dependencies, no Play Services.
-
-## Licence
-
-Apache-2.0 — see `LICENSE` and `NOTICE`.
+No proprietary dependencies, no Play Services. Apache-2.0 - see `LICENSE` and `NOTICE`.
