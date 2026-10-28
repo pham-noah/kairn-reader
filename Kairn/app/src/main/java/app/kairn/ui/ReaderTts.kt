@@ -17,14 +17,15 @@ import java.util.Locale
  * and a [speak] that arrives first is remembered and played when it is ready - a tap must never be a no-op.
  *
  * TextToSpeech has no pause, so a pause is a stop plus the position: onRangeStart reports the character
- * offset of every word inside the utterance being spoken, and [resume] re-queues from that offset instead of
- * restarting the chapter. Nothing here plays in the background: the Activity stops it in onPause.
+ * offset of every word, [onWord] carries that offset into the chapter text, and [resume] re-queues from it
+ * instead of restarting the chapter. Nothing here plays in the background: the Activity stops it in onPause.
  */
 internal class ReaderTts(
     context: Context,
     private val onStarted: () -> Unit,
     private val onEnded: () -> Unit,
     private val onFailed: () -> Unit,
+    private val onWord: (Int) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val app = context.applicationContext
@@ -32,9 +33,10 @@ internal class ReaderTts(
     private var ready = false
     private var waiting: String? = null
 
-    private var chunks: List<String> = emptyList()
-    private var index = 0              // the chunk being spoken
-    private var offset = 0             // characters of that chunk already heard
+    private var pieces: List<ReaderLogic.TtsPiece> = emptyList()
+    private var base = 0               // where the spoken text starts in the chapter
+    private var index = 0              // the piece being spoken
+    private var offset = 0             // characters of that piece already heard
     private var firstIndex = 0         // where the last queueing started, and from which character
     private var firstOffset = 0
     private var playing = false
@@ -58,7 +60,7 @@ internal class ReaderTts(
             Log.i("KairnPerf", "tts init ${initMs}ms ok=$ready")
             if (!ready) { waiting = null; main.post(onFailed); return@TextToSpeech }
             chooseVoice()
-            waiting?.let { text -> waiting = null; speak(text, rate) }
+            waiting?.let { text -> waiting = null; speak(text, rate, base) }
         }
         engine?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
@@ -71,14 +73,17 @@ internal class ReaderTts(
                 main.post(onStarted)
             }
 
-            // Word-level position: this is what makes a pause resumable instead of restarting the chapter.
+            // Word-level position: a pause resumes here, and the page and the highlight follow it.
             override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
                 val i = utteranceId?.substringBefore('/')?.toIntOrNull() ?: return
+                val piece = pieces.getOrNull(i) ?: return
                 offset = (if (i == firstIndex) firstOffset else 0) + start
+                val at = base + piece.start + offset
+                main.post { onWord(at) }
             }
 
             override fun onDone(utteranceId: String?) {
-                if (utteranceId?.substringBefore('/') == (chunks.size - 1).toString()) {
+                if (utteranceId?.substringBefore('/') == (pieces.size - 1).toString()) {
                     playing = false
                     main.post(onEnded)
                 }
@@ -109,16 +114,18 @@ internal class ReaderTts(
         Log.i("KairnPerf", "tts voice ${best?.name ?: "engine default"} ${best?.locale ?: ""}")
     }
 
-    fun speak(text: String, speechRate: Float) {
+    /** [base] is where [text] sits in the chapter, so a spoken word maps back onto the page. */
+    fun speak(text: String, speechRate: Float, base: Int = 0) {
         ensureEngine()
         rate = speechRate
+        this.base = base
         speakAt = SystemClock.elapsedRealtime()
         started = false
         playing = false
         paused = false
         if (!ready) { waiting = text; return }
-        chunks = ReaderLogic.ttsChunks(text)
-        if (chunks.isEmpty()) { main.post(onFailed); return }
+        pieces = ReaderLogic.ttsPieces(text)
+        if (pieces.isEmpty()) { main.post(onFailed); return }
         playing = true
         queueFrom(0, 0)
     }
@@ -169,10 +176,11 @@ internal class ReaderTts(
         firstOffset = off
         e.setSpeechRate(rate)
         var first = true
-        for (i in i0 until chunks.size) {
-            val text = if (i == i0 && off > 0) chunks[i].substring(off.coerceAtMost(chunks[i].length)) else chunks[i]
+        for (i in i0 until pieces.size) {
+            val body = pieces[i].text
+            val text = if (i == i0 && off > 0) body.substring(off.coerceAtMost(body.length)) else body
             val mode = if (first) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
-            e.speak(text, mode, null, "$i/${chunks.size}")
+            e.speak(text, mode, null, "$i/${pieces.size}")
             first = false
         }
     }

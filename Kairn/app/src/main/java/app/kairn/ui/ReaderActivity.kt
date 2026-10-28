@@ -11,6 +11,7 @@ import android.widget.Toast
 import kotlinx.coroutines.isActive
 import org.readium.r2.navigator.preferences.FontFamily
 import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -114,6 +115,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 ui.ttsOn = false; ui.ttsStarting = false
                 Toast.makeText(this, getString(R.string.s_tts_unavailable), Toast.LENGTH_LONG).show()
             },
+            onWord = ::followVoice,
         )
     }
 
@@ -342,6 +344,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         super.onPause()
         tts.stop()                                   // never reads on in the background
         ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
+        clearFollow()
         stopAutoScroll()
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
@@ -645,6 +648,14 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         tts.stop()
         ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
         ui.sheet = ReaderSheet.NONE
+        clearFollow()
+    }
+
+    /** Drop the painted sentence and the page the voice had reached. */
+    private fun clearFollow() {
+        lastSentence = -1
+        followedPage = -1
+        lifecycleScope.launch { nav?.evaluateJavascript(ReaderFollow.clear()) }
     }
 
     override fun setSpeechRate(rate: Float) {
@@ -661,7 +672,44 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             return@launch
         }
         val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
-        tts.speak(text.substring(from), ui.prefs.speechRate)
+        spokenText = text
+        spokenHref = loc.href.toString()
+        lastSentence = -1
+        followedPage = -1
+        tts.speak(text.substring(from), ui.prefs.speechRate, from)
+    }
+
+    // ---- follow the voice ----
+    private var spokenText = ""
+    private var spokenHref: String? = null
+    private var lastSentence = -1
+    private var followedPage = -1
+    private var followAt = 0L
+
+    /**
+     * The voice reports each word's place in the chapter. Paint the sentence it is in, and in page mode turn
+     * the page when it moves on: a page cannot scroll to follow a voice the way a scroll view can.
+     */
+    private fun followVoice(at: Int) {
+        if (!ui.ttsOn || ui.ttsPaused || spokenText.isEmpty()) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - followAt < 300) return
+        followAt = now
+        val (s, e) = ReaderLogic.sentenceAt(spokenText, at)
+        if (s != lastSentence) {
+            lastSentence = s
+            lifecycleScope.launch { nav?.evaluateJavascript(ReaderFollow.highlight(s, e)) }
+        }
+        if (ui.prefs.scroll) return                     // a scroll view already shows the spoken place
+        val href = spokenHref ?: ui.chapterHref ?: return
+        val chapter = ui.positions.filter { it.href.toString() == href }
+        if (chapter.size < 2) return
+        val progress = at.toFloat() / spokenText.length.coerceAtLeast(1)
+        val idx = chapter.indexOfLast { (it.locations.progression ?: 0.0) <= progress }.coerceAtLeast(0)
+        if (idx == followedPage) return
+        followedPage = idx
+        Log.i("KairnPerf", "tts follow page $idx of ${chapter.size} at ${(progress * 100).toInt()}%")
+        lifecycleScope.launch { nav?.go(chapter[idx], animated = false) }
     }
 
     /** The chapter ended by itself: turn the page and keep reading, unless this was the last one. */

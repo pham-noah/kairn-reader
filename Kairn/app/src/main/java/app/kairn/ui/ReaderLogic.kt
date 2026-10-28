@@ -102,8 +102,60 @@ object ReaderLogic {
         if (text.isEmpty()) return 0
         val rough = (progression.coerceIn(0f, 1f) * text.length).toInt().coerceIn(0, text.length - 1)
         if (rough == 0) return 0
-        val end = Regex("[.!?\u2026]\\s").find(text, rough)?.range?.last ?: return rough
+        val end = Regex("[.!?\\u2026]\\s").find(text, rough)?.range?.last ?: return rough
         return (end + 1).coerceIn(0, text.length - 1)
+    }
+
+    /** A chunk to speak, and where it starts in the chapter text, so a spoken word maps back to it. */
+    data class TtsPiece(val start: Int, val text: String)
+
+    private val sentenceEnd = Regex("[.!?\\u2026][\"')\\]]*\\s+|\\n{1,}")
+
+    /** Like [ttsChunks], but each chunk carries its offset in the ORIGINAL text. */
+    fun ttsPieces(text: String): List<TtsPiece> {
+        val sentences = ArrayList<TtsPiece>()
+        var start = 0
+        while (start < text.length) {
+            val m = sentenceEnd.find(text, start)
+            val end = if (m == null) text.length else m.range.last + 1
+            sentences += TtsPiece(start, text.substring(start, end))
+            start = end
+        }
+        val out = ArrayList<TtsPiece>()
+        var cur: StringBuilder? = null
+        var curStart = 0
+        for (s in sentences) {
+            val body = s.text.trim()
+            if (body.isEmpty()) continue
+            val lead = s.start + (s.text.length - s.text.trimStart().length)
+            var piece = body
+            var at = lead
+            while (piece.length > TTS_CHUNK) {
+                cur?.let { out += TtsPiece(curStart, it.toString()); cur = null }
+                out += TtsPiece(at, piece.take(TTS_CHUNK))
+                piece = piece.drop(TTS_CHUNK); at += TTS_CHUNK
+            }
+            if (cur == null) { cur = StringBuilder(); curStart = at }
+            else if (cur.length + piece.length + 1 > TTS_CHUNK) { out += TtsPiece(curStart, cur.toString()); cur = StringBuilder(); curStart = at }
+            if (cur!!.isNotEmpty()) cur.append(' ')
+            cur!!.append(piece)
+        }
+        cur?.let { if (it.isNotEmpty()) out += TtsPiece(curStart, it.toString()) }
+        return out
+    }
+
+    /** The sentence around [at], as a start/end pair inside [text]. */
+    fun sentenceAt(text: String, at: Int): Pair<Int, Int> {
+        if (text.isEmpty()) return 0 to 0
+        val pos = at.coerceIn(0, text.length - 1)
+        val stops = ".!?\u2026\n"
+        var s = pos
+        while (s > 0 && stops.indexOf(text[s - 1]) < 0) s--
+        var e = pos
+        while (e < text.length - 1 && stops.indexOf(text[e]) < 0) e++
+        e = (e + 1).coerceAtMost(text.length)
+        if (e - s > 180) { s = (pos - 60).coerceAtLeast(0); e = (s + 180).coerceAtMost(text.length) }
+        return s to e
     }
 
     /** Marks minus one id. Used by every delete, so the "already gone" case is the same everywhere. */

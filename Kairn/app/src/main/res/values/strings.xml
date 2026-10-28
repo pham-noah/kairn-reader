@@ -177,7 +177,7 @@
     <string name="s_no_wi_fi_network_found_join_a_wi_fi_netw">No Wi-Fi network found. Join a Wi-Fi network and try again.</string>
     <string name="s_not_yet">Not yet</string>
     <string name="s_notes_and_highlights">Notes and highlights</string>
-    <string name="s_options">Options</string>
+    <string name="s_more">More</string>
     <string name="s_reading">Reading</string>
     <string name="s_reset_this_book_to_your_defaults">Reset this book to your defaults</string>
     <string name="s_restore_from_a_backup">Restore from a backup</string>
@@ -361,7 +361,6 @@
     <string name="s_font_sans">Sans</string>
     <string name="s_font_mono">Mono</string>
     <string name="s_auto_scroll">Auto scroll</string>
-    <string name="s_auto_scrolling">Auto scrolling</string>
     <string name="s_scroll_speed">Scroll speed</string>
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Searching inside your books (%1$d of %2$d)</string>

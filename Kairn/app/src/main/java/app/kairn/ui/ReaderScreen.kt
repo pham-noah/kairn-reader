@@ -240,14 +240,15 @@ internal fun ReaderScreen(
                         }
                         drag = null
                     })
-                    // The bar stays minimal: "Options" holds the four sheets, and the two reading modes sit
+                    // The bar stays minimal: "More" holds the four sheets, and the two reading modes sit
                     // beside it as toggles with a visible state. They are not tools and they are not hidden -
                     // a mode that moves the page must be visible while it moves it.
+                    val twoUp = !ui.ttsOn && !ui.prefs.scroll     // nothing between them: share the row evenly
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
                             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
-                            Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_options), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
+                            Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
                         }
                         // While it is reading, the speed takes the auto scroll slot - the two never make sense
                         // together - so the row never grows past what fits on a phone.
@@ -258,8 +259,8 @@ internal fun ReaderScreen(
                             // Auto scroll exists only in scroll mode, so outside it the toggle is not shown at all.
                             ModePill(
                                 if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
-                                stringResource(if (ui.autoScrolling) R.string.s_auto_scrolling else R.string.s_auto_scroll),
-                                ui.autoScrolling, colors, act::toggleAutoScroll,
+                                stringResource(R.string.s_auto_scroll),
+                                ui.autoScrolling, colors, onClick = act::toggleAutoScroll,
                             )
                             Spacer(Modifier.width(6.dp))
                         }
@@ -277,8 +278,9 @@ internal fun ReaderScreen(
                                     else -> R.string.s_read_aloud
                                 },
                             ),
-                            ui.ttsOn, colors, act::toggleTts,
-                        )
+                            ui.ttsOn, colors,
+                            modifier = if (twoUp) Modifier.weight(1f) else Modifier,
+                        ) { act.toggleTts() }
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
@@ -351,16 +353,23 @@ internal fun ReaderScreen(
  * One reading mode as a toggle: its own state is on the bar, so starting or stopping it never needs a sheet.
  */
 @Composable
-private fun ModePill(icon: ImageVector?, label: String, live: Boolean, colors: ReaderUi, onClick: () -> Unit) {
+private fun ModePill(
+    icon: ImageVector?,
+    label: String,
+    live: Boolean,
+    colors: ReaderUi,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     val tint = if (live) K.mint else colors.chromeText
     Row(
-        Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+        modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
             .background(if (live) K.mint.copy(alpha = 0.16f) else CColor.Transparent)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp)
             .semantics { contentDescription = label },
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
         Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
