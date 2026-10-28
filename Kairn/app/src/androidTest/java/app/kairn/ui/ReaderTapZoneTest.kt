@@ -42,10 +42,18 @@ class ReaderTapZoneTest {
         return book
     }
 
-    private fun tap(x: Int, y: Int) {
-        val now = SystemClock.uptimeMillis()
-        inst.sendPointerSync(MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0))
-        inst.sendPointerSync(MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0))
+    /**
+     * The touch goes through the Activity's own dispatchTouchEvent rather than Instrumentation's input
+     * injection: injection is addressed to the FOCUSED window, and ActivityScenario's invoker activity can
+     * take focus away from the reader, which fails the test with "not directed at a window owned by uid".
+     * Dispatching in-process tests the same handler and cannot lose a race with the window manager.
+     */
+    private fun tap(scenario: ActivityScenario<ReaderActivity>, x: Int, y: Int) {
+        scenario.onActivity { activity ->
+            val now = SystemClock.uptimeMillis()
+            activity.dispatchTouchEvent(MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0))
+            activity.dispatchTouchEvent(MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0))
+        }
     }
 
     private fun progress(id: String): Float? = app.store.get(id)?.progress
@@ -76,7 +84,7 @@ class ReaderTapZoneTest {
         publish("paging-ltr.epub", id)
         open(id).use {
             val before = awaitOpen(id)
-            tap((width * 0.9f).toInt(), height / 2)
+            tap(it, (width * 0.9f).toInt(), height / 2)
             SystemClock.sleep(3_000)
             val after = progress(id) ?: before
             assertTrue("right edge did not move forward: $before -> $after", after > before)
@@ -88,7 +96,7 @@ class ReaderTapZoneTest {
         publish("paging-rtl.epub", id)
         open(id).use {
             val before = awaitOpen(id)
-            tap((width * 0.1f).toInt(), height / 2)
+            tap(it, (width * 0.1f).toInt(), height / 2)
             SystemClock.sleep(3_000)
             val after = progress(id) ?: before
             assertTrue("left edge did not move forward in an RTL book: $before -> $after", after > before)

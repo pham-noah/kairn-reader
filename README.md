@@ -21,22 +21,25 @@ folder, or let it find the EPUBs already on your device.
 
 ## Features
 
-**Reading** — page or scroll; per-book text size, spacing, margins, justification, hyphenation; five page
-tones from light to true black; a warm-light filter; brightness for this app alone or from the system; full
-screen; a whole-book progress slider with an honest time left; two-page columns on a tablet; contents;
-footnote pop-ups with a "back to where you were" chip. Set in Manrope and Literata, both bundled.
+**Reading** — page or scroll, with auto scroll at a speed you set per book. Typeface (the publication's own,
+or the system's serif, sans or mono), text size, line and paragraph spacing, margins, justification,
+hyphenation — all per book, and one action puts a book back on the app defaults. Five page tones from light
+to true black, plus any custom page and ink pair. Warm light; brightness for this app alone or from the
+system; full screen. A whole-book progress slider and an honest time left, worked out from the book's real
+word count at your reading speed. Two-page columns on a tablet; contents; footnote pop-ups with a "back to
+where you were" chip. Read aloud speaks the chapter you are in, from the place you are at, and carries on
+into the next one.
 
-**Library** — grid or list; search, sort, reading status; collections and tags you can rename or delete; add
-several books to one collection at once; watched folders; a scan for the EPUBs already on your device;
-generated covers for books without one; "Open with" from any file manager.
+**Library** — grid or list; search over titles and over the text inside every book; sort, reading status,
+collections and tags you can rename or delete; add several books to one collection at once; watched folders;
+a scan for the EPUBs already on your device; generated covers for books without one; "Open with" from any
+file manager.
 
 **Sending books** — a page you open from a computer on the same Wi-Fi. Drop EPUBs on it and they land in the
 library. The address carries a four-digit code.
 
-**Notes and highlights** — four highlight colours, notes typed on a selection and edited later, one bookmark
+**Notes and highlights** — six highlight colours, notes typed on a selection and edited later, one bookmark
 per chapter, a per-book list to jump from, an undo on every delete, Markdown export.
-
-**Search** — full text, in the book you are reading, a page of results at a time.
 
 **Backup** — one zip, optionally with the book files inside; merge or replace on restore.
 
@@ -65,8 +68,8 @@ reopened once that history exists. A self-hosted F-Droid repository is the plan 
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 48 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 6 on-device tests, needs a phone or emulator
+    ./gradlew :app:testDebugUnitTest          # 53 JVM tests, no device needed
+    ./gradlew :app:connectedDebugAndroidTest  # 20 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own
 
@@ -75,8 +78,8 @@ and which spec item maps to what.
 
 ## Roadmap
 
-Dictionary lookup · image zoom · right-to-left and vertical text · tablet layouts · library sync between
-devices.
+Dictionary and share from the selection menu · image zoom · right-to-left and vertical text · text and Word
+files imported alongside EPUBs.
 
 ## Credits
 

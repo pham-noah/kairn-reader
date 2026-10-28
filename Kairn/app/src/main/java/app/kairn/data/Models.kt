@@ -56,12 +56,15 @@ data class ReaderPrefs(
     val brightness: Float = -1f,               // R-06, -1 = follow system
     val pageColor: Int? = null,                // a custom page colour laid over the theme
     val inkColor: Int? = null,                 // and the ink that goes with it
+    val fontFamily: String? = null,            // null = the publication's own typeface
+    val scrollSpeed: Float = 44f,              // dp per second for auto scroll
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("fontScale", fontScale)
         .put("lineHeight", lineHeight).put("paragraphSpacing", paragraphSpacing)
         .put("margins", margins).put("justify", justify).put("hyphens", hyphens).put("twoPage", twoPage)
         .put("scroll", scroll).put("warmth", warmth.toDouble()).put("brightness", brightness.toDouble())
         .put("pageColor", pageColor ?: JSONObject.NULL).put("inkColor", inkColor ?: JSONObject.NULL)
+        .put("fontFamily", fontFamily ?: JSONObject.NULL).put("scrollSpeed", scrollSpeed.toDouble())
 
     companion object {
         fun from(o: JSONObject?, base: ReaderPrefs = ReaderPrefs()): ReaderPrefs {
@@ -80,6 +83,9 @@ data class ReaderPrefs(
                 brightness = o.optDouble("brightness", base.brightness.toDouble()).toFloat(),
                 pageColor = o.optInt("pageColor", 0).takeIf { it != 0 } ?: base.pageColor,
                 inkColor = o.optInt("inkColor", 0).takeIf { it != 0 } ?: base.inkColor,
+                scrollSpeed = o.optDouble("scrollSpeed", base.scrollSpeed.toDouble()).toFloat(),
+                fontFamily = if (o.has("fontFamily") && !o.isNull("fontFamily"))
+                    o.optString("fontFamily").ifEmpty { null } else base.fontFamily,
             )
         }
     }

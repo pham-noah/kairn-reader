@@ -93,6 +93,11 @@ internal fun NoteEditor(target: NoteTarget, initial: String = "", onSave: (Strin
     KButton(stringResource(R.string.s_save_note), { onSave(text.trim()) }, enabled = text.isNotBlank())
 }
 
+// Readium ships no fonts of its own, so these are the families Android's WebView can resolve.
+private val fontModes = listOf(R.string.s_font_default, R.string.s_font_serif, R.string.s_font_sans, R.string.s_font_mono)
+private val fontValues: List<String?> = listOf(null, "serif", "sans-serif", "monospace")
+private fun fontIndexOf(family: String?): Int = fontValues.indexOf(family).takeIf { it >= 0 } ?: 0
+
 @Composable
 internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true, onReset: (() -> Unit)? = null) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -113,6 +118,11 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     }
     Spacer(Modifier.height(16.dp))
     KSegmented(pageModes.map { stringResource(it) }, if (prefs.scroll) 1 else 0, { onChange(prefs.copy(scroll = it == 1)) })
+    if (prefs.scroll) {
+        KControl(stringResource(R.string.s_scroll_speed), stringResource(R.string.s_dp_per_second, prefs.scrollSpeed.toInt())) {
+            KSlider(prefs.scrollSpeed, { onChange(prefs.copy(scrollSpeed = it)) }, 20f..200f)
+        }
+    }
     // A phone has no room for two readable columns, so the choice is not offered there, and a value
     // stored on a tablet is not honoured on a phone either (see ReaderActivity.isTablet).
     if (showColumns) {
@@ -120,6 +130,11 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
             KSegmented(columnModes.map { stringResource(it) }, if (prefs.twoPage) 1 else 0, { onChange(prefs.copy(twoPage = it == 1)) })
         }
         Text(stringResource(R.string.s_two_pages_suits_a_tablet_or_a_wide_scree), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+    }
+    KControl(stringResource(R.string.s_typeface), stringResource(fontModes[fontIndexOf(prefs.fontFamily)])) {
+        KSegmented(fontModes.map { stringResource(it) }, fontIndexOf(prefs.fontFamily), {
+            onChange(prefs.copy(fontFamily = fontValues[it]))
+        })
     }
     KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (prefs.fontScale * 100).toInt())) { KSlider(prefs.fontScale.toFloat(), { onChange(prefs.copy(fontScale = it.toDouble())) }, 0.7f..2.5f) }
     KControl(stringResource(R.string.s_line_spacing), stringResource(R.string.s_2f).format(prefs.lineHeight)) { KSlider(prefs.lineHeight.toFloat(), { onChange(prefs.copy(lineHeight = it.toDouble())) }, 1.0f..2.2f) }

@@ -1,5 +1,7 @@
 package app.kairn.ui.nav
 
+import app.kairn.ui.ReaderActivity
+
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -103,7 +105,14 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                             onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) })
                         null -> when (tab) {
                             Tab.Library -> LibraryScreen(app.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
-                                onBackup = { overlay = Overlay.Backup })
+                                onBackup = { overlay = Overlay.Backup },
+                                onOpenAt = { b, locator ->
+                                    ctx.startActivity(
+                                        android.content.Intent(ctx, ReaderActivity::class.java)
+                                            .putExtra(ReaderActivity.EXTRA_ID, b.id)
+                                            .putExtra(ReaderActivity.EXTRA_LOCATOR, locator)
+                                    )
+                                })
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
                             Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } })
                         }

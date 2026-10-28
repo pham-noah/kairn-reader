@@ -1,5 +1,15 @@
 package app.kairn.ui.screens
 
+import kotlinx.coroutines.Dispatchers
+
+import kotlinx.coroutines.withContext
+
+import kotlinx.coroutines.delay
+
+import app.kairn.data.BookSearch
+
+import androidx.compose.runtime.LaunchedEffect
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -145,6 +155,7 @@ fun LibraryScreen(
     store: Store, shelf: String?, onShelf: (String?) -> Unit,
     onOpen: (Book) -> Unit, onAdd: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
     onBackup: () -> Unit = {},
+    onOpenAt: (Book, String) -> Unit = { _, _ -> },
 ) {
     val toast = LocalToast.current
     val ctx = LocalContext.current
@@ -155,6 +166,26 @@ fun LibraryScreen(
     // change of its own or the empty state never replaces the placeholder.
     val loaded by store.loaded.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
+    // Full-text hits live beside the title filter: the same field searches the text once it has 3 characters.
+    var hits by remember { mutableStateOf<List<BookSearch.Hit>>(emptyList()) }
+    var scanned by remember { mutableStateOf(0 to 0) }
+    var scanBusy by remember { mutableStateOf(false) }
+    LaunchedEffect(query) {
+        hits = emptyList()
+        scanned = 0 to 0
+        scanBusy = false
+        if (query.trim().length < 3) return@LaunchedEffect
+        delay(500)                                  // typing is not a search yet
+        scanBusy = true
+        withContext(Dispatchers.IO) {
+            BookSearch.run(
+                ctx, books, query,
+                onProgress = { done, total -> scanned = done to total },
+                emit = { hit -> hits = hits + hit },
+            )
+        }
+        scanBusy = false
+    }
     var searching by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<Status?>(null) }
     var grid by remember { mutableStateOf(true) }
@@ -223,6 +254,30 @@ fun LibraryScreen(
             KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid }, bordered = true)
         }
         if (searching) KField(query, { query = it }, Modifier.padding(top = 12.dp), placeholder = stringResource(R.string.search_hint), leading = Icons.Default.Search)
+        if (searching && (hits.isNotEmpty() || scanBusy)) {
+            Column(Modifier.padding(top = 12.dp)) {
+                Text(
+                    if (scanBusy) stringResource(R.string.s_searching_books, scanned.first, scanned.second)
+                    else pluralStringResource(R.plurals.s_hits_in_books, hits.size, hits.size),
+                    style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                )
+                hits.take(12).forEach { h ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            onOpenAt(h.book, h.locator.toJSON().toString())
+                            query = ""                  // cancels the scan; the reader needs the CPU
+                        }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(h.book.title, style = KType.small.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(h.snippet, style = KType.small.copy(color = K.mut), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
         LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (shelf != null) item { KChip(shelf, true, { onShelf(null) }) }
             item { KChip(stringResource(R.string.s_all), status == null, { status = null }, count = books.size) }
@@ -256,12 +311,16 @@ fun LibraryScreen(
         if (cb != null && !filtering) ContinueCard(cb, store, onOpen)
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 10.dp, start = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(pluralStringResource(R.plurals.books_count, shown.size, shown.size), style = KType.small)
-            Box {
-                Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
+            // A Box stacks its children, so the reverse arrow must be a SIBLING of the menu anchor: inside
+            // the Box it was drawn on top of the sort label ("Recently read").
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
+                    }
+                    val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) }
+                    KMenu(sortMenu, { sortMenu = false }, sortItems) { sort = SortBy.entries[it] }
                 }
-                val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) }
-                KMenu(sortMenu, { sortMenu = false }, sortItems) { sort = SortBy.entries[it] }
                 KIconButton(
                     if (sortFlipped) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                     stringResource(R.string.s_reverse_sort),

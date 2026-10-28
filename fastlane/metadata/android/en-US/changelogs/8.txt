@@ -1,8 +1,11 @@
 0.7.0
 
 - Read aloud: the chapter you are in, spoken from the place you are at, carrying on into the next chapter when it runs out.
+- Search inside your books: the library search now looks through the text of every book, not just titles.
+- Auto scroll: the page moves by itself, at a speed you set for that book.
+- Pick your typeface: default, serif, sans or mono.
 - Custom page and ink colours, laid over any theme, remembered per book.
 - Six highlight colours instead of four.
 - Reading speed, so "min left" uses your own pace instead of a fixed guess.
 - Grey is a real charcoal now instead of a pale mid-grey.
-- "Report a problem" opens the issue tracker in your browser - the app still makes no network calls of its own.
+- The sort arrow no longer sits on top of the sort label.

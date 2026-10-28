@@ -346,4 +346,16 @@
     <string name="s_report_problem_hint">Opens the issue tracker in a browser</string>
     <string name="s_read_aloud">Read aloud</string>
     <string name="s_stop_reading">Stop reading</string>
+    <string name="s_typeface">Typeface</string>
+    <string name="s_font_default">Default</string>
+    <string name="s_font_serif">Serif</string>
+    <string name="s_font_sans">Sans</string>
+    <string name="s_font_mono">Mono</string>
+    <string name="s_auto_scroll">Auto scroll</string>
+    <string name="s_stop_scrolling">Stop</string>
+    <string name="s_auto_scroll_needs_scroll_mode">Turn on scrolling for this book first</string>
+    <string name="s_scroll_speed">Scroll speed</string>
+    <string name="s_dp_per_second">%1$d dp/s</string>
+    <string name="s_searching_books">Searching inside your books (%1$d of %2$d)</string>
+    <plurals name="s_hits_in_books"><item quantity="one">%1$d hit inside your books</item><item quantity="other">%1$d hits inside your books</item></plurals>
 </resources>

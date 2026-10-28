@@ -7,6 +7,9 @@ package app.kairn.ui
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.widget.Toast
+import kotlinx.coroutines.isActive
+import org.readium.r2.navigator.preferences.FontFamily
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -71,10 +74,16 @@ import org.readium.r2.navigator.preferences.TextAlign as RTextAlign
 
 /** The navigator, the input events and the debounced save; everything drawn is ReaderScreen. */
 class ReaderActivity : AppCompatActivity(), ReaderActions {
-    companion object { const val EXTRA_ID = "book_id"; private const val PAGE_SIZE = 100 }
+    companion object {
+        const val EXTRA_ID = "book_id"
+        const val EXTRA_LOCATOR = "locator"          // a search hit opens the book at that place
+        private const val PAGE_SIZE = 100
+    }
 
     private val app get() = application as KairnApp
     private lateinit var bookId: String
+    /** A search hit's locator: where to open instead of the saved position. */
+    private var startLocator: String? = null
     private var pub: Publication? = null
     private var nav: EpubNavigatorFragment? = null
     private lateinit var container: FragmentContainerView
@@ -119,6 +128,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         super.onCreate(null)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         bookId = intent.getStringExtra(EXTRA_ID) ?: return finish()
+    startLocator = intent.getStringExtra(EXTRA_LOCATOR)
         // Held as state: the manifest handles uiMode itself, so a day/night switch must land here.
         ui.night = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
 
@@ -222,7 +232,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             onNote = { done -> startNote(done) },
         )
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
-            initialLocator = book.locator?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
+            initialLocator = (startLocator ?: book.locator)?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
             initialPreferences = toEpub(ui.prefs),
             listener = object : EpubNavigatorFragment.Listener {
                 override fun shouldFollowInternalLink(link: Link, context: HyperlinkNavigator.LinkContext?): Boolean {
@@ -324,6 +334,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun onPause() {
         super.onPause()
         tts.stop()                                   // never reads on in the background
+        stopAutoScroll()
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
@@ -375,7 +386,44 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             pageMargins = p.margins, publisherStyles = false, scroll = p.scroll,
             columnCount = if (p.twoPage && isTablet) ColumnCount.TWO else null,      // R-14: reflowable two-page, tablet only. `spread` is fixed-layout only; setting it here crashes.
             textAlign = if (p.justify) RTextAlign.JUSTIFY else RTextAlign.START, hyphens = p.hyphens,
+            fontFamily = p.fontFamily?.let { FontFamily(it) },   // a CSS family the WebView resolves
         )
+    }
+
+    // ---- auto scroll ----
+    // One JS interval moves the page inside the WebView: a per-frame Kotlin round-trip would be a wake-up
+    // and a hop across the bridge every 16 ms. The loop below only watches for the end of the chapter.
+    private var autoJob: Job? = null
+
+    override fun toggleAutoScroll() {
+        if (autoJob != null) { stopAutoScroll(); return }
+        if (!ui.prefs.scroll) {
+            Toast.makeText(this, getString(R.string.s_auto_scroll_needs_scroll_mode), Toast.LENGTH_SHORT).show()
+            return
+        }
+        ui.autoScrolling = true
+        autoJob = lifecycleScope.launch {
+            val n = nav ?: return@launch
+            val step = (ui.prefs.scrollSpeed * resources.displayMetrics.density / 50f).coerceAtLeast(0.5f)
+            n.evaluateJavascript("window.__kairnAuto && clearInterval(window.__kairnAuto);" +
+                "window.__kairnAuto = setInterval(function(){ window.scrollBy(0, $step) }, 20)")
+            var last = -1f
+            var still = 0
+            while (isActive) {
+                delay(1500)
+                val y = n.evaluateJavascript("window.scrollY")?.toFloatOrNull() ?: -1f
+                still = if (y == last) still + 1 else 0
+                last = y
+                if (still >= 2) { still = 0; n.goForward(true) }     // the bottom: turn and keep going
+            }
+        }
+    }
+
+    private fun stopAutoScroll() {
+        autoJob?.cancel()
+        autoJob = null
+        ui.autoScrolling = false
+        lifecycleScope.launch { nav?.evaluateJavascript("clearInterval(window.__kairnAuto)") }
     }
 
     private var applyJob: Job? = null
@@ -396,6 +444,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     }
 
     private fun applyPrefs() {
+        if (!ui.prefs.scroll) stopAutoScroll()       // auto scroll only exists in scroll mode
         nav?.submitPreferences(toEpub(ui.prefs))
         window.attributes = window.attributes.also { it.screenBrightness = if (ui.prefs.brightness < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else ui.prefs.brightness }
     }

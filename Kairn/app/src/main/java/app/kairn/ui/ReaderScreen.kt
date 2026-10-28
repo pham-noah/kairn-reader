@@ -86,6 +86,7 @@ internal class ReaderUiState {
     var chapterWords by mutableIntStateOf(0)                // this chapter's word count, once measured
     var searchChapterOnly by mutableStateOf(false)          // S-01: search only the chapter on screen
     var ttsPlaying by mutableStateOf(false)                 // the chapter is being read aloud
+    var autoScrolling by mutableStateOf(false)              // the page is scrolling by itself
     var bookProgress by mutableFloatStateOf(0f)             // WHOLE-BOOK progression
     /** The book's own word count, counted once after open. 0 until it lands. */
     var bookWords by mutableIntStateOf(0)
@@ -114,6 +115,7 @@ internal interface ReaderActions {
     fun exportNotes()
     fun search(query: String)
     fun toggleTts()
+    fun toggleAutoScroll()
     fun searchMore()
 }
 
@@ -249,6 +251,11 @@ internal fun ReaderScreen(
                                 stringResource(if (ui.ttsPlaying) R.string.s_stop_reading else R.string.s_read_aloud),
                                 colors,
                             ) { act.toggleTts() }
+                            ReaderTool(
+                                if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
+                                stringResource(if (ui.autoScrolling) R.string.s_stop_scrolling else R.string.s_auto_scroll),
+                                colors,
+                            ) { act.toggleAutoScroll() }
                         }
                     }
                 }

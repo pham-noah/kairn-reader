@@ -139,4 +139,14 @@ class ModelsTest {
         val b = Book.from(o)!!
         assertEquals("not json at all", b.locator)   // kept verbatim; never thrown away
     }
+
+    /** The typeface survives the record, and an older record without one falls back to the default. */
+    @Test fun reader_prefs_keep_the_typeface_and_tolerate_its_absence() {
+        val p = ReaderPrefs(fontFamily = "serif")
+        assertEquals("serif", ReaderPrefs.from(p.toJson()).fontFamily)
+        val old = p.toJson().also { it.remove("fontFamily") }
+        assertNull(ReaderPrefs.from(old).fontFamily)
+        val explicitNone = p.toJson().put("fontFamily", org.json.JSONObject.NULL)
+        assertNull(ReaderPrefs.from(explicitNone).fontFamily)
+    }
 }
