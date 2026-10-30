@@ -178,6 +178,8 @@ data class AppSettings(
     val lastNudge: Long = 0,                  // when the "you have not backed up" card was dismissed
     val readingWpm: Int = 240,               // the reader's own pace, for "min left"
     val lastBackupName: String = "",
+    val checkUpdates: Boolean = true,       // DS-04: one request a day, off in Settings; see data/Update
+    val lastUpdateCheck: Long = 0,          // when the last check ran, so it is at most once a day
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
@@ -185,6 +187,7 @@ data class AppSettings(
         .put("keepScreenOn", keepScreenOn).put("fullscreen", fullscreen).put("volumeKeys", volumeKeys)
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
         .put("autoDetect", autoDetect)
+        .put("checkUpdates", checkUpdates).put("lastUpdateCheck", lastUpdateCheck)
         .put("folders", JSONArray(folders.map {
             JSONObject().put("uri", it.uri).put("name", it.name).put("enabled", it.enabled)
         }))
@@ -221,6 +224,8 @@ data class AppSettings(
                 lastNudge = o.optLong("lastNudge", 0),
                 readingWpm = o.optInt("readingWpm", 240),
                 lastBackupName = o.optString("lastBackupName"),
+                checkUpdates = o.optBoolean("checkUpdates", d.checkUpdates),
+                lastUpdateCheck = o.optLong("lastUpdateCheck", 0),
             )
         }
     }

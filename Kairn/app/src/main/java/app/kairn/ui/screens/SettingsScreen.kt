@@ -15,6 +15,7 @@ import app.kairn.R
 import app.kairn.data.Ambient
 import app.kairn.data.Library
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kairn.data.Status
 import app.kairn.data.Store
 import app.kairn.data.ThemeId
 import app.kairn.ui.kit.*
@@ -30,10 +31,21 @@ private val SmallDim = KType.small.copy(color = K.dim)
 
 /** N-07: one place for appearance, library, data and about. */
 @Composable
-fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit) {
+fun SettingsScreen(
+    store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit,
+    onCheckUpdates: () -> Unit = {},
+    showUpdates: Boolean = true,
+) {
     val s by store.settings.collectAsStateWithLifecycle()
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var licences by remember { mutableStateOf(false) }
+    var statsOpen by remember { mutableStateOf(false) }
+    val stats by store.stats.collectAsStateWithLifecycle()
+    val books by store.books.collectAsStateWithLifecycle()
+    val finishedCount = remember(books) { books.count { it.status == Status.FINISHED } }
+    // One line of proof that the record exists, so the row is worth tapping.
+    val statsSub = if (stats.totalMinutes() == 0) stringResource(R.string.s_no_reading_yet)
+                   else pluralStringResource(R.plurals.reading_today, stats.minutesToday(), stats.minutesToday(), stats.streak())
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
     val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
@@ -120,10 +132,22 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
             }
         }
         KGroup(stringResource(R.string.s_group_your_data)) {
-            KCard { KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup) { KChevron() } }
+            KCard {
+                KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup, divider = false) { KChevron() }
+                // DS-02: the reading record lives beside the backup, because that is the group about "your stuff".
+                KRow(stringResource(R.string.s_your_reading), subtitle = statsSub, divider = true, onClick = { statsOpen = true }) { KChevron() }
+            }
         }
         KGroup(stringResource(R.string.s_group_about)) {
             KCard {
+                // DS-04: the one request Kairn makes on its own, with its own switch next to it. A store
+                // build (F-Droid) has no updater at all, so the rows are not shown there.
+                if (showUpdates) {
+                    KRow(stringResource(R.string.s_check_for_updates), subtitle = stringResource(R.string.s_check_for_updates_hint), divider = false) {
+                        KSwitch(s.checkUpdates, { v -> store.saveSettings { it.copy(checkUpdates = v) } })
+                    }
+                    KRow(stringResource(R.string.s_check_now), divider = true, onClick = onCheckUpdates) { KChevron() }
+                }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
                 // No network code of our own: the browser opens the tracker.
                 KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
@@ -137,6 +161,7 @@ fun SettingsScreen(store: Store, library: Library, onWatchedFolders: () -> Unit,
         Text(stringResource(R.string.s_kairn_draft_build_no_account_no_ads_no_t), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
     }
 
+    if (statsOpen) StatsSheet(stats, finishedCount) { statsOpen = false }
     if (licences) KSheet({ licences = false }, stringResource(R.string.s_open_source_licences)) {
         KCard {
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))

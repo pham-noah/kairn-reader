@@ -7,6 +7,23 @@
          server runs only while its screen is open (see WifiTransfer / AddBooksScreen). -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- DS-04 updates: the downloaded APK is handed to the SYSTEM installer. Kairn never installs anything
+         itself, and without this permission Android would simply refuse the intent. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Android 11+ package visibility: without these the app cannot even ask whether a dictionary or an
+         installer exists, and "Look up" would always report that nothing handles it. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
+
     <!-- L-01 auto-detection: on Android 11+ MediaStore hides EPUBs unless the app can see "all files".
          The user grants this from Settings; the app works fine without it (watched folders only). -->
     <uses-permission
@@ -50,6 +67,18 @@
                 <data android:mimeType="application/epub+zip" />
             </intent-filter>
         </activity>
+
+        <!-- The downloaded update lives in the app cache and is shared with the installer through this,
+             with a read grant for that one file only. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <activity
             android:name=".ui.ReaderActivity"

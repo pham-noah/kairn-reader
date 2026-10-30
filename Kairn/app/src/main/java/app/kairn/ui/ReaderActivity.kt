@@ -235,10 +235,14 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             colourLabels,
             copyLabel = getString(R.string.s_menu_copy),
             noteLabel = getString(R.string.s_menu_note),
+            shareLabel = getString(R.string.s_menu_share),
+            lookupLabel = getString(R.string.s_menu_look_up),
             onCopy = { copySelection() },
-            // All named: a trailing lambda now binds to onNote, which is the last parameter.
+            // All named: a trailing lambda now binds to onLookup, which is the last parameter.
             onHighlight = { c, done -> highlightSelection(c) { done() } },
             onNote = { done -> startNote(done) },
+            onShare = { done -> shareSelection(done) },
+            onLookup = { done -> lookUpSelection(done) },
         )
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = (startLocator ?: book.locator)?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
@@ -340,6 +344,11 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         applyPrefs()
     }
 
+    override fun onResume() {
+        super.onResume()
+        sessionStart = SystemClock.elapsedRealtime()      // DS-02: a reading session starts when the book shows
+    }
+
     override fun onPause() {
         super.onPause()
         tts.stop()                                   // never reads on in the background
@@ -349,8 +358,61 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         // The prefs write is debounced: a close inside that window would drop the last change.
         writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
+        commitSession()
     }
     override fun onDestroy() { closeSearch(); tts.shutdown(); pub?.close(); super.onDestroy() }
+
+    /**
+     * DS-02: adds the time this session lasted to today's minutes. A glance at a page is not a session, so
+     * anything under a minute is dropped - the file is a reading record, not a launch counter.
+     */
+    private fun commitSession() {
+        val started = sessionStart
+        sessionStart = 0L
+        if (started == 0L) return
+        val minutes = ((SystemClock.elapsedRealtime() - started) / 60_000L).toInt()
+        if (minutes < 1) return
+        app.store.saveStats { it.add(java.time.LocalDate.now().toString(), minutes) }
+    }
+
+    // ---- sleep timer (R-15) ----
+    private var sleepJob: Job? = null
+    private var sessionStart = 0L                       // DS-02: when this reading session began
+
+    /**
+     * Stops reading aloud after [minutes], or at the end of the chapter when [minutes] is negative, and off
+     * at 0. Reading in bed is the one use of read-aloud where the thing that matters is that it stops.
+     */
+    override fun setSleepTimer(minutes: Int) {
+        sleepJob?.cancel()
+        sleepJob = null
+        ui.sleepChoice = minutes
+        when {
+            minutes == 0 -> return
+            minutes < 0 -> toast.show(getString(R.string.toast_sleep_chapter))
+            else -> {
+                toast.show(getString(R.string.toast_sleep_set, minutes))
+                sleepJob = lifecycleScope.launch {
+                    delay(minutes * 60_000L)
+                    endSleep()
+                }
+            }
+        }
+    }
+
+    /** The timer fired (or the chapter ended under an end-of-chapter timer): stop the voice, keep the page. */
+    private fun endSleep() {
+        sleepJob?.cancel()
+        sleepJob = null
+        val wasReading = ui.ttsOn
+        ui.sleepChoice = 0
+        if (wasReading) {
+            tts.stop()
+            ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
+            clearFollow()
+        }
+        toast.show(getString(R.string.toast_sleep_done))
+    }
 
     // ---- preferences (R-03, R-04, R-05, R-06, R-10) ----
 
@@ -555,6 +617,48 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         cm?.setPrimaryClip(android.content.ClipData.newPlainText(getString(R.string.app_name), text))
     }
 
+    /**
+     * The selection as plain text, read while the ActionMode is still open: finishing the mode clears the
+     * WebView selection, which is why every caller takes its `done` and closes the menu afterwards.
+     */
+    private suspend fun selectionText(): String? = nav
+        ?.let { n -> runCatching { n.currentSelection() }.getOrNull()?.locator?.text?.highlight }
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+    /** Share hands the quote to the system chooser as plain text. Kairn never picks the app itself. */
+    private fun shareSelection(done: () -> Unit) = lifecycleScope.launch {
+        val text = selectionText()
+        runCatching { nav?.clearSelection() }
+        done()
+        if (text == null) return@launch
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+            .setType("text/plain")
+            .putExtra(android.content.Intent.EXTRA_TEXT, text)
+        runCatching { startActivity(android.content.Intent.createChooser(send, getString(R.string.s_share_selection))) }
+    }
+
+    /**
+     * Look up hands the word to whatever dictionary the reader has, through ACTION_PROCESS_TEXT: no dictionary
+     * is bundled, nothing is sent anywhere by Kairn, and an app with no dictionary installed says so.
+     */
+    private fun lookUpSelection(done: () -> Unit) = lifecycleScope.launch {
+        val text = selectionText()?.replace(Regex("\\s+"), " ")?.take(64)
+        runCatching { nav?.clearSelection() }
+        done()
+        if (text == null) return@launch
+        val process = android.content.Intent(android.content.Intent.ACTION_PROCESS_TEXT)
+            .setType("text/plain")
+            .putExtra(android.content.Intent.EXTRA_PROCESS_TEXT, text)
+            .putExtra(android.content.Intent.EXTRA_PROCESS_TEXT_READONLY, true)
+        // resolveActivity needs the <queries> entry in the manifest on Android 11+, which the manifest has.
+        if (packageManager.resolveActivity(process, 0) == null) {
+            toast.show(getString(R.string.s_no_dictionary_app))
+            return@launch
+        }
+        runCatching { startActivity(android.content.Intent.createChooser(process, getString(R.string.s_look_up))) }
+    }
+
     /** A-02: add a highlight for the current selection. [done] runs once the mark is saved. */
     private fun highlightSelection(color: Int, done: () -> Unit = {}) = lifecycleScope.launch {
         val n = nav ?: return@launch
@@ -649,6 +753,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
         ui.sheet = ReaderSheet.NONE
         clearFollow()
+        // The timer belongs to the voice: a manual stop ends the timer too, instead of leaving a chip that
+        // promises to stop something that is already stopped.
+        sleepJob?.cancel(); sleepJob = null
+        ui.sleepChoice = 0
     }
 
     /** Drop the painted sentence and the page the voice had reached. */
@@ -714,6 +822,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     /** The chapter ended by itself: turn the page and keep reading, unless this was the last one. */
     private fun advanceWithTts() {
+        // A timer set to "end of chapter" is fulfilled here, before the next chapter can start.
+        if (ui.sleepChoice < 0) { endSleep(); return }
         val n = nav ?: run { ui.ttsOn = false; return }
         val here = n.currentLocator.value?.href?.toString()
         val last = pub?.readingOrder?.lastOrNull()?.href?.toString()

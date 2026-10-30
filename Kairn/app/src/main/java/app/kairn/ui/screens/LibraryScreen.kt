@@ -210,12 +210,15 @@ fun LibraryScreen(
     val filtering by remember { derivedStateOf { query.isNotBlank() || status != null || currentShelf != null } }
     // Derive the visible list once per data change, outside the recomposition path: derivedStateOf reads
     // its dependencies (books, filters) and recomputes only when one changes, not on every scroll frame.
-    val continueBook by remember {
+    // "Continue reading" as a shelf instead of one card: the last few books, newest first, so the one you
+    // were in is not the only one you can get back to without searching.
+    val recent by remember {
         derivedStateOf {
-            books.filter { it.lastRead > 0 && it.status != Status.FINISHED && !it.missing && !it.broken }.maxByOrNull { it.lastRead }
+            books.filter { it.lastRead > 0 && !it.missing && !it.broken }
+                .sortedByDescending { it.lastRead }
+                .take(8)
         }
     }
-    val cb = continueBook
     val shown by remember {
         derivedStateOf {
             // Read currentShelf inside the lambda: plain vals captured at first composition would be stale.
@@ -308,7 +311,7 @@ fun LibraryScreen(
                 }
             }
         }
-        if (cb != null && !filtering) ContinueCard(cb, store, onOpen)
+        if (recent.isNotEmpty() && !filtering) ContinueShelf(recent, store, onOpen)
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 10.dp, start = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(pluralStringResource(R.plurals.books_count, shown.size, shown.size), style = KType.small)
             // A Box stacks its children, so the reverse arrow must be a SIBLING of the menu anchor: inside
@@ -464,16 +467,28 @@ private fun NoMatches(onClear: () -> Unit) =
         KButton(stringResource(R.string.s_clear_filters), onClear, style = KButtonStyle.Secondary, small = true)
     }
 
+/** The last few books read, newest first, with the same progress hairline the grid cells carry. */
 @Composable
-private fun ContinueCard(b: Book, store: Store, onOpen: (Book) -> Unit) {
-    val shape = RoundedCornerShape(Dim.card.dp)
-    Row(Modifier.padding(top = 16.dp).fillMaxWidth().clip(shape).background(K.surf).border(1.dp, K.line, shape).clickable { onOpen(b) }.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        KCover(b, store.thumbFile(b.id).path, Modifier.width(64.dp), showBadge = false, fallbackPath = store.coverFile(b.id).path)
-        Column(Modifier.weight(1f).align(Alignment.CenterVertically), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.continue_reading), color = K.mint, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(b.title, style = KType.h2.copy(fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF2B3238))) { Box(Modifier.fillMaxWidth(b.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint)) }
-            Text(stringResource(R.string.percent_read, (b.progress * 100).toInt()), style = KType.small)
+private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit) {
+    Column(Modifier.padding(top = 18.dp)) {
+        Text(
+            stringResource(R.string.continue_reading),
+            color = K.mint, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 2.dp, bottom = 10.dp),
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(list, key = { it.id }) { b ->
+                Column(Modifier.width(94.dp).clickable { onOpen(b) }) {
+                    KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), showBadge = false, fallbackPath = store.coverFile(b.id).path)
+                    Text(
+                        b.title, style = KType.small.copy(fontWeight = FontWeight.SemiBold),
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 7.dp),
+                    )
+                    Box(Modifier.padding(top = 7.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF2B3238))) {
+                        Box(Modifier.fillMaxWidth(b.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
+                    }
+                }
+            }
         }
     }
 }

@@ -1,0 +1,8 @@
+Kairn 0.8.0
+
+- Read aloud has a sleep timer: 15, 30 or 45 minutes, or the end of the chapter.
+- Select a passage to share it, or look a word up in the dictionary app you already have.
+- Kindle highlights come in from My Clippings.txt, each quote placed where it actually is in the book.
+- A "Continue reading" shelf of the books you were last in.
+- Your reading: minutes a day, a streak, and the books you have finished, kept on the phone.
+- Kairn can update itself now: one check a day, with a switch in Settings.

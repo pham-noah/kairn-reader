@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger
 fun AddBooksScreen(
     store: Store, onBack: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
     onImportFile: (File, String) -> Unit,
+    onImportClippings: () -> Unit = {},
 ) {
     val toast = LocalToast.current
     val settings by store.settings.collectAsStateWithLifecycle()
@@ -135,6 +136,17 @@ fun AddBooksScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 KButton(stringResource(R.string.s_add_folder_or_files), { chooser = true }, style = KButtonStyle.Secondary)
+            }
+            // DS-03: the other way books arrive - with someone's highlights already in them.
+            KGroup(stringResource(R.string.s_group_from_another_reader)) {
+                KCard {
+                    KRow(
+                        stringResource(R.string.s_import_kindle_highlights),
+                        subtitle = stringResource(R.string.s_import_kindle_hint),
+                        leading = Icons.Default.Bookmarks,
+                        onClick = onImportClippings,
+                    ) { KChevron() }
+                }
             }
         }
     }

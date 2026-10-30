@@ -25,7 +25,10 @@ folder, or let it find the EPUBs already on your device.
   on the page and picks up when you lift it.
 - Read aloud from where you are, and it carries on into the next chapter. Pause and resume land on the word
   you left; speed runs 0.6x to 2.0x per book. It marks the sentence it is speaking, and in page mode the
-  page turns to keep up with it.
+  page turns to keep up with it. A sleep timer stops it after 15, 30 or 45 minutes, or at the end of the
+  chapter, so a book at night does not read on until morning.
+- Select a passage to copy it, highlight it, write a note on it, share it as plain text, or look a word up in
+  whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one.
 - Typeface, text size, line and paragraph spacing, margins, justification and hyphenation - per book, with
   one action to put a book back on your defaults.
 - Five page tones from light to true black, plus any custom page and ink pair. Warm light; brightness for
@@ -35,14 +38,17 @@ folder, or let it find the EPUBs already on your device.
 
 ## Library
 
-Grid or list; search over titles and over the text inside every book; sort, reading status, collections and
-tags you can rename or delete; add several books to one collection at once; watched folders; a scan for the
-EPUBs already on your device; generated covers for books without one; "Open with" from any file manager.
+Grid or list; a "Continue reading" shelf of the books you were last in; search over titles and over the text
+inside every book; sort, reading status, collections and tags you can rename or delete; add several books to
+one collection at once; watched folders; a scan for the EPUBs already on your device; generated covers for
+books without one; "Open with" from any file manager.
 
 ## Notes, highlights, backup
 
 Six highlight colours, notes typed on a selection and edited later, one bookmark per chapter, a per-book
-list to jump from, an undo on every delete, Markdown export. Backup is one zip, optionally with the book
+list to jump from, an undo on every delete, Markdown export. Kindle highlights come in from the Kindle's own
+`My Clippings.txt`, placed by finding each quote in the book. A reading record keeps minutes per day, a
+streak and the finished count - in `stats.json`, on the phone. Backup is one zip, optionally with the book
 files inside; restore merges or replaces.
 
 ## Sending books
@@ -52,9 +58,14 @@ four-digit code, and nothing else on the network can reach it.
 
 ## Privacy
 
-Nothing touches the network unless you start the Wi-Fi transfer. Even then Kairn only listens: the computer
-makes the request, the server lives only while that screen is open, and it will not answer without the code
-shown on screen.
+Nothing touches the network unless you start the Wi-Fi transfer or leave the update check on. The transfer
+server only listens: the computer makes the request, the server lives only while that screen is open, and it
+will not answer without the code shown on screen.
+
+The update check is one request a day at most, to `api.github.com`, asking
+[github.com/pham-noah/kairn-reader](https://github.com/pham-noah/kairn-reader) for its latest release. It
+sends the app name and version as the user agent and nothing else - no install id, no device id, no usage.
+It has its own switch in Settings, and with it off Kairn makes no outgoing request of any kind.
 
 `INTERNET` is requested because a socket needs it even to listen. `MANAGE_EXTERNAL_STORAGE` is optional: it
 lets the scan see EPUBs already on the device, and the folder picker covers everything else.
@@ -64,6 +75,10 @@ lets the scan see EPUBs already on the device, and the folder picker covers ever
 **The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** It is
 signed with a debug key on purpose, so it installs over an earlier Kairn and keeps your library. A
 store-signed build cannot install over it - take a backup in the app before switching.
+
+Once installed, Kairn can update itself: Settings > About > "Check for updates" (on by default, once a day)
+offers the new APK, downloads it, checks it against the size the release publishes, and hands it to
+Android's own installer. An APK that is not signed with the same key will not install over this one.
 
 **F-Droid:** not in the main repository yet. The submission
 ([!52993](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/52993)) was closed on project age; reviewers
@@ -77,7 +92,7 @@ Android 8.0 or newer.
 JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 53 JVM tests, no device needed
+    ./gradlew :app:testDebugUnitTest          # 73 JVM tests, no device needed
     ./gradlew :app:connectedDebugAndroidTest  # 20 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # unsigned; a store signs its own
@@ -88,8 +103,8 @@ API traps, the performance work, and which spec item maps to what.
 
 ## What is next
 
-Dictionary and share from the selection menu · right-to-left and vertical text · text and Word files
-imported alongside EPUBs.
+Zoom into an image in the page · vertical text · text and Word files imported alongside EPUBs · a custom
+typeface from your own font files (blocked on the Readium API, see SPEC_STATUS.md).
 
 ## Credits and licence
 

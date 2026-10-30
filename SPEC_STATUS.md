@@ -34,13 +34,61 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Backup (one zip, optional book files) and restore (safety copy, merge or replace) | DS-01, DEC-12 |
 | Bad/missing file messages, never a crash | N-04 |
 | Wi-Fi transfer: a LAN-only upload page, running only while its screen is open | L-04 |
+| Share a passage, and look a word up in the reader's own dictionary app | A-04 |
+| Sleep timer for read aloud: 15/30/45 minutes, or the end of the chapter | R-15 |
+| "Continue reading" shelf: the last eight books, newest first | L-09 |
+| Reading record: minutes a day, a streak, the finished count, in `stats.json` | DS-02 |
+| Kindle `My Clippings.txt` import, each quote placed by searching the book | DS-03 |
+| Update check, APK download and hand-off to the system installer | DS-04 |
 | No analytics, no crash reporting, all data in open JSON | N-01..N-02, DEC-8 |
 
 ## Not built yet
 
 R-04 custom font import (blocked: see below) · R-12 RTL/vertical verification (partly) · R-13 image zoom ·
-dictionary pop-up (DEC-13) · all v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
+a bundled dictionary *card* (DEC-13: the selection menu hands the word to a dictionary app instead) · all
+v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
 `licences/`) and the signed minified release path both exist; F-Droid supplies its own signature.
+
+## DS-03: Kindle clippings are placed by search, not by location
+
+A Kindle "Location 631-633" points into a Kindle rendering of the file and means nothing inside the EPUB -
+Readium would put the highlight on whatever text happens to sit at that progression, which for a different
+edition is a different paragraph. So [ClippingImport](Kairn/app/src/main/java/app/kairn/data/ClippingImport.kt)
+runs the reader's own `Publication.search()` per clipping, longest query first (60 chars, then 30, then 15),
+and the first hit's locator becomes the mark's locator. A quote that is not found is counted and NOT placed:
+an imported highlight on the wrong page is worse than one that did not arrive.
+
+Costs, measured rather than assumed: one book open plus up to three searches per clipping, all on
+`Dispatchers.IO`, with `(done, total)` reported as it goes. Deduplication is by normalised quote, so running
+the same file twice adds nothing. Author matching is token-based because Kindle writes "Le Guin, Ursula K."
+where an EPUB says "Ursula K. Le Guin" - an in-order substring test rejects the right book, which is exactly
+what the first test run showed.
+
+## DS-04: the update check is the only request Kairn makes on its own
+
+`data/Update.kt` asks `api.github.com/repos/pham-noah/kairn-reader/releases/latest`, compares the tag against
+`versionName` numerically (a string compare puts 0.10.0 before 0.9.0), picks the arm64 APK when the release
+has one, then downloads into `cacheDir/updates` and accepts the file only when the byte count matches the
+asset's published size. Installation is `ACTION_VIEW` on a FileProvider URI: Android's own installer shows
+the prompt, and the app never installs anything silently.
+
+Three consequences worth keeping in mind:
+
+- `look()` returns Found / Current / Failed, because "you are up to date" is a different answer from "could
+  not reach GitHub" and the sheet must not say the first when it means the second.
+- The check runs at most once a day (`AppSettings.lastUpdateCheck`), 2.5 s after the library has loaded so it
+  never delays the first paint, and offers a new release as a toast with an action - not a sheet over the
+  library. The manual check in Settings opens the sheet.
+- F-Droid forbids an app that updates itself. `res/values/bools.xml` carries `self_update`; a store build sets
+  it false and the check, the rows and the toast all disappear - there is no request to switch off.
+
+## R-15: the sleep timer belongs to the voice
+
+`ReaderUiState.sleepChoice` is the single source: 0 = off, a positive number = minutes, -1 = end of chapter.
+The Activity owns one coroutine for the countdown and one rule that matters - `advanceWithTts()` checks it
+BEFORE paging into the next chapter, because a chapter that ends while the timer says "end of chapter" must
+stop, not carry on. Stopping the voice by hand clears the timer, so a chip can never promise to stop
+something that is already stopped.
 
 ## R-04 custom font import is blocked by Readium 3.0.0, not by effort
 
@@ -249,7 +297,7 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
     ui/nav/  AppShell — the 3 tabs, overlays and system pickers
     ui/screens/ Library, Collections, Add books, Settings, Backup, Onboarding, Annotations
 
-Tests live in `app/src/test` and run on the JVM (48): model round-trips, `Store`'s writer (coalescing,
+Tests live in `app/src/test` and run on the JVM (73): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
 `app/src/androidTest` holds 20 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an

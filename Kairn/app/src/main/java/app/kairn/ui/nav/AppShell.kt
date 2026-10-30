@@ -17,12 +17,18 @@ import androidx.documentfile.provider.DocumentFile
 import app.kairn.KairnApp
 import app.kairn.R
 import app.kairn.data.Book
+import app.kairn.data.ClippingImport
+import app.kairn.data.Clippings
+import app.kairn.data.Update
 import app.kairn.ui.kit.*
 import app.kairn.ui.screens.*
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.ambientWash
 import app.kairn.ui.theme.glass
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -45,14 +51,60 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     // Decided after the store's first read, never from settings.value here: on a cold start that read has
     // not finished yet, so it still holds the defaults and every returning reader would get onboarding.
     var overlay by remember { mutableStateOf<Overlay?>(null) }
-    LaunchedEffect(Unit) {
-        app.store.awaitLoaded()
-        if (!app.store.settings.value.onboarded) overlay = Overlay.Onboarding
-    }
     var shelf by remember { mutableStateOf<String?>(null) }
     val backupUi = remember { BackupUi() }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    val updateUi = remember { UpdateUi() }
+    val versionName = remember {
+        runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull().orEmpty()
+    }
+    // DS-04: a store build (F-Droid) cannot update itself, so the whole check disappears there.
+    val selfUpdate = remember { ctx.resources.getBoolean(R.bool.self_update) }
+    val clipper = remember { ClippingImport(ctx, app.store, app.readium) }
+    var importingClippings by remember { mutableStateOf(false) }
 
+    /**
+     * DS-04. One request, at most once a day, only while the switch is on. [openSheet] is false for the
+     * automatic check on start: a new release is offered as a toast with an action, never as a sheet over
+     * the library the reader just opened.
+     */
+    fun checkUpdates(openSheet: Boolean) {
+        if (!selfUpdate || updateUi.checking) return
+        updateUi.checking = true
+        updateUi.message = null
+        if (openSheet) { updateUi.release = null; updateUi.apk = null; updateUi.open = true }
+        scope.launch {
+            when (val c = Update.look(versionName)) {
+                is Update.Check.Found -> {
+                    updateUi.checking = false
+                    updateUi.release = c.release
+                    if (openSheet) updateUi.open = true
+                    else toast.show(
+                        ctx.getString(R.string.toast_update_available, c.release.version),
+                        ctx.getString(R.string.s_update),
+                    ) { updateUi.open = true }
+                }
+                // "Nothing newer" and "could not ask" are different answers, and only one of them is good news.
+                Update.Check.Current -> { updateUi.checking = false; updateUi.message = null }
+                Update.Check.Failed -> {
+                    updateUi.checking = false
+                    updateUi.message = ctx.getString(R.string.s_update_check_failed)
+                }
+            }
+            app.store.saveSettings { it.copy(lastUpdateCheck = System.currentTimeMillis()) }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        app.store.awaitLoaded()
+        if (!app.store.settings.value.onboarded) overlay = Overlay.Onboarding
+        val s = app.store.settings.value
+        // After the library is up and a moment later still: the check must never delay the first paint.
+        if (selfUpdate && s.checkUpdates && System.currentTimeMillis() - s.lastUpdateCheck > 24L * 60 * 60 * 1000) {
+            delay(2500)
+            checkUpdates(openSheet = false)
+        }
+    }
     val pickBook = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) scope.launch { uris.forEach { app.library.importPicked(it) }; toast.show(ctx.resources.getQuantityString(R.plurals.books_added, uris.size, uris.size)) }
     }
@@ -75,6 +127,33 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
         }
     }
     val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u -> if (u != null) restoreUri = u }
+    // DS-03: "My Clippings.txt" from a Kindle. text/plain in practice, but some file providers report
+    // octet-stream for a .txt on removable storage, so both are accepted.
+    val pickClippings = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+        if (u != null && !importingClippings) {
+            importingClippings = true
+            scope.launch {
+                val text = clipper.readText(u)
+                if (text == null) {
+                    importingClippings = false
+                    toast.show(ctx.getString(R.string.toast_clippings_unreadable))
+                    return@launch
+                }
+                val parsed = withContext(Dispatchers.Default) { Clippings.parse(text) }
+                if (parsed.isEmpty()) {
+                    importingClippings = false
+                    toast.show(ctx.getString(R.string.toast_clippings_none))
+                    return@launch
+                }
+                toast.show(ctx.resources.getQuantityString(R.plurals.importing_clippings, parsed.size, parsed.size))
+                val r = clipper.run(parsed)
+                importingClippings = false
+                toast.show(
+                    ctx.resources.getQuantityString(R.plurals.clippings_imported, r.imported, r.imported, r.notFound, r.unmatched),
+                )
+            }
+        }
+    }
 
     val launchPickBook = { pickBook.launch(arrayOf("application/epub+zip")) }
     // L-01: open the picker at the device storage root so "find books" sweeps everything at once.
@@ -91,6 +170,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                             app.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
                         }
                         Overlay.Add -> AddBooksScreen(app.store, { overlay = null }, launchPickFolder, launchPickBook,
+                            onImportClippings = { pickClippings.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) },
                             onImportFile = { file, name ->
                                 scope.launch {
                                     val b = app.library.addBook(Uri.fromFile(file), null, name.removeSuffix(".epub"))
@@ -114,13 +194,38 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                     )
                                 })
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
-                            Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } })
+                            Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } },
+                                onCheckUpdates = { checkUpdates(openSheet = true) },
+                                showUpdates = selfUpdate)
                         }
                     }
                 }
                 if (overlay == null) KNavBar(tab, { tab = it })
             }
             toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
+
+            if (updateUi.open) UpdateSheet(
+                updateUi,
+                onCheck = { checkUpdates(openSheet = true) },
+                onDownload = {
+                    val r = updateUi.release
+                    if (r != null && !updateUi.downloading) {
+                        updateUi.downloading = true
+                        updateUi.progress = 0f
+                        scope.launch {
+                            val f = Update.download(ctx, r) { p -> updateUi.progress = p }
+                            updateUi.downloading = false
+                            if (f == null) toast.show(ctx.getString(R.string.toast_update_download_failed))
+                            else updateUi.apk = f
+                        }
+                    }
+                },
+                onInstall = {
+                    val a = updateUi.apk
+                    if (a != null && !Update.install(ctx, a)) toast.show(ctx.getString(R.string.toast_update_open_failed))
+                },
+                onClose = { updateUi.open = false },
+            )
 
             restoreUri?.let { u ->
                 RestoreSheet(DocumentFile.fromSingleUri(ctx, u)?.name ?: "backup.zip", { restoreUri = null }) { replace ->

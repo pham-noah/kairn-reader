@@ -87,6 +87,7 @@ internal class ReaderUiState {
     var chapterWords by mutableIntStateOf(0)                // this chapter's word count, once measured
     var searchChapterOnly by mutableStateOf(false)          // S-01: search only the chapter on screen
     var ttsOn by mutableStateOf(false)                      // reading aloud is on (the engine may still be starting)
+    var sleepChoice by mutableIntStateOf(0)                // R-15: 0 = no timer, >0 minutes, -1 = end of chapter
     var ttsStarting by mutableStateOf(false)                // tapped, but the engine has not produced audio yet
     var ttsPaused by mutableStateOf(false)                  // reading aloud, held at the word it reached
     var autoScrolling by mutableStateOf(false)              // the page is scrolling by itself
@@ -120,6 +121,7 @@ internal interface ReaderActions {
     fun toggleTts()
     fun stopTts()
     fun setSpeechRate(rate: Float)
+    fun setSleepTimer(minutes: Int)
     fun toggleAutoScroll()
     fun searchMore()
 }
@@ -322,7 +324,7 @@ internal fun ReaderScreen(
             else -> stringResource(R.string.s_notes_and_highlights)
         }) {
             when (ui.sheet) {
-                ReaderSheet.TTS -> TtsSheet(ui.prefs, act::setSpeechRate, act::stopTts)
+                ReaderSheet.TTS -> TtsSheet(ui.prefs, ui.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts)
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
                 ReaderSheet.SEARCH -> {

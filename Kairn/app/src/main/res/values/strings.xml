@@ -206,7 +206,6 @@
     <string name="delete_named">Delete \"%1$s\"?</string>
     <string name="delete_kind">Delete %1$s</string>
     <string name="s_bookmark_label">Bookmark</string>
-    <string name="percent_read">%1$d%% read</string>
     <plurals name="books_count">
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
@@ -365,4 +364,62 @@
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Searching inside your books (%1$d of %2$d)</string>
     <plurals name="s_hits_in_books"><item quantity="one">%1$d hit inside your books</item><item quantity="other">%1$d hits inside your books</item></plurals>
+    <!-- 0.8.0: the selection menu gains Share and Look up -->
+    <string name="s_menu_share">Share</string>
+    <string name="s_menu_look_up">Look up</string>
+    <string name="s_share_selection">Share this passage</string>
+    <string name="s_look_up">Look up</string>
+    <string name="s_no_dictionary_app">No dictionary app is installed</string>
+
+    <!-- 0.8.0: sleep timer for read aloud (R-15) -->
+    <string name="s_sleep_timer">Sleep timer</string>
+    <string name="s_off">Off</string>
+    <string name="s_minutes_short">%1$d min</string>
+    <string name="s_end_of_chapter">End of chapter</string>
+    <string name="s_sleep_hint">The reading stops by itself and your place is kept.</string>
+    <string name="toast_sleep_set">Reading stops in %1$d minutes</string>
+    <string name="toast_sleep_chapter">Reading stops at the end of this chapter</string>
+    <string name="toast_sleep_done">Sleep timer: reading stopped</string>
+
+    <!-- 0.8.0: the reading record (DS-02) -->
+    <string name="s_your_reading">Your reading</string>
+    <string name="s_no_reading_yet">Nothing recorded yet</string>
+    <plurals name="reading_today"><item quantity="one">Today %1$d min · %2$d-day streak</item><item quantity="other">Today %1$d min · %2$d-day streak</item></plurals>
+    <string name="s_today">Today</string>
+    <string name="s_this_week">This week</string>
+    <string name="s_streak">Streak</string>
+    <string name="s_days_value">%1$d d</string>
+    <string name="s_minutes_value">%1$d min</string>
+    <string name="s_hours_value">%1$d h %2$d min</string>
+    <plurals name="reading_total"><item quantity="one">All time: %1$d h %2$d min across %3$d finished book</item><item quantity="other">All time: %1$d h %2$d min across %3$d finished books</item></plurals>
+    <string name="s_stats_local_note">Kept in stats.json on this phone. Nothing is uploaded.</string>
+
+    <!-- 0.8.0: updates (DS-04) -->
+    <string name="s_check_for_updates">Check for updates</string>
+    <string name="s_check_for_updates_hint">One request a day to GitHub, nothing else</string>
+    <string name="s_check_now">Check now</string>
+    <string name="s_software_update">Software update</string>
+    <string name="s_checking_for_updates">Checking…</string>
+    <string name="s_version_available">Kairn %1$s is available</string>
+    <string name="s_downloading">Downloading… %1$d%%</string>
+    <string name="s_install_update">Install</string>
+    <string name="s_download">Download</string>
+    <string name="s_update_size">%1$d MB</string>
+    <string name="s_up_to_date">You are on the latest version.</string>
+    <string name="s_check_again">Check again</string>
+    <string name="s_update_check_failed">Could not reach GitHub. Your library is unaffected.</string>
+    <string name="s_update_source_note">Kairn asks github.com/pham-noah/kairn-reader for its latest release. The APK is checked against its published size before the installer sees it.</string>
+    <string name="s_update">Update</string>
+    <string name="toast_update_available">Kairn %1$s is available</string>
+    <string name="toast_update_download_failed">The download did not arrive whole</string>
+    <string name="toast_update_open_failed">No app can open the installer</string>
+
+    <!-- 0.8.0: Kindle clippings import (DS-03) -->
+    <string name="s_group_from_another_reader">From another reader</string>
+    <string name="s_import_kindle_highlights">Import Kindle highlights</string>
+    <string name="s_import_kindle_hint">From My Clippings.txt on the Kindle</string>
+    <plurals name="importing_clippings"><item quantity="one">Looking for %1$d clipping inside your books…</item><item quantity="other">Looking for %1$d clippings inside your books…</item></plurals>
+    <plurals name="clippings_imported"><item quantity="one">%1$d highlight imported · %2$d not found · %3$d book not in the library</item><item quantity="other">%1$d highlights imported · %2$d not found · %3$d book not in the library</item></plurals>
+    <string name="toast_clippings_unreadable">That file could not be read</string>
+    <string name="toast_clippings_none">No highlights found in that file</string>
 </resources>

@@ -21,9 +21,13 @@ class HighlightActionModeCallback(
     private val colors: List<Pair<String, Int>>,          // (label, ARGB)
     private val copyLabel: String,
     private val noteLabel: String,
+    private val shareLabel: String,
+    private val lookupLabel: String,
     private val onCopy: () -> Unit,
     private val onHighlight: (color: Int, done: () -> Unit) -> Unit,
     private val onNote: (done: () -> Unit) -> Unit,
+    private val onShare: (done: () -> Unit) -> Unit = {},
+    private val onLookup: (done: () -> Unit) -> Unit = {},
 ) : BaseActionModeCallback() {
 
     private val byItemId = HashMap<Int, Int>()            // menu item id -> ARGB
@@ -64,6 +68,10 @@ class HighlightActionModeCallback(
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             item.icon = Swatch(argb)
         }
+        // Share and Look up are used far less often than Copy or the colours, so they sit in the overflow
+        // menu: the swatches must stay visible, and the row cannot hold ten items on a phone.
+        menu.add(Menu.NONE, SHARE_ID, 10, shareLabel)
+        menu.add(Menu.NONE, LOOKUP_ID, 11, lookupLabel)
         return true
     }
 
@@ -76,11 +84,20 @@ class HighlightActionModeCallback(
         if (item.itemId == NOTE_ID) {                        // open the editor, then close the menu
             onNote { mode.finish() }; return true
         }
+        if (item.itemId == SHARE_ID) {
+            onShare { mode.finish() }; return true
+        }
+        if (item.itemId == LOOKUP_ID) {
+            onLookup { mode.finish() }; return true
+        }
         val argb = byItemId[item.itemId] ?: return false
         onHighlight(argb) { mode.finish() }
         return true
     }
 
-    private companion object { const val COPY_ID = 0x4B410001; const val NOTE_ID = 0x4B410002 }
+    private companion object {
+        const val COPY_ID = 0x4B410001; const val NOTE_ID = 0x4B410002
+        const val SHARE_ID = 0x4B410003; const val LOOKUP_ID = 0x4B410004
+    }
 
 }

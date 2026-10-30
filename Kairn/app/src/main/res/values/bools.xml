@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DS-04. F-Droid forbids an app that updates itself, so a store build sets this to false and the check
+     disappears entirely: no request, no row in Settings, nothing to turn off. The GitHub build keeps true. -->
+<resources>
+    <bool name="self_update">true</bool>
+</resources>

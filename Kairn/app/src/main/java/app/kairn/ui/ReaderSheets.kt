@@ -8,6 +8,7 @@ package app.kairn.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -73,14 +74,34 @@ private fun ColourDot(argb: Int, selected: Boolean, onClick: () -> Unit) = Box(
 }
 private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
 
-/** Reading aloud: the speed, and the way out. Pause and resume stay on the bar, one tap from the page. */
+/** Reading aloud: the speed, the sleep timer, and the way out. Pause and resume stay on the bar. */
 @Composable
-internal fun TtsSheet(prefs: ReaderPrefs, onRate: (Float) -> Unit, onStop: () -> Unit) {
+internal fun TtsSheet(
+    prefs: ReaderPrefs,
+    sleepChoice: Int,                    // 0 = off, >0 minutes, -1 = end of chapter
+    onRate: (Float) -> Unit,
+    onSleep: (Int) -> Unit,
+    onStop: () -> Unit,
+) {
     KControl(stringResource(R.string.s_speech_rate), stringResource(R.string.s_speech_rate_value, prefs.speechRate)) {
         KSlider(prefs.speechRate, onRate, 0.6f..2f)
     }
     Text(stringResource(R.string.s_speech_rate_hint), style = KType.small.copy(color = K.dim),
         modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 16.dp))
+    // R-15. The one thing a reader wants from a voice at night is that it stops, so the choice is on the
+    // sheet that is already open while it reads, not three screens away in Settings.
+    Text(stringResource(R.string.s_sleep_timer), style = KType.small.copy(fontWeight = FontWeight.SemiBold),
+        modifier = Modifier.padding(start = 4.dp))
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        KChip(stringResource(R.string.s_off), sleepChoice == 0, { onSleep(0) })
+        listOf(15, 30, 45).forEach { m -> KChip(stringResource(R.string.s_minutes_short, m), sleepChoice == m, { onSleep(m) }) }
+        KChip(stringResource(R.string.s_end_of_chapter), sleepChoice < 0, { onSleep(-1) })
+    }
+    Text(stringResource(R.string.s_sleep_hint), style = KType.small.copy(color = K.dim),
+        modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 16.dp))
     KButton(stringResource(R.string.s_stop_reading), onStop, style = KButtonStyle.Secondary)
 }
 

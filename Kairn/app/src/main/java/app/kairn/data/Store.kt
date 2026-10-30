@@ -24,11 +24,14 @@ class Store private constructor(val root: File, val copiesDir: File) {
     val coversDir = File(root, "covers").apply { mkdirs() }
     val thumbsDir = File(root, "thumbs").apply { mkdirs() }     // small pre-decoded cover thumbnails
     private val settingsFile = File(root, "settings.json")
+    private val statsFile = File(root, "stats.json")
 
     init { copiesDir.mkdirs() }        // a constructor param, so nothing else creates it
 
     val books = MutableStateFlow<List<Book>>(emptyList())
     val settings = MutableStateFlow(AppSettings())
+    /** DS-02: minutes read per day. Kept out of settings.json so an old record never fights a new one. */
+    val stats = MutableStateFlow(ReadingStats())
 
     // ---- serial, coalescing writer. Declared before init, which calls reload() -> flush(). ----
     private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "kairn-store") }
@@ -113,6 +116,11 @@ class Store private constructor(val root: File, val copiesDir: File) {
             .onSuccess { settings.value = it }
             // Only a REAL parse failure warns: no settings file yet is the normal first launch, not an error.
             .onFailure { if (settingsFile.exists()) Log.w("KairnStore", "settings.json could not be read; keeping the current settings", it) }
+        // Reading stats are a separate file and a separate flow: a broken stats.json must not cost the
+        // reader their library, their positions or their settings.
+        runCatching { ReadingStats.from(JSONObject(statsFile.readText())) }
+            .onSuccess { stats.value = it }
+            .onFailure { if (statsFile.exists()) Log.w("KairnStore", "stats.json could not be read; keeping the current record", it) }
     }
 
     fun get(id: String) = books.value.firstOrNull { it.id == id }
@@ -153,6 +161,18 @@ class Store private constructor(val root: File, val copiesDir: File) {
         if (s == settings.value) return                          // unchanged: no serialise, no write (as put() does)
         enqueue(settingsFile) { writeAtomic(settingsFile, s.toJson().toString(2)) }
         settings.value = s
+    }
+
+    /**
+     * DS-02. Same coalescing writer as everything else: closing the reader three times in a row costs one
+     * write, and a session record cannot be overtaken by a restore.
+     */
+    @Synchronized
+    fun saveStats(f: (ReadingStats) -> ReadingStats) {
+        val s = f(stats.value)
+        if (s == stats.value) return
+        enqueue(statsFile) { writeAtomic(statsFile, s.toJson().toString(2)) }
+        stats.value = s
     }
 
     companion object {
