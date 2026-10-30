@@ -71,6 +71,8 @@
     <string name="s_only_the_address_kairn_shows_will_work">Only the address Kairn shows will work.</string>
     <string name="s_open_a_file">Open a file</string>
     <string name="s_made_by_noah_pham">Made by Noah Pham</string>
+    <string name="s_kairn_on_github">Kairn on GitHub</string>
+    <string name="s_source_code_issues_and_releases">Source code, issues and releases</string>
     <string name="s_github_com_pham_noah">github.com/pham-noah</string>
     <string name="s_open_source_licences">Open-source licences</string>
     <string name="s_open_this_on_your_computer_on_the_same_w">Open this on your computer, on the same Wi-Fi:</string>

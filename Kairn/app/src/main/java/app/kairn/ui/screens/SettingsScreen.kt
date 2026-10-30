@@ -164,6 +164,14 @@ fun SettingsScreen(
                             android.net.Uri.parse("https://github.com/pham-noah")))
                     }
                 }) { KChevron() }
+                // The source, one row under the credit. Same pattern: the browser opens the page, so Kairn
+                // keeps no web code and no network permission of its own for links.
+                KRow(stringResource(R.string.s_kairn_on_github), subtitle = stringResource(R.string.s_source_code_issues_and_releases), divider = true, onClick = {
+                    runCatching {
+                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/pham-noah/kairn-reader")))
+                    }
+                }) { KChevron() }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
                 // No network code of our own: the browser opens the tracker.
                 KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
