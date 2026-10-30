@@ -35,6 +35,7 @@
         tools:ignore="ScopedStorage" />
 
     <application
+        android:localeConfig="@xml/locales_config"
         android:name=".KairnApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

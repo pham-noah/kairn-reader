@@ -97,6 +97,7 @@ builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
     ./gradlew :app:connectedDebugAndroidTest  # 36 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
+    python3 tools/check_translations.py       # key parity, format arguments, plural categories
 
 Release assembly needs a keystore (storeFile, storePassword, keyAlias, keyPassword in `keystore.properties`,
 outside this repo), pointed at with `KAIRN_KEYSTORE_PROPS`; without one it fails unless `-PallowUnsigned` is
@@ -108,8 +109,9 @@ and which spec item maps to what.
 
 ## What is next
 
-**Translations.** Every user-facing string is a resource and every count is a plural, so a new language is a
-`values-xx/strings.xml` away. Spanish, French and German first.
+**Translations.** Vietnamese, Japanese, Simplified Chinese, Spanish and Finnish are written; Vietnamese still
+wants a native read before it is called finished. Every user-facing string is a resource and every count is a
+plural, so the next language is a `values-xx/strings.xml` away.
 
 Image zoom inside the page. F-Droid, once the project has the history its reviewers ask for. Vertical text and
 a typeface from your own font files depend on what the Readium API exposes, so neither is promised yet.
