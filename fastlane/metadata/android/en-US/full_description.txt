@@ -1,39 +1,48 @@
-Kairn is an offline EPUB reader for Android. It reads the books you already own and keeps everything about
-them - your place, highlights, notes and settings - on your phone.
+Kairn reads the EPUBs you already own. Open a book from your storage, or point Kairn at a folder and it
+picks up new ones as they arrive. There is no account to make and no library to import into. Your place,
+your highlights and notes, and your settings all live on the phone, in plain files you could read yourself.
 
-NO ACCOUNT, NOTHING TO SET UP
-No sign-up, no subscription, no library to import into. Open an EPUB from your storage, or point Kairn at
-a folder and let it watch for new books.
+A book is recognised by what is inside it rather than by its file name, so renaming it or moving it to
+another folder brings your place and your highlights along.
 
-LIBRARY
-Grid or list, search and sort, reading status, and collections and tags you can rename or delete. Books
-are identified by their contents, so moving or renaming a file keeps its highlights and your place.
+Reading
+Page or scroll, whichever you prefer. Text size, spacing, margins, justification and hyphenation are set per
+book. Five page tones from light to true black, a warm filter for late nights, and brightness that either
+applies to Kairn alone or follows the rest of the phone. The slider at the bottom shows where you are and
+roughly how long is left.
 
-READING
-Page or scroll mode. Per-book text size, line and paragraph spacing, margins, justification and
-hyphenation. Five page tones from light to true black, a warm-light filter, and brightness that affects
-this app only or follows the system. A whole-book progress slider with a time-left estimate.
+Read aloud
+Kairn can speak the book with the voice your phone already has, at the speed you like. A sleep timer stops
+it after fifteen, thirty or forty five minutes, or at the end of the chapter, so it can read you to sleep
+without reading all night.
 
-SEND BOOKS OVER WI-FI
-Kairn shows an address; open it in a browser on a computer on the same network and drop EPUB files on the
-page. A four-digit code is part of the address, so nobody else on the network can upload, and the transfer
-stops when you leave the screen.
+Highlights and notes
+Six highlight colours, notes you type on a selection, and one bookmark per chapter. Select a passage to copy
+it, share it with another app, or look a word up in the dictionary you already have. Each book keeps a list
+you can jump from, and it can be exported as Markdown.
 
-HIGHLIGHTS AND NOTES
-Four highlight colours, notes you type on a selection, and one bookmark per chapter. A per-book list to
-jump from, and Markdown export.
+Already reading on a Kindle
+If you have a My Clippings.txt file from a Kindle, Kairn brings those highlights in and puts each quote on
+the page where it actually sits.
 
-SEARCH
-Full text inside the book you are reading.
+Search
+Search the whole text of the book you are reading.
 
-BACKUP
-One zip with everything, optionally including the book files. A restore validates the archive first, takes
-a safety copy, and can merge with or replace what is on the phone.
+Sending books over Wi-Fi
+Kairn shows you an address. Open it in a browser on your computer on the same network and drop EPUB files onto
+the page. A four digit code is part of the address, so nobody else on the network can upload, and the
+transfer stops as soon as you leave the screen.
 
-PRIVACY
-No analytics, no crash reporting, no accounts and no ads. Nothing touches the network unless you start the
-Wi-Fi transfer, and even then Kairn only listens - the browser on your computer makes the request, and the
-server stops when you leave the screen. The app opens no outgoing connection. Your data lives in plain JSON
-files inside the app.
+Backup
+One zip with everything in it, and you can include the book files too. Restoring checks the archive before it
+touches anything, takes a safety copy first, and can either merge with or replace what is on the phone.
 
-Requires Android 8.0 or newer. Apache-2.0, built on the Readium Kotlin Toolkit and AndroidX.
+Your reading
+A quiet record of the days you read, how long for, and how many books you have finished.
+
+Privacy
+No analytics, no crash reporting, no accounts, no ads. Kairn opens no outgoing connection. The only network
+code is the Wi-Fi transfer, and even that only listens: the browser on your computer makes the request, and
+the server stops when you leave the screen.
+
+Android 8.0 or newer. Apache-2.0. Built on the Readium Kotlin Toolkit and AndroidX.

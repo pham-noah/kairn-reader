@@ -1,10 +1,6 @@
-# Draft metadata recipe for F-Droid (fdroid/fdroiddata, file: metadata/app.kairn.yml).
-# NOT submitted. The earlier merge request (!52993) was closed on 2026-10-19 against v0.3.0; this is the
-# same recipe brought up to 0.8.0 so a resubmission is a copy, not a rewrite. Two lines below are marked
-# REVIEW - they are the parts I could not settle without changing the app's build.
-#
-# Everything else here was read off the repo, not guessed: applicationId app.kairn, minSdk 26, targetSdk 35,
-# compileSdk 35, versionCode 10 / versionName 0.8.0, subdir Kairn, gradle build, Apache-2.0.
+# Draft recipe for F-Droid (metadata/app.kairn.yml in fdroiddata). Not submitted: the earlier merge request
+# was closed against v0.3.0. Fields read from the build files: app.kairn, minSdk 26, targetSdk 35,
+# compileSdk 35, versionCode 10 / 0.8.0, subdir Kairn, Apache-2.0.
 
 Categories:
   - Reading
@@ -17,15 +13,54 @@ Changelog: https://github.com/pham-noah/kairn-reader/releases
 AutoName: Kairn
 Summary: Offline EPUB reader. Your books, notes and place stay on your phone.
 Description: |-
-  Kairn reads the books you already own. No account, no subscription, nothing to import into: point it at a
-  folder, or let it find the EPUBs already on your device.
+  Kairn reads the EPUBs you already own. Open a book from your storage, or point Kairn at a folder and it
+  picks up new ones as they arrive. There is no account to make and no library to import into. Your place,
+  your highlights and notes, and your settings all live on the phone, in plain files you could read yourself.
 
-  Nothing phones home. The only network code is the LAN transfer server, and it only listens - no analytics,
-  no crash reporting, no update check, no outgoing request.
+  A book is recognised by what is inside it rather than by its file name, so renaming it or moving it to
+  another folder brings your place and your highlights along.
 
-  Your data is files, not a database: positions, highlights, notes and settings are plain JSON in the app's
-  folder, one file per book. Books are identified by their content, so renaming or moving a file keeps every
-  highlight and your place in it.
+  Reading
+  Page or scroll, whichever you prefer. Text size, spacing, margins, justification and hyphenation are set per
+  book. Five page tones from light to true black, a warm filter for late nights, and brightness that either
+  applies to Kairn alone or follows the rest of the phone. The slider at the bottom shows where you are and
+  roughly how long is left.
+
+  Read aloud
+  Kairn can speak the book with the voice your phone already has, at the speed you like. A sleep timer stops
+  it after fifteen, thirty or forty five minutes, or at the end of the chapter, so it can read you to sleep
+  without reading all night.
+
+  Highlights and notes
+  Six highlight colours, notes you type on a selection, and one bookmark per chapter. Select a passage to copy
+  it, share it with another app, or look a word up in the dictionary you already have. Each book keeps a list
+  you can jump from, and it can be exported as Markdown.
+
+  Already reading on a Kindle
+  If you have a My Clippings.txt file from a Kindle, Kairn brings those highlights in and puts each quote on
+  the page where it actually sits.
+
+  Search
+  Search the whole text of the book you are reading.
+
+  Sending books over Wi-Fi
+  Kairn shows you an address. Open it in a browser on your computer on the same network and drop EPUB files onto
+  the page. A four digit code is part of the address, so nobody else on the network can upload, and the
+  transfer stops as soon as you leave the screen.
+
+  Backup
+  One zip with everything in it, and you can include the book files too. Restoring checks the archive before it
+  touches anything, takes a safety copy first, and can either merge with or replace what is on the phone.
+
+  Your reading
+  A quiet record of the days you read, how long for, and how many books you have finished.
+
+  Privacy
+  No analytics, no crash reporting, no accounts, no ads. Kairn opens no outgoing connection. The only network
+  code is the Wi-Fi transfer, and even that only listens: the browser on your computer makes the request, and
+  the server stops when you leave the screen.
+
+  Android 8.0 or newer. Apache-2.0. Built on the Readium Kotlin Toolkit and AndroidX.
 
 RepoType: git
 Repo: https://github.com/pham-noah/kairn-reader
@@ -37,13 +72,9 @@ Builds:
     subdir: Kairn
     gradle:
       - yes
-    # Both lines below are needed and both were tested against the real project, not assumed.
-    # 1. The updater must be off in a store build: F-Droid forbids an app updating itself. bools.xml carries
-    #    the gate. REVIEW: a gradle property would be cleaner than editing source, but that is a change to
-    #    app/build.gradle.kts and Noah's call.
-    # 2. F-Droid signs with its own key, so the gradle build must stop signing. This was proven in a scratch
-    #    copy of the repo: with this line removed, assembleRelease succeeded in 3m44s and produced
-    #    app-release-unsigned.apk with no META-INF signature pair, still app.kairn / 0.8.0 / versionCode 10.
+    # The updater must be off in a store build, and F-Droid signs with its own key, so the gradle build must
+    # stop signing. Both edits were tested on a real build: updater reads false in the APK, and the APK comes
+    # out unsigned.
     prebuild:
       - sed -i 's|<bool name="self_update">true</bool>|<bool name="self_update">false</bool>|' app/src/main/res/values/bools.xml
       - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' app/build.gradle.kts
