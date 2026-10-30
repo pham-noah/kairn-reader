@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.kairn.data.Book
+import app.kairn.data.Status
 import app.kairn.data.Store
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -57,6 +58,19 @@ class ContinueShelfTest {
         compose.onAllNodesWithText("Charlie").assertCountEquals(2)
         // A book that was never opened belongs in the grid only.
         compose.onAllNodesWithText("Never Opened").assertCountEquals(1)
+    }
+
+    @Test
+    fun a_finished_book_is_not_something_to_continue() {
+        val store = store()
+        // Same lastRead age on purpose: only the status can separate these two.
+        store.put(Book("b1", "Alpha", "", "content://e/a.epub", lastRead = 2_000, status = Status.FINISHED))
+        store.put(Book("b2", "Bravo", "", "content://e/b.epub", lastRead = 2_000))
+        screen(store)
+
+        // Finished: the grid only. Unfinished: shelf and grid.
+        compose.onAllNodesWithText("Alpha").assertCountEquals(1)
+        compose.onAllNodesWithText("Bravo").assertCountEquals(2)
     }
 
     @Test

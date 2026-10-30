@@ -118,6 +118,14 @@ fun SettingsScreen(
                         )
                     }
                 }
+                // The selection menu's two optional actions. Off means the item is not built at all - a
+                // disabled row in a text-selection toolbar has nowhere to explain itself.
+                KRow(stringResource(R.string.s_share_a_passage), subtitle = stringResource(R.string.s_share_a_passage_hint), divider = true) {
+                    KSwitch(s.shareSelection, { v -> store.saveSettings { it.copy(shareSelection = v) } })
+                }
+                KRow(stringResource(R.string.s_look_a_word_up), subtitle = stringResource(R.string.s_look_a_word_up_hint), divider = true) {
+                    KSwitch(s.lookupSelection, { v -> store.saveSettings { it.copy(lookupSelection = v) } })
+                }
             }
         }
         KGroup(stringResource(R.string.s_group_library)) {

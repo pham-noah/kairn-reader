@@ -243,6 +243,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             onNote = { done -> startNote(done) },
             onShare = { done -> shareSelection(done) },
             onLookup = { done -> lookUpSelection(done) },
+            showShare = { app.store.settings.value.shareSelection },
+            showLookup = { app.store.settings.value.lookupSelection },
         )
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = (startLocator ?: book.locator)?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },

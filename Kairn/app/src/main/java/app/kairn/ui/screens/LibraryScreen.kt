@@ -214,7 +214,8 @@ fun LibraryScreen(
     // were in is not the only one you can get back to without searching.
     val recent by remember {
         derivedStateOf {
-            books.filter { it.lastRead > 0 && !it.missing && !it.broken }
+            // A finished book is done: it stays in the grid, but it is not something to continue.
+            books.filter { it.lastRead > 0 && !it.missing && !it.broken && it.status != Status.FINISHED }
                 .sortedByDescending { it.lastRead }
                 .take(8)
         }

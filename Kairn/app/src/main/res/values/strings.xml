@@ -97,6 +97,10 @@
     <string name="s_surface">Surface</string>
     <string name="s_swipe_distance">Swipe distance</string>
     <string name="s_swipe_to_change_chapter">Swipe to change chapter</string>
+    <string name="s_share_a_passage">Share a passage</string>
+    <string name="s_share_a_passage_hint">Send the selected text to another app</string>
+    <string name="s_look_a_word_up">Look a word up</string>
+    <string name="s_look_a_word_up_hint">Open the selected word in your dictionary app</string>
     <string name="s_switch_automatically">Switch automatically</string>
     <string name="s_tags_comma_separated">Tags (comma separated)</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">Tap a collection to put this book in it, or tap again to take it out.</string>

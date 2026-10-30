@@ -28,6 +28,10 @@ class HighlightActionModeCallback(
     private val onNote: (done: () -> Unit) -> Unit,
     private val onShare: (done: () -> Unit) -> Unit = {},
     private val onLookup: (done: () -> Unit) -> Unit = {},
+    // Read on every selection, not once at construction: turning either off in Settings takes effect in the
+    // next long-press rather than the next time the book is opened.
+    private val showShare: () -> Boolean = { true },
+    private val showLookup: () -> Boolean = { true },
 ) : BaseActionModeCallback() {
 
     private val byItemId = HashMap<Int, Int>()            // menu item id -> ARGB
@@ -68,10 +72,11 @@ class HighlightActionModeCallback(
             item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             item.icon = Swatch(argb)
         }
-        // Share and Look up are used far less often than Copy or the colours, so they sit in the overflow
-        // menu: the swatches must stay visible, and the row cannot hold ten items on a phone.
-        menu.add(Menu.NONE, SHARE_ID, 10, shareLabel)
-        menu.add(Menu.NONE, LOOKUP_ID, 11, lookupLabel)
+        // Share and Look up sit in the row, not behind the overflow: they are whole actions on a passage, and
+        // hiding them meant finding a three-dot menu first. Either can be switched off in Settings, and then
+        // it is simply not added - a disabled item that does nothing is worse than no item.
+        if (showShare()) menu.add(Menu.NONE, SHARE_ID, 10, shareLabel).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        if (showLookup()) menu.add(Menu.NONE, LOOKUP_ID, 11, lookupLabel).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return true
     }
 

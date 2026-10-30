@@ -180,6 +180,8 @@ data class AppSettings(
     val lastBackupName: String = "",
     val checkUpdates: Boolean = true,       // DS-04: one request a day, off in Settings; see data/Update
     val lastUpdateCheck: Long = 0,          // when the last check ran, so it is at most once a day
+    val shareSelection: Boolean = true,     // the Share item in the text-selection menu
+    val lookupSelection: Boolean = true,    // the Look up item in the text-selection menu
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
@@ -188,6 +190,7 @@ data class AppSettings(
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
         .put("autoDetect", autoDetect)
         .put("checkUpdates", checkUpdates).put("lastUpdateCheck", lastUpdateCheck)
+        .put("shareSelection", shareSelection).put("lookupSelection", lookupSelection)
         .put("folders", JSONArray(folders.map {
             JSONObject().put("uri", it.uri).put("name", it.name).put("enabled", it.enabled)
         }))
@@ -207,6 +210,8 @@ data class AppSettings(
                 swipeChapters = o.optBoolean("swipeChapters", d.swipeChapters),
                 swipeThreshold = o.optInt("swipeThreshold", d.swipeThreshold),
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
+                shareSelection = o.optBoolean("shareSelection", d.shareSelection),
+                lookupSelection = o.optBoolean("lookupSelection", d.lookupSelection),
                 // mapNotNull + optString: an entry with no usable uri is skipped, not a reason to discard
                 // every other setting.
                 folders = o.optJSONArray("folders")?.let { a ->
