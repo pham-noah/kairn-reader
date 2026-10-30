@@ -29,7 +29,8 @@ folder, or let it find the EPUBs already on your device.
   page turns to keep up with it. A sleep timer stops it after 15, 30 or 45 minutes, or at the end of the
   chapter, so a book at night does not read on until morning.
 - Select a passage to copy it, highlight it, write a note on it, share it as plain text, or look a word up in
-  whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one.
+  whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one. Share and
+  Look up sit in the selection toolbar itself, and either can be switched off in Settings.
 - Typeface, text size, line and paragraph spacing, margins, justification and hyphenation - per book, with
   one action to put a book back on your defaults.
 - Five page tones from light to true black, plus any custom page and ink pair. Warm light; brightness for

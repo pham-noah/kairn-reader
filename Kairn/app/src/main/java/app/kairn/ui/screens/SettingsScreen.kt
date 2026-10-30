@@ -156,6 +156,14 @@ fun SettingsScreen(
                     }
                     KRow(stringResource(R.string.s_check_now), divider = true, onClick = onCheckUpdates) { KChevron() }
                 }
+                // The credit sits above the licences and the issue tracker: it is who made the app, not a
+                // utility. The link opens the browser; Kairn has no web code of its own.
+                KRow(stringResource(R.string.s_made_by_noah_pham), subtitle = stringResource(R.string.s_github_com_pham_noah), divider = true, onClick = {
+                    runCatching {
+                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/pham-noah")))
+                    }
+                }) { KChevron() }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
                 // No network code of our own: the browser opens the tracker.
                 KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
