@@ -480,11 +480,15 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
             items(list, key = { it.id }) { b ->
                 Column(Modifier.width(94.dp).clickable { onOpen(b) }) {
                     KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), showBadge = false, fallbackPath = store.coverFile(b.id).path)
-                    Text(
-                        b.title, style = KType.small.copy(fontWeight = FontWeight.SemiBold),
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 7.dp),
-                    )
-                    Box(Modifier.padding(top = 7.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF2B3238))) {
+                    // A fixed two-line title box: without it a one-line title pulls its progress bar up and the
+                    // shelf's bars sit on four different baselines.
+                    Box(Modifier.padding(top = 7.dp).height(36.dp)) {
+                        Text(
+                            b.title, style = KType.small.copy(fontWeight = FontWeight.SemiBold, lineHeight = 16.sp),
+                            maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Box(Modifier.padding(top = 4.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF2B3238))) {
                         Box(Modifier.fillMaxWidth(b.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
                     }
                 }
