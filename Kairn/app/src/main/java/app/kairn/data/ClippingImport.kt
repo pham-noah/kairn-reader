@@ -8,15 +8,9 @@ import org.readium.r2.shared.publication.services.search.search
 import java.util.UUID
 
 /**
- * Brings Kindle highlights and notes into the library (DS-03).
- *
- * The hard part is not parsing the file, it is placement: a Kindle location points into a Kindle
- * rendering, so it means nothing inside the EPUB. Instead every quote is searched for in the book itself
- * (the same search the reader uses) and the first hit becomes the mark's locator - which is why the marks
- * land where the text actually is, jump, and survive a layout change.
- *
- * A quote that is not found is counted, never guessed at: a highlight sitting on the wrong page is worse
- * than a highlight that did not arrive.
+ * Brings Kindle highlights and notes into the library (DS-03). A Kindle location means nothing inside an
+ * EPUB, so each quote is searched for in the book and the first hit becomes its locator. A quote that is not
+ * found is counted, never guessed at.
  */
 class ClippingImport(
     private val ctx: android.content.Context,

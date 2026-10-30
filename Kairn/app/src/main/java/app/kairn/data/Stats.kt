@@ -4,10 +4,8 @@ import org.json.JSONObject
 import java.time.LocalDate
 
 /**
- * How much has been read, per day (DS-02). Minutes only: no page counts, no book-level history, nothing to
- * correlate. It is plain JSON next to the books, like everything else (DEC-8).
- *
- * A day is a local calendar date (`yyyy-MM-dd`), because "today" is what a reader means, not a UTC day.
+ * Minutes read per day (DS-02), in plain JSON next to the books. A day is a local calendar date: "today" is
+ * what a reader means, not a UTC day.
  */
 data class ReadingStats(
     /** `yyyy-MM-dd` -> minutes read that day. Days with no reading are simply absent. */

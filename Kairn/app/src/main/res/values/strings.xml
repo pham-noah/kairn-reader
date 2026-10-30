@@ -53,7 +53,7 @@
     <string name="s_hyphenation">Hyphenation</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">In scroll mode: left for next, right for previous</string>
     <string name="s_justify_text">Justify text</string>
-    <string name="s_kairn_draft_build_no_account_no_ads_no_t">Kairn, draft build. No account, no ads, no tracking.</string>
+    <string name="s_footer_tagline">No account, no ads, nothing tracked. Just a reading app, made by one person.</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn saves a safety copy of your current data first, so you can undo.</string>
     <string name="s_kairn_shows_an_address_open_it_on_a_comp">Kairn shows an address. Open it on a computer on the same Wi-Fi and drop your EPUB files on the page.</string>
     <string name="s_keep_it">Keep it</string>

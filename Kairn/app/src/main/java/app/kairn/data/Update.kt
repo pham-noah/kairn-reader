@@ -1,16 +1,9 @@
 package app.kairn.data
 
 /**
- * Self-update from GitHub releases, the way Mihon and Sonarar do it.
- *
- * This is the app's SECOND outgoing request and the only one that is not the user typing into a browser, so
- * it is strictly opt-in (Settings > About), it asks for a JSON document and nothing else, and it identifies
- * itself with the app name and version and no other information. Kairn still sends no identifier, no
- * install id, no usage. See README "Privacy".
- *
- * The download is only accepted when the byte count matches the release asset, and the installer is the
- * system package installer: the app never installs anything silently, and never asks for a permission it
- * does not use.
+ * Self-update from GitHub releases: opt-in (Settings > About), asks for a JSON document and identifies itself
+ * as the app name and version, with no identifier or install id. A download is accepted only when the byte
+ * count matches the asset, and the system installer does the installing.
  */
 object Update {
 
@@ -53,7 +46,7 @@ object Update {
             )
         }
 
-    /** The release JSON, or null. No exceptions out: an app that will not open because GitHub was slow is broken. */
+    /** The release JSON, or null. No exceptions out. */
     private fun fetchJson(currentVersion: String, timeoutMs: Int): org.json.JSONObject? = runCatching {
         val c = java.net.URL("https://api.github.com/repos/$REPO/releases/latest").openConnection() as java.net.HttpURLConnection
         c.connectTimeout = timeoutMs

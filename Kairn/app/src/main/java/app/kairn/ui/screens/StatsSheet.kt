@@ -23,8 +23,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 /**
- * DS-02: the reading record. Three numbers and a week of bars - enough to see a habit, not enough to be a
- * dashboard. Everything here comes from one local JSON file (stats.json), and nothing leaves the phone.
+ * DS-02: the reading record. Three numbers and a week of bars, all from the local stats.json.
  */
 @Composable
 fun StatsSheet(stats: ReadingStats, finishedBooks: Int, onClose: () -> Unit) {
@@ -41,8 +40,7 @@ fun StatsSheet(stats: ReadingStats, finishedBooks: Int, onClose: () -> Unit) {
             StatBox(stringResource(R.string.s_this_week), minutes(weekTotal), Modifier.weight(1f))
             StatBox(stringResource(R.string.s_streak), stringResource(R.string.s_days_value, streak), Modifier.weight(1f))
         }
-        // The week, oldest first, with the tallest bar as the reference: a bar chart that rescales to
-        // nothing when every day is empty is worse than no chart.
+        // Oldest first, tallest bar as the reference; every day empty means no chart.
         Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             week.forEach { (day, mins) ->
                 val h = if (best <= 0) 0 else (mins.toFloat() / best * 64f).toInt().coerceAtLeast(if (mins > 0) 4 else 0)

@@ -166,7 +166,7 @@ fun SettingsScreen(
                 }) { KChevron() }
             }
         }
-        Text(stringResource(R.string.s_kairn_draft_build_no_account_no_ads_no_t), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
+        Text(stringResource(R.string.s_footer_tagline), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
     }
 
     if (statsOpen) StatsSheet(stats, finishedCount) { statsOpen = false }
