@@ -1,5 +1,6 @@
 Kairn 0.8.1
 
-- A book you have finished no longer sits in Continue reading. It stays in the grid, it just stops asking to be picked up.
-- Share and Look up now sit in the selection toolbar instead of behind the three dots, and either can be turned off under Settings.
-- Plainer wording on the store page and in Settings, and a credit with a link to the developer's GitHub in About.
+- A book you have finished no longer appears in Continue reading. It stays in the grid.
+- Share and Look up sit in the selection toolbar instead of behind the three dots.
+- Both can be turned off under Settings > Reading.
+- Settings > About credits the developer with a link to their GitHub.

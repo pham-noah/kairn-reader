@@ -3,17 +3,10 @@ package app.kairn.data
 import org.json.JSONObject
 
 /**
- * Kindle's "My Clippings.txt" (DS-03): the file every Kindle drops in its documents folder, one block per
- * highlight, note or bookmark, separated by a line of ten '='.
+ * Kindle's "My Clippings.txt" (DS-03): one block per clipping, separated by a line of ten '='. A block is a
+ * "Title (Author)" line, a "- Your Highlight on page 42 | Location 631-633" line, then the text.
  *
- *     The Left Hand of Darkness (Le Guin, Ursula K.)
- *     - Your Highlight on page 42 | Location 631-633 | Added on Monday, 12 March 2018 21:04:11
- *
- *     It is good to have an end to journey toward; but it is the journey that matters, in the end.
- *     ==========
- *
- * Clippings carry no EPUB locator - a Kindle location is meaningless in another rendering - so the importer
- * finds each quote in the book itself and uses that as the place to land (see [ClippingImport]).
+ * Clippings carry no EPUB locator, so the importer finds each quote in the book itself (see [ClippingImport]).
  */
 data class Clipping(
     val title: String,
