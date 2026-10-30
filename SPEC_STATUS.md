@@ -346,9 +346,10 @@ F-Droid: merge request **!52993** ("New app: Kairn (app.kairn)") was **closed by
 2026-10-19**, and it was submitted against **v0.3.0** — five releases stale. Two consequences worth knowing
 before anyone reopens it:
 
-- **No store metadata exists in this repo.** There is no `fastlane/metadata/android/en-US/` directory and no
-  `fdroid.yml`; both lived only inside that merge request. A resubmission has to write them first: name,
-  summary, full description, icon, and a changelog per version code.
+- **The store metadata is already written and current.** `fastlane/metadata/android/en-US/` holds the title,
+  a 69-character short description, the full description and changelogs `1.txt` to `10.txt`, plus phone
+  screenshots — all in the repo and in both histories, updated with 0.8.0. What is missing is only the
+  `fdroid.yml` recipe itself, which lives in the fdroiddata merge request and nowhere in this repo.
 - **The store build must ship with `self_update=false`.** `res/values/bools.xml` carries the gate, but the
   recipe needs to set it for the F-Droid build (a resource override or a small source patch) or the store
   build will offer in-app updates, which F-Droid policy forbids.
