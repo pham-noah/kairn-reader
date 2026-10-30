@@ -174,7 +174,8 @@ reverted rather than shipped:
 
 ## The device suite has been mutation-checked
 
-All 18 device tests passed on their first run, which is exactly when to distrust them. Three behaviours were
+All 18 device tests passed on their first run, which is exactly when to distrust them. (That was the count at
+the time; the suite is 27 now and the same rule applies.) Three behaviours were
 broken on purpose, in one build, and the suite was run (mutation testing):
 
 | broken on purpose | test that caught it |
@@ -186,6 +187,23 @@ broken on purpose, in one build, and the suite was run (mutation testing):
 Result: `Tests run: 18, Failures: 3` - exactly those three, nothing else, and every other test still passed.
 The mutations were reverted and the suite is `OK (18 tests)` again. Repeat this after adding tests: a test that
 cannot fail is worse than no test, and a green suite on the first attempt proves nothing on its own.
+
+## The 0.8.0 device tests were mutation-checked too
+
+Three tests were added for the new surfaces and run on the emulator: `ContinueShelfTest` (a book being read
+appears twice - shelf and grid - while a never-opened book appears once), `StatsSheetTest` (today, the week
+and the streak are three different sums of the same map, so a swapped pair cannot pass) and
+`ClippingImportDeviceTest`, which imports into a REAL EPUB and asserts the mark's href is the chapter the
+quote is actually in.
+
+Two behaviours were broken on purpose in one build - placement returning null, and the dedupe disabled - and
+the suite answered `Tests run: 3, Failures: 2`, exactly the placement and re-import tests, with the
+unmatched-book test still green. Reverted, the suite is `OK (27 tests)`.
+
+Two traps that cost a run each: a `.txt`-less fixture lives in the TEST APK's assets, so `targetContext.assets`
+answers FileNotFoundException and `InstrumentationRegistry.getInstrumentation().context.assets` is the one
+that works; and `addBook` takes the title from the EPUB's metadata, not from the name it was imported under,
+so a clipping has to be matched against `store.books.value.single().title` rather than the fixture's filename.
 
 ## Features added 2026-10-27 (the nine-item batch)
 
@@ -300,7 +318,7 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 Tests live in `app/src/test` and run on the JVM (73): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 20 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 27 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
