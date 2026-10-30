@@ -26,6 +26,20 @@
     <string name="s_author">Author</string>
     <string name="s_back_up_now">Back up now</string>
     <string name="s_backing_up">Backing up…</string>
+    <string name="s_automatic_backup">Automatic backup</string>
+    <string name="s_no_browser">No browser on this device to open links</string>
+    <string name="s_install_refused_hint">If Android says the app was not installed, the Kairn on this phone was signed with an older key. Back up, uninstall Kairn, then install this file. It only happens once.</string>
+    <string name="s_search_cache">Search cache</string>
+    <string name="s_search_cache_cleared">Search cache cleared</string>
+    <plurals name="search_cache_size">
+        <item quantity="one">%1$d book · %2$s - tap to clear</item>
+        <item quantity="other">%1$d books · %2$s - tap to clear</item>
+    </plurals>
+    <string name="s_off">Off</string>
+    <plurals name="s_every_days_in">
+        <item quantity="one">Every day into %2$s, keeping the newest %3$d</item>
+        <item quantity="other">Every %1$d days into %2$s, keeping the newest %3$d</item>
+    </plurals>
     <string name="s_backup_and_restore">Backup and restore</string>
     <string name="s_brightness_this_app_only">Brightness, this app only</string>
     <string name="s_bring_your_books">Bring your books</string>
@@ -381,7 +395,6 @@
 
     <!-- 0.8.0: sleep timer for read aloud (R-15) -->
     <string name="s_sleep_timer">Sleep timer</string>
-    <string name="s_off">Off</string>
     <string name="s_minutes_short">%1$d min</string>
     <string name="s_end_of_chapter">End of chapter</string>
     <string name="s_sleep_hint">The reading stops by itself and your place is kept.</string>
@@ -430,4 +443,8 @@
     <plurals name="clippings_imported"><item quantity="one">%1$d highlight imported · %2$d not found · %3$d book not in the library</item><item quantity="other">%1$d highlights imported · %2$d not found · %3$d book not in the library</item></plurals>
     <string name="toast_clippings_unreadable">That file could not be read</string>
     <string name="toast_clippings_none">No highlights found in that file</string>
+    <string name="s_yesterday">Yesterday</string>
+    <string name="s_days_ago">%1$dd ago</string>
+    <string name="s_reading_aloud_hint">Tap to go back to the page</string>
+    <string name="s_stop">Stop</string>
 </resources>

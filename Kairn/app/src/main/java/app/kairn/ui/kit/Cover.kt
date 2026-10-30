@@ -131,7 +131,7 @@ fun KCover(
  * The Kairn mark used in-app (the Library header, the empty state, onboarding).
  */
 @Composable
-fun CairnMark(size: Int = 30, modifier: Modifier = Modifier) {
+fun CairnMark(modifier: Modifier = Modifier, size: Int = 30) {
     Canvas(modifier.size(size.dp)) {
         val u = this.size.minDimension / 96f   // SVG viewBox is 96x96
         // x,y,w,h,r and the rotation+pivot are the SVG's own values, in SVG units.

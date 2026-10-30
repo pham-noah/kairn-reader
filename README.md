@@ -26,8 +26,9 @@ folder, or let it find the EPUBs already on your device.
   on the page and picks up when you lift it.
 - Read aloud from where you are, and it carries on into the next chapter. Pause and resume land on the word
   you left; speed runs 0.6x to 2.0x per book. It marks the sentence it is speaking, and in page mode the
-  page turns to keep up with it. A sleep timer stops it after 15, 30 or 45 minutes, or at the end of the
-  chapter, so a book at night does not read on until morning.
+  page turns to keep up with it. Lock the screen and it keeps reading: a media-playback service holds the
+  session so nothing is cut off mid-chapter. A sleep timer stops it after 15, 30 or 45 minutes, or at the end
+  of the chapter, so a book at night does not read on until morning.
 - Select a passage to copy it, highlight it, write a note on it, share it as plain text, or look a word up in
   whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one. Share and
   Look up sit in the selection toolbar itself, and either can be switched off in Settings.
@@ -40,10 +41,11 @@ folder, or let it find the EPUBs already on your device.
 
 ## Library
 
-Grid or list; a "Continue reading" shelf of the books you were last in; search over titles and over the text
-inside every book; sort, reading status, collections and tags you can rename or delete; add several books to
-one collection at once; watched folders; a scan for the EPUBs already on your device; generated covers for
-books without one; "Open with" from any file manager.
+Grid or list; a "Continue reading" shelf showing each book's progress and when you were last in it; search
+over titles and over the text inside every book, cached after the first pass so a repeat search is instant;
+sort, reading status, collections and tags you can rename or delete; add several books to one collection at
+once; watched folders; a scan for the EPUBs already on your device; generated covers for books without one;
+"Open with" from any file manager.
 
 ## Notes, highlights, backup
 
@@ -51,7 +53,8 @@ Six highlight colours, notes typed on a selection and edited later, one bookmark
 list to jump from, an undo on every delete, Markdown export. Kindle highlights come in from the Kindle's own
 `My Clippings.txt`, placed by finding each quote in the book. A reading record keeps minutes per day, a
 streak and the finished count - in `stats.json`, on the phone. Backup is one zip, optionally with the book
-files inside; restore merges or replaces.
+files inside; restore merges or replaces. Point Settings at a folder once and a backup lands there every few
+days on its own, keeping the newest few.
 
 ## Sending books
 
@@ -74,11 +77,10 @@ lets the scan see EPUBs already on the device, and the folder picker covers ever
 
 ## Install
 
-**The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** Every release is
-signed with the same dedicated key, so an update installs over the one before it and your library, places and
-settings survive. (Up to 0.8.1 it was signed with a debug key, which is per-machine and not guaranteed to match
-— that is why 0.8.2 needs one uninstall first.) A store-signed build cannot install over these; take a backup
-in the app before switching.
+**The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** Every release
+from 0.8.2 on is signed with the same dedicated key, so it installs over the one before it and your library,
+places and settings survive. (0.8.1 and earlier used a debug key, so the step from 0.8.1 to 0.8.2 needs one
+uninstall first.) A store-signed build cannot install over these; take a backup in the app before switching.
 
 Once installed, Kairn can update itself: Settings > About > "Check for updates" (on by default, once a day)
 offers the new APK, downloads it, checks it against the size the release publishes, and hands it to
@@ -93,17 +95,18 @@ Android 8.0 or newer.
 
 ## Build and test
 
-JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included.
+JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrapper is included. The app
+builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
 
     ./gradlew :app:assembleDebug
     ./gradlew :app:testDebugUnitTest          # 73 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 28 on-device tests, needs a phone or emulator
+    ./gradlew :app:connectedDebugAndroidTest  # 30 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
     # Signing: put keystore.properties (storeFile, storePassword, keyAlias, keyPassword) in
-    # ../Kairn-keys/ next to this repo, or point KAIRN_KEYSTORE_PROPS at it. Without it the release APK is
-    # unsigned, which is what CI and F-Droid want. The key is not in the repo and must not be lost: only it
-    # can install over an existing install.
+    # ../Kairn-keys/ next to this repo, or point KAIRN_KEYSTORE_PROPS at it. Release assembly fails without a
+    # key unless -PallowUnsigned is passed, which is what CI and F-Droid build with. The key is not in the
+    # repo and must not be lost: only it can install over an existing install.
 
 Every user-facing string is a resource and every count is a plural, so a translation is a
 `values-xx/strings.xml` away. [SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0

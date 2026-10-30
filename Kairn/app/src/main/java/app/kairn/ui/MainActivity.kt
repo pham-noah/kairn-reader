@@ -1,6 +1,7 @@
 package app.kairn.ui
 
 import android.content.Intent
+import android.util.Log
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -45,6 +46,8 @@ class MainActivity : AppCompatActivity() {
             delay(1_200)
             app.library.scan(force = false)
             if (!thumbsBackfilled) { thumbsBackfilled = true; app.library.backfillThumbs() }
+            // After the scan, never before it: a scheduled backup should contain the library as it is now.
+            if (app.autoBackup.runIfDue()) Log.i("KairnPerf", "auto backup written")
         }
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); handleViewIntent(intent) }

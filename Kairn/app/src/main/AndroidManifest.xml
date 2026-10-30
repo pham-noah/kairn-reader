@@ -6,6 +6,10 @@
          a socket needs the permission either way, but the app never opens an outbound connection. The
          server runs only while its screen is open (see WifiTransfer / AddBooksScreen). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Reading aloud with the screen off: a media-playback foreground service, so the system keeps the
+         process (and the voice) alive. No microphone, no media buttons, no audio focus changes. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- DS-04 updates: the downloaded APK is handed to the SYSTEM installer. Kairn never installs anything
          itself, and without this permission Android would simply refuse the intent. -->
@@ -87,5 +91,11 @@
             tools:ignore="LockedOrientationActivity,DiscouragedApi"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
             android:theme="@style/Theme.Kairn" />
-    </application>
+    
+        <!-- Keeps the process alive while the reader talks with the screen off; owns no audio. -->
+        <service
+            android:name=".ui.SpeechService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+</application>
 </manifest>

@@ -24,13 +24,22 @@ object BookSearch {
         books: List<Book>,
         query: String,
         perBook: Int = 6,
+        index: SearchIndex? = null,
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
         emit: (Hit) -> Unit,
     ) {
         val q = query.trim()
         if (q.length < 3) return
         val searchable = books.filterNot { it.missing || it.broken }
-        searchable.forEachIndexed { index, book ->
+        searchable.forEachIndexed { position, book ->
+            // A book with a fresh text dump is grepped instead of parsed: the second search across the
+            // library is disk-only, and each book is opened at most once in its life (plus once per change).
+            val cached = index?.takeIf { it.isFresh(book) }?.search(book, q, perBook).orEmpty()
+            if (cached.isNotEmpty() || index?.isFresh(book) == true) {
+                for (c in cached) index?.locator(c)?.let { emit(Hit(book, it, c.snippet)) }
+                onProgress(position + 1, searchable.size)
+                return@forEachIndexed
+            }
             runCatching {
                 val pub = ReadiumHelper(ctx).open(Uri.parse(book.uri)) ?: return@runCatching
                 try {
@@ -52,7 +61,9 @@ object BookSearch {
                     pub.close()
                 }
             }
-            onProgress(index + 1, searchable.size)
+            // Cache it on the way out, so this book never has to be parsed for a search again.
+            runCatching { index?.let { if (!it.isFresh(book)) it.build(book) } }
+            onProgress(position + 1, searchable.size)
         }
     }
 

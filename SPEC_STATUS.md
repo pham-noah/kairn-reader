@@ -40,6 +40,9 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Reading record: minutes a day, a streak, the finished count, in `stats.json` | DS-02 |
 | Kindle `My Clippings.txt` import, each quote placed by searching the book | DS-03 |
 | Update check, APK download and hand-off to the system installer | DS-04 |
+| Read aloud with the screen off, behind a media-playback foreground service | R-15 |
+| Automatic backup on a schedule into a chosen folder, newest few kept | DS-01 |
+| Search cache: book text dumped once, repeat searches grep disk | S-01 |
 | No analytics, no crash reporting, all data in open JSON | N-01..N-02, DEC-8 |
 
 ## Not built yet
@@ -378,6 +381,36 @@ Verified: `app-release.apk` is signed by CN=Kairn (cert SHA-256 69086f40...), th
 so the two cannot replace each other — installing 0.8.2 over 0.8.1 on the emulator failed with
 INSTALL_FAILED_UPDATE_INCOMPATIBLE, exactly as predicted, and a clean install then ran versionCode 12. That
 uninstall is a one-time cost; from 0.8.2 on, updates land in place and keep the data.
+
+## 0.8.3 — released 2026-10-30
+
+Tag v0.8.3, versionCode 13, signed with the same CN=Kairn key as 0.8.2 (cert SHA-256 69086f40...), so it
+installs in place over 0.8.2 and keeps filesDir. compileSdk/targetSdk 36, AGP 8.11.1, Kotlin 2.1.0.
+
+What changed, and where the sharp edges are:
+
+- **Read aloud with the screen off.** [SpeechService](Kairn/app/src/main/java/app/kairn/ui/SpeechService.kt) is a
+  `mediaPlayback` foreground service with a Stop action. `ReaderActivity.onPause` starts it while reading and
+  stops it otherwise; `stopTts` and `onDestroy` stop it too. The service owns no audio - the voice, the page
+  follow and the sleep timer all stay in the reader's process, which is exactly why the process needs holding.
+  Asserted on device by `SpeechServiceDeviceTest`: backgrounding the reader while it reads leaves the service
+  running, and stopping the voice ends it.
+- **Automatic backup.** [AutoBackup](Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
+  `autoBackupDays` into the SAF tree chosen in Settings, pruning its own `PREFIX` files to `autoBackupKeep`.
+  Silent on failure by design. **Not exercised end to end on a device** - a SAF tree cannot be granted from
+  adb - so it is code-reviewed and compiled, not observed writing a zip.
+- **Search cache.** [SearchIndex](Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
+  per book under `filesDir/search/`, keyed by the book file's size and mtime. Two traps it hit: `DocumentFile`
+  cannot stat a `file://` book (stat the copy directly), and `Link.href` is an `Href` wrapper while `Locator`
+  wants a `Url`, whose `String` constructor is deprecated to ERROR level (use the `Url(String)` factory).
+  Covered by `SearchIndexDeviceTest`.
+- **Daily sweep.** The MediaStore + storage walk now runs at most once every 24 h (`settings.lastSweep`);
+  watched folders stay live and "Find books on this device" still forces it.
+- **Rough edges.** Release assembly fails without a keystore unless `-PallowUnsigned`; dead link taps say why;
+  the update sheet explains a refused install.
+
+Tests: 73 JVM, 30 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
+after the SDK bump; it now polls for the saved page turn.
 
 ## Distribution state (checked 2026-10-30)
 

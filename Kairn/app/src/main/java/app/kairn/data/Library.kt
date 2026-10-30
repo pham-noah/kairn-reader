@@ -148,20 +148,22 @@ class Library(private val ctx: Context, private val store: Store, private val re
      */
     suspend fun scan(force: Boolean = true) {
         store.awaitLoaded()             // a scan against an unloaded library re-adds everything it finds
-        // Automatic callers pass force=false and skip a scan that is already running or finished moments
-        // reader is closed. Explicit callers (force=true) still never run two scans at once.
+        // force=false skips a scan that is running or was just done; no caller ever runs two at once.
         if (!force && (scanLock.isLocked || SystemClock.elapsedRealtime() - lastScanEnd < SCAN_MIN_INTERVAL_MS)) return
         scanLock.withLock {
-            scanOnce()
+            scanOnce(force)
             lastScanEnd = SystemClock.elapsedRealtime()
         }
     }
 
     private val scanLock = Mutex()
     @Volatile private var lastScanEnd = -SCAN_MIN_INTERVAL_MS
-    private companion object { const val SCAN_MIN_INTERVAL_MS = 30_000L }
+    private companion object {
+        const val SCAN_MIN_INTERVAL_MS = 30_000L
+        const val SWEEP_EVERY_MS = 24 * 60 * 60 * 1000L
+    }
 
-    private suspend fun scanOnce() = withContext(Dispatchers.IO) {
+    private suspend fun scanOnce(force: Boolean = false) = withContext(Dispatchers.IO) {
         val seen = mutableSetOf<String>()
 
         // 1. Watched folders picked in settings (survive reboots).
@@ -174,10 +176,17 @@ class Library(private val ctx: Context, private val store: Store, private val re
             }
         }
 
-        // 2. Device sweep: every EPUB already on the device, skipped when the auto-detect switch is off.
-        if (store.settings.value.autoDetect) sweep { found ->
-            val b = addBook(found, null, found.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub"))
-            seen += b.id
+        // 2. Device sweep: every EPUB already on the device. It queries MediaStore and walks external
+        // storage, so it runs once a day rather than on every resume - the watched folders above are cheap
+        // and stay live. "Find books on this device" in Settings forces it (scan(force = true)).
+        val s0 = store.settings.value
+        val sweepDue = force || System.currentTimeMillis() - s0.lastSweep > SWEEP_EVERY_MS
+        if (s0.autoDetect && sweepDue) {
+            sweep { found ->
+                val b = addBook(found, null, found.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub"))
+                seen += b.id
+            }
+            store.saveSettings { it.copy(lastSweep = System.currentTimeMillis()) }
         }
 
         for (b in store.books.value) {

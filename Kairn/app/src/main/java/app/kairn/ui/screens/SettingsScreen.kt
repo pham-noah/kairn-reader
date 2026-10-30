@@ -35,6 +35,8 @@ fun SettingsScreen(
     store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit,
     onCheckUpdates: () -> Unit = {},
     showUpdates: Boolean = true,
+    searchCacheLabel: String = "",
+    onClearSearchCache: () -> Unit = {},
 ) {
     val s by store.settings.collectAsStateWithLifecycle()
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -141,7 +143,9 @@ fun SettingsScreen(
         }
         KGroup(stringResource(R.string.s_group_your_data)) {
             KCard {
-                KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup, divider = false) { KChevron() }
+                KRow(stringResource(R.string.s_backup_and_restore), subtitle = last, onClick = onBackup, divider = true) { KChevron() }
+                // Safe to delete: the dumps rebuild from the books on the next search.
+                if (searchCacheLabel.isNotBlank()) KRow(stringResource(R.string.s_search_cache), subtitle = searchCacheLabel, onClick = onClearSearchCache, divider = false) { KChevron() }
                 // DS-02: the reading record lives beside the backup, because that is the group about "your stuff".
                 KRow(stringResource(R.string.s_your_reading), subtitle = statsSub, divider = true, onClick = { statsOpen = true }) { KChevron() }
             }
@@ -159,26 +163,17 @@ fun SettingsScreen(
                 // The credit sits above the licences and the issue tracker: it is who made the app, not a
                 // utility. The link opens the browser; Kairn has no web code of its own.
                 KRow(stringResource(R.string.s_made_by_noah_pham), subtitle = stringResource(R.string.s_github_com_pham_noah), divider = true, onClick = {
-                    runCatching {
-                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/pham-noah")))
-                    }
+                    openRow(ctx, "https://github.com/pham-noah")
                 }) { KChevron() }
                 // The source, one row under the credit. Same pattern: the browser opens the page, so Kairn
                 // keeps no web code and no network permission of its own for links.
                 KRow(stringResource(R.string.s_kairn_on_github), subtitle = stringResource(R.string.s_source_code_issues_and_releases), divider = true, onClick = {
-                    runCatching {
-                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/pham-noah/kairn-reader")))
-                    }
+                    openRow(ctx, "https://github.com/pham-noah/kairn-reader")
                 }) { KChevron() }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
                 // No network code of our own: the browser opens the tracker.
                 KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
-                    runCatching {
-                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/pham-noah/kairn-reader/issues")))
-                    }
+                    openRow(ctx, "https://github.com/pham-noah/kairn-reader/issues")
                 }) { KChevron() }
             }
         }
@@ -191,5 +186,14 @@ fun SettingsScreen(
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
             KRow(stringResource(R.string.s_manrope_and_literata), subtitle = stringResource(R.string.s_sil_open_font_license_bundled_with_the_a), divider = true)
         }
+    }
+}
+
+/** Opens a link; when no browser handles it, the tap says so instead of doing nothing. */
+private fun openRow(ctx: android.content.Context, url: String) {
+    runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+    }.onFailure {
+        android.widget.Toast.makeText(ctx, app.kairn.R.string.s_no_browser, android.widget.Toast.LENGTH_SHORT).show()
     }
 }

@@ -349,12 +349,14 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun onResume() {
         super.onResume()
         sessionStart = SystemClock.elapsedRealtime()      // DS-02: a reading session starts when the book shows
+        SpeechService.onStop = { runOnUiThread { stopTts() } }
     }
 
     override fun onPause() {
         super.onPause()
-        tts.stop()                                   // never reads on in the background
-        ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
+        // Reading aloud continues in the background behind a foreground service; everything else stops here.
+        if (ui.ttsOn && !ui.ttsPaused) SpeechService.start(this) else SpeechService.stop(this)
+        if (!ui.ttsOn) { ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false }
         clearFollow()
         stopAutoScroll()
         // The prefs write is debounced: a close inside that window would drop the last change.
@@ -362,7 +364,12 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         nav?.currentLocator?.value?.let(::savePosition)
         commitSession()
     }
-    override fun onDestroy() { closeSearch(); tts.shutdown(); pub?.close(); super.onDestroy() }
+    override fun onDestroy() {
+        closeSearch(); tts.shutdown(); pub?.close()
+        SpeechService.onStop = null
+        SpeechService.stop(this)
+        super.onDestroy()
+    }
 
     /**
      * DS-02: adds the time this session lasted to today's minutes. A glance at a page is not a session, so
@@ -752,6 +759,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     override fun stopTts() {
         tts.stop()
+        SpeechService.stop(this)
         ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
         ui.sheet = ReaderSheet.NONE
         clearFollow()

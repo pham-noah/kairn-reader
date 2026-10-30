@@ -182,6 +182,11 @@ data class AppSettings(
     val lastUpdateCheck: Long = 0,          // when the last check ran, so it is at most once a day
     val shareSelection: Boolean = true,     // the Share item in the text-selection menu
     val lookupSelection: Boolean = true,    // the Look up item in the text-selection menu
+    val autoBackupFolder: String = "",      // SAF tree for automatic backups; empty = off
+    val autoBackupDays: Int = 7,            // how often a backup is written while the app is open
+    val autoBackupKeep: Int = 3,            // how many of ours to keep in that folder
+    val lastAutoBackup: Long = 0,           // when the last automatic one was written
+    val lastSweep: Long = 0,                // the last full device sweep; see Library.scan
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
@@ -191,6 +196,8 @@ data class AppSettings(
         .put("autoDetect", autoDetect)
         .put("checkUpdates", checkUpdates).put("lastUpdateCheck", lastUpdateCheck)
         .put("shareSelection", shareSelection).put("lookupSelection", lookupSelection)
+        .put("autoBackupFolder", autoBackupFolder).put("autoBackupDays", autoBackupDays)
+        .put("autoBackupKeep", autoBackupKeep).put("lastAutoBackup", lastAutoBackup).put("lastSweep", lastSweep)
         .put("folders", JSONArray(folders.map {
             JSONObject().put("uri", it.uri).put("name", it.name).put("enabled", it.enabled)
         }))
@@ -212,6 +219,11 @@ data class AppSettings(
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
                 shareSelection = o.optBoolean("shareSelection", d.shareSelection),
                 lookupSelection = o.optBoolean("lookupSelection", d.lookupSelection),
+                autoBackupFolder = o.optString("autoBackupFolder", d.autoBackupFolder),
+                autoBackupDays = o.optInt("autoBackupDays", d.autoBackupDays).coerceIn(1, 90),
+                autoBackupKeep = o.optInt("autoBackupKeep", d.autoBackupKeep).coerceIn(1, 20),
+                lastAutoBackup = o.optLong("lastAutoBackup", d.lastAutoBackup),
+                lastSweep = o.optLong("lastSweep", d.lastSweep),
                 // mapNotNull + optString: an entry with no usable uri is skipped, not a reason to discard
                 // every other setting.
                 folders = o.optJSONArray("folders")?.let { a ->

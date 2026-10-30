@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +54,12 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     var shelf by remember { mutableStateOf<String?>(null) }
     val backupUi = remember { BackupUi() }
+    // Recomputed when the tab composes, and after clearing: the number is a hint, not a live counter.
+    var cacheStats by remember { mutableStateOf(app.searchIndex.stats()) }
+    val cacheLabel = remember(cacheStats) {
+        val (n, bytes) = cacheStats
+        if (n == 0) "" else ctx.resources.getQuantityString(R.plurals.search_cache_size, n, n, android.text.format.Formatter.formatShortFileSize(ctx, bytes))
+    }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     val updateUi = remember { UpdateUi() }
     val versionName = remember {
@@ -126,6 +133,15 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
             )
         }
     }
+    // The automatic-backup folder: granted once here, persisted, and written by data/AutoBackup with no
+    // further prompts. Turning the switch off only forgets the folder - the zips already written stay.
+    val pickAutoFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
+        if (u != null) {
+            runCatching { ctx.contentResolver.takePersistableUriPermission(u, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+            app.store.saveSettings { it.copy(autoBackupFolder = u.toString()) }
+            scope.launch { if (app.autoBackup.runIfDue()) toast.show(ctx.getString(R.string.s_backup_saved)) }
+        }
+    }
     val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u -> if (u != null) restoreUri = u }
     // DS-03: "My Clippings.txt" from a Kindle. text/plain in practice, but some file providers report
     // octet-stream for a .txt on removable storage, so both are accepted.
@@ -182,7 +198,12 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                 val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                                 createBackup.launch("kairn-backup-$stamp.zip")
                             },
-                            onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) })
+                            onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) },
+                            autoFolderName = app.store.settings.collectAsStateWithLifecycle().value.autoBackupFolder
+                                .takeIf { it.isNotBlank() }
+                                ?.let { u -> DocumentFile.fromTreeUri(ctx, Uri.parse(u))?.name },
+                            onPickAutoFolder = { pickAutoFolder.launch(null) },
+                            onAutoBackupOff = { app.store.saveSettings { it.copy(autoBackupFolder = "") } })
                         null -> when (tab) {
                             Tab.Library -> LibraryScreen(app.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
                                 onBackup = { overlay = Overlay.Backup },
@@ -195,6 +216,12 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                 })
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
                             Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } },
+                                searchCacheLabel = cacheLabel,
+                                onClearSearchCache = {
+                                    app.searchIndex.clear()
+                                    cacheStats = 0 to 0L
+                                    toast.show(ctx.getString(R.string.s_search_cache_cleared))
+                                },
                                 onCheckUpdates = { checkUpdates(openSheet = true) },
                                 showUpdates = selfUpdate)
                         }

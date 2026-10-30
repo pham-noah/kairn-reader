@@ -8,6 +8,10 @@ import kotlinx.coroutines.delay
 
 import app.kairn.data.BookSearch
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
 import androidx.compose.runtime.LaunchedEffect
 
 import androidx.activity.compose.BackHandler
@@ -180,6 +184,7 @@ fun LibraryScreen(
         withContext(Dispatchers.IO) {
             BookSearch.run(
                 ctx, books, query,
+                index = (ctx.applicationContext as app.kairn.KairnApp).searchIndex,
                 onProgress = { done, total -> scanned = done to total },
                 emit = { hit -> hits = hits + hit },
             )
@@ -252,7 +257,7 @@ fun LibraryScreen(
     }
 
     @Composable fun Header() = Column {
-        KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(30) }) {
+        KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(size = 30) }) {
             KIconButton(Icons.Default.Add, stringResource(R.string.s_add_books), onAdd, bordered = true)
             KIconButton(Icons.Default.Search, stringResource(R.string.s_search_library), { searching = !searching; if (!searching) query = "" }, bordered = true)
             KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid }, bordered = true)
@@ -339,13 +344,13 @@ fun LibraryScreen(
             // The first library read is still running: show the header only, not the empty state, which
             // would flash before the grid appears.
             Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = Dim.screenPad.dp)) {
-                KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(30) })
+                KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(size = 30) })
             }
         } else if (books.isEmpty()) {
             Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = Dim.screenPad.dp)) {
-                KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(30) })
+                KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(size = 30) })
                 Column(Modifier.fillMaxWidth().padding(top = 56.dp, start = 12.dp, end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CairnMark(64)
+                    CairnMark(size = 64)
                     Text(stringResource(R.string.empty_title), style = KType.h2.copy(fontSize = 24.sp))
                     Text(stringResource(R.string.s_add_a_folder_to_watch_or_open_an_epub_fi), style = KType.body.copy(color = K.mut), modifier = Modifier.widthIn(max = 280.dp))
                     Column(Modifier.fillMaxWidth().padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -489,9 +494,17 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
                             maxLines = 2, overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Box(Modifier.padding(top = 4.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF2B3238))) {
-                        Box(Modifier.fillMaxWidth(b.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
-                    }
+                    // One bar, not two: the cover already carries the progress, so this line says the two
+                    // things the bar cannot - how far in, and when it was last touched.
+                    Text(
+                        text = listOfNotNull(
+                            "${(b.progress.coerceIn(0f, 1f) * 100).roundToInt()}%",
+                            b.lastRead.takeIf { it > 0 }?.let { lastReadLabel(it) },
+                        ).joinToString(" · "),
+                        style = KType.small.copy(fontSize = 11.sp, color = K.dim),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
                 }
             }
         }
@@ -546,5 +559,17 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         KField(tags, { tags = it }, label = stringResource(R.string.s_tags_comma_separated))
         Spacer(Modifier.height(16.dp))
         KButton(stringResource(R.string.s_save), { store.update(b.id) { it.copy(title = title.ifBlank { b.title }, author = author, status = status, collections = cols.sortedBy { c -> c.lowercase() }, tags = split(tags)) }; onDone() })
+    }
+}
+
+/** "Today", "Yesterday", "4d ago", then a date. Small and local: one shelf uses it. */
+@Composable
+private fun lastReadLabel(at: Long): String {
+    val days = ((System.currentTimeMillis() - at) / 86_400_000L).toInt()
+    return when {
+        days <= 0 -> stringResource(R.string.s_today)
+        days == 1 -> stringResource(R.string.s_yesterday)
+        days < 7 -> stringResource(R.string.s_days_ago, days)
+        else -> remember(at) { SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(at)) }
     }
 }

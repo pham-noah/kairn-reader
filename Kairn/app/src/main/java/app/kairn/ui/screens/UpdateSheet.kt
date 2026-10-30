@@ -68,7 +68,15 @@ fun UpdateSheet(
                             Box(Modifier.fillMaxWidth(ui.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
                         }
                     }
-                    ui.apk != null -> KButton(stringResource(R.string.s_install_update), onInstall, Modifier.padding(top = 16.dp))
+                    ui.apk != null -> {
+                        KButton(stringResource(R.string.s_install_update), onInstall, Modifier.padding(top = 16.dp))
+                        // The refusal has one cause and one cure, once.
+                        Text(
+                            stringResource(R.string.s_install_refused_hint),
+                            style = KType.small.copy(color = K.dim),
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
                     else -> KButton(stringResource(R.string.s_download), onDownload, Modifier.padding(top = 16.dp))
                 }
                 if (r.size > 0) Text(

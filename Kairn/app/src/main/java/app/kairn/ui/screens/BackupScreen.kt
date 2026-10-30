@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -41,7 +42,16 @@ class BackupUi {
 
 /** DS-01: Backup and restore (idle, running, done). */
 @Composable
-fun BackupScreen(ui: BackupUi, store: Store, onBack: () -> Unit, onBackupNow: () -> Unit, onRestoreFromFile: () -> Unit) {
+fun BackupScreen(
+    ui: BackupUi,
+    store: Store,
+    onBack: () -> Unit,
+    onBackupNow: () -> Unit,
+    onRestoreFromFile: () -> Unit,
+    autoFolderName: String?,
+    onPickAutoFolder: () -> Unit,
+    onAutoBackupOff: () -> Unit,
+) {
     val s by store.settings.collectAsStateWithLifecycle()
     val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(s.lastBackup)) else null }
     val last = lastDate ?: stringResource(R.string.s_never)
@@ -52,6 +62,15 @@ fun BackupScreen(ui: BackupUi, store: Store, onBack: () -> Unit, onBackupNow: ()
             KCard(padding = 16) { Text(stringResource(R.string.s_last_backup), style = KType.small); Text(last, style = KType.h2, modifier = Modifier.padding(top = 2.dp)) }
             Spacer(Modifier.height(12.dp))
             KCard { KRow(stringResource(R.string.s_include_book_files), subtitle = stringResource(R.string.s_makes_the_backup_larger)) { KSwitch(ui.includeFiles, { ui.includeFiles = it }) } }
+            Spacer(Modifier.height(12.dp))
+            // A backup nobody remembers to make is not a backup: pick the folder once.
+            KCard {
+                KRow(
+                    stringResource(R.string.s_automatic_backup),
+                    subtitle = autoFolderName?.let { pluralStringResource(R.plurals.s_every_days_in, s.autoBackupDays, s.autoBackupDays, it, s.autoBackupKeep) }
+                        ?: stringResource(R.string.s_off),
+                ) { KSwitch(autoFolderName != null, { on -> if (on) onPickAutoFolder() else onAutoBackupOff() }) }
+            }
             Column(Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (ui.phase) {
                     BackupPhase.Idle, BackupPhase.Failed -> {

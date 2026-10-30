@@ -79,14 +79,29 @@ class ReaderTapZoneTest {
         throw AssertionError("the reader never saved a position for $id")
     }
 
+
+    /**
+     * Waits for the page turn to be saved. A fixed sleep raced the cold start: a fresh install opens the book
+     * in ~5 s and the WebView needs a moment more, so 3 s sometimes measured a page that had not turned yet.
+     */
+    private fun awaitProgressAfter(id: String, before: Float, timeoutMs: Long = 20_000): Float {
+        val end = SystemClock.uptimeMillis() + timeoutMs
+        var last = before
+        while (SystemClock.uptimeMillis() < end) {
+            last = progress(id) ?: before
+            if (last > before) return last
+            SystemClock.sleep(250)
+        }
+        return last
+    }
+
     @Test fun in_a_left_to_right_book_the_right_edge_pages_forward() {
         val id = "tap-ltr"
         publish("paging-ltr.epub", id)
         open(id).use {
             val before = awaitOpen(id)
             tap(it, (width * 0.9f).toInt(), height / 2)
-            SystemClock.sleep(3_000)
-            val after = progress(id) ?: before
+            val after = awaitProgressAfter(id, before)
             assertTrue("right edge did not move forward: $before -> $after", after > before)
         }
     }
@@ -97,8 +112,7 @@ class ReaderTapZoneTest {
         open(id).use {
             val before = awaitOpen(id)
             tap(it, (width * 0.1f).toInt(), height / 2)
-            SystemClock.sleep(3_000)
-            val after = progress(id) ?: before
+            val after = awaitProgressAfter(id, before)
             assertTrue("left edge did not move forward in an RTL book: $before -> $after", after > before)
         }
     }

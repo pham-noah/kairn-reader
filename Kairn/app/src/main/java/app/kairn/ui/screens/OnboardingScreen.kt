@@ -39,7 +39,7 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {   // scrolls at large font sizes instead of clipping
             when (step) {
                 0 -> {
-                    CairnMark(64)
+                    CairnMark(size = 64)
                     Text(stringResource(R.string.s_onboarding_promise), style = KType.onboardingTitle, modifier = Modifier.padding(top = 26.dp, bottom = 14.dp))
                     Text(stringResource(R.string.s_a_quiet_epub_reader_your_books_notes_and), style = KType.body.copy(fontSize = 16.sp, lineHeight = 23.sp, color = K.mut), modifier = Modifier.widthIn(max = 300.dp))
                     Column(Modifier.padding(top = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
