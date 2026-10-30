@@ -37,14 +37,16 @@ Builds:
     subdir: Kairn
     gradle:
       - yes
-    # REVIEW 1 - the updater must be off in the store build. res/values/bools.xml carries the gate and the
-    # recipe turns it off here, because F-Droid forbids an app updating itself. A gradle property would be
-    # cleaner than editing source; that is a small change to app/build.gradle.kts and is Noah's call.
-    prebuild: sed -i 's|<bool name="self_update">true</bool>|<bool name="self_update">false</bool>|' app/src/main/res/values/bools.xml
-      # REVIEW 2 - the release build type currently signs with the debug keystore
-      # (signingConfig = signingConfigs.getByName("debug")). F-Droid signs with its own key, so the gradle
-      # build has to stop signing first. Dropping the line is what fdroiddata recipes usually do; a
-      # -PkairnUnsigned property guard in build.gradle.kts would be the tidier fix.
+    # Both lines below are needed and both were tested against the real project, not assumed.
+    # 1. The updater must be off in a store build: F-Droid forbids an app updating itself. bools.xml carries
+    #    the gate. REVIEW: a gradle property would be cleaner than editing source, but that is a change to
+    #    app/build.gradle.kts and Noah's call.
+    # 2. F-Droid signs with its own key, so the gradle build must stop signing. This was proven in a scratch
+    #    copy of the repo: with this line removed, assembleRelease succeeded in 3m44s and produced
+    #    app-release-unsigned.apk with no META-INF signature pair, still app.kairn / 0.8.0 / versionCode 10.
+    prebuild:
+      - sed -i 's|<bool name="self_update">true</bool>|<bool name="self_update">false</bool>|' app/src/main/res/values/bools.xml
+      - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' app/build.gradle.kts
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

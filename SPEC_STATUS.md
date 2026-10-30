@@ -356,9 +356,10 @@ before anyone reopens it:
 
 - **A draft recipe now exists in the repo:** `fdroid/app.kairn.yml`, brought up to 0.8.0 (versionCode 10,
   commit `v0.8.0`, subdir `Kairn`), written from the build files rather than guessed. It parses as YAML, its
-  summary is 68 characters and the description 574, and the `self_update` sed in it was run against
-  `values/bools.xml` and confirmed to flip the flag. Two lines are marked REVIEW: the flag override (a gradle
-  property would be cleaner than editing source) and the fact that the release build type signs with the debug
-  keystore, which F-Droid has to strip before it builds.
+  summary is 68 characters and the description 574, and both of its `prebuild` sed lines were exercised on a
+  real build rather than assumed. Proven in a scratch copy of the repo: the two edits applied, `assembleRelease`
+  succeeded in 49s, the AAPT2 resource dump inside the APK reads `bool/self_update () false`, and the APK has
+  no `META-INF` signature pair (F-Droid signs it with its own key). One style question remains: overriding the
+  flag by editing source is cruder than a gradle property, and that change belongs to Noah.
 
 Do not rediscover this as news: the submission is closed and stale, not pending.
