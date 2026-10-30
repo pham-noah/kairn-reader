@@ -391,7 +391,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             minutes == 0 -> return
             minutes < 0 -> toast.show(getString(R.string.toast_sleep_chapter))
             else -> {
-                toast.show(getString(R.string.toast_sleep_set, minutes))
+                toast.show(resources.getQuantityString(R.plurals.reading_stops_in, minutes, minutes))
                 sleepJob = lifecycleScope.launch {
                     delay(minutes * 60_000L)
                     endSleep()

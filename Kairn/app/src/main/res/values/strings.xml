@@ -377,7 +377,7 @@
     <string name="s_minutes_short">%1$d min</string>
     <string name="s_end_of_chapter">End of chapter</string>
     <string name="s_sleep_hint">The reading stops by itself and your place is kept.</string>
-    <string name="toast_sleep_set">Reading stops in %1$d minutes</string>
+    <plurals name="reading_stops_in"><item quantity="one">Reading stops in %1$d minute</item><item quantity="other">Reading stops in %1$d minutes</item></plurals>
     <string name="toast_sleep_chapter">Reading stops at the end of this chapter</string>
     <string name="toast_sleep_done">Sleep timer: reading stopped</string>
 
