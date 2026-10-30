@@ -103,9 +103,16 @@ outside this repo), pointed at with `KAIRN_KEYSTORE_PROPS`; without one it fails
 passed, which is what CI and F-Droid build with. That key is not in the repo and must not be lost: only it
 can install over an existing install.
 
-Every user-facing string is a resource and every count is a plural, so a translation is a
-`values-xx/strings.xml` away. [SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0
-API traps, the performance work, and which spec item maps to what.
+[SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0 API traps, the performance work,
+and which spec item maps to what.
+
+## What is next
+
+**Translations.** Every user-facing string is a resource and every count is a plural, so a new language is a
+`values-xx/strings.xml` away. Spanish, French and German first.
+
+Image zoom inside the page. F-Droid, once the project has the history its reviewers ask for. Vertical text and
+a typeface from your own font files depend on what the Readium API exposes, so neither is promised yet.
 
 ## Credits and licence
 
