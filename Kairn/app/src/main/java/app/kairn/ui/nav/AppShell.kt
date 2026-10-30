@@ -259,7 +259,12 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                     restoreUri = null
                     scope.launch {
                         app.backup.restore(u, replace).fold(
-                            { toast.show(ctx.getString(if (replace) R.string.toast_restored else R.string.toast_merged)) },
+                            {
+                                toast.show(ctx.getString(if (replace) R.string.toast_restored else R.string.toast_merged))
+                                // The records are back but their files may not be (a backup without book
+                                // files): scan straight away so the reader is not left with missing books.
+                                scope.launch { app.library.scan(force = true) }
+                            },
                             // The exception message matters: "nothing was changed" and "restored part-way" are
                             // different outcomes that need different messages.
                             { e -> toast.show(e.message ?: ctx.getString(R.string.toast_restore_failed)) },

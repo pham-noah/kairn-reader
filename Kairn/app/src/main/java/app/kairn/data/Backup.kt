@@ -91,6 +91,9 @@ class Backup(private val ctx: Context, private val store: Store) {
                     }
                 }
                 store.reload()
+                // lastSweep describes THIS device's storage, so it never comes out of an archive: a restored
+                // value could hold off the one sweep that re-attaches the books.
+                store.saveSettings { it.copy(lastSweep = 0) }
                 // A replace restore is a mirror of the archive: art whose book is gone is an orphan.
                 if (replace) pruneOrphanArt(store)
             } catch (t: Throwable) {

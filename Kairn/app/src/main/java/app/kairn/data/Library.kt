@@ -99,7 +99,9 @@ class Library(private val ctx: Context, private val store: Store, private val re
         runCatching {
             ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        return addBook(uri, null, DocumentFile.fromSingleUri(ctx, uri)?.name?.removeSuffix(".epub"))
+        // A picked file's permission belongs to this install: after a reinstall or a restore of records only,
+        // the record points at an uri nothing can open. Keep our own copy, as "Open with" does.
+        return importShared(uri)
     }
 
     /** L-03: "Open with". Other apps' grants are temporary, so keep a private copy. */
@@ -129,6 +131,28 @@ class Library(private val ctx: Context, private val store: Store, private val re
             if (old != null && old.parentFile == store.copiesDir) runCatching { old.delete() }
         }
         return@withContext book
+    }
+
+
+    /**
+     * A book whose uri died but whose file is in our own folder is not missing: point the record at the copy.
+     * This is what an update or a restore of records only needs - no scan, no dialog. Cheap: one exists() per
+     * book, and only for records that do not already resolve.
+     */
+    private fun relinkOwnedCopies() {
+        val copies = store.copiesDir.listFiles()?.associateBy { it.name } ?: return
+        var changed = false
+        for (b in store.books.value) {
+            val u = Uri.parse(b.uri)
+            val alive = if (u.scheme == "file") u.path?.let { File(it).exists() } == true
+                        else DocumentFile.fromSingleUri(ctx, u)?.exists() == true
+            if (alive) continue
+            val name = u.lastPathSegment ?: continue
+            val copy = copies[name] ?: continue
+            store.put(b.copy(uri = Uri.fromFile(copy).toString()))
+            changed = true
+        }
+        if (changed) { store.flush(); store.reload() }
     }
 
     fun addFolder(tree: Uri) {
@@ -163,8 +187,10 @@ class Library(private val ctx: Context, private val store: Store, private val re
         const val SWEEP_EVERY_MS = 24 * 60 * 60 * 1000L
     }
 
+
     private suspend fun scanOnce(force: Boolean = false) = withContext(Dispatchers.IO) {
         val seen = mutableSetOf<String>()
+        relinkOwnedCopies()
 
         // 1. Watched folders picked in settings (survive reboots).
         for (f in store.settings.value.folders.filter { it.enabled }) {
@@ -180,7 +206,9 @@ class Library(private val ctx: Context, private val store: Store, private val re
         // storage, so it runs once a day rather than on every resume - the watched folders above are cheap
         // and stay live. "Find books on this device" in Settings forces it (scan(force = true)).
         val s0 = store.settings.value
-        val sweepDue = force || System.currentTimeMillis() - s0.lastSweep > SWEEP_EVERY_MS
+        // A book that cannot be found makes the sweep due now, not in a day: after a restore onto a fresh
+        // install the records are back but their files are not, and the sweep is what re-attaches them.
+        val sweepDue = sweepIsDue(force, s0.lastSweep, store.books.value.any { it.missing }, System.currentTimeMillis())
         if (s0.autoDetect && sweepDue) {
             sweep { found ->
                 val b = addBook(found, null, found.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub"))
@@ -277,3 +305,11 @@ class Library(private val ctx: Context, private val store: Store, private val re
         }
     }
 }
+
+/**
+ * Whether the device sweep runs on this pass: forced, never run, a day old, or a book is missing. A missing
+ * book counts as due because after a restore onto a fresh install the records are back and the files are not,
+ * and the sweep is what re-attaches them.
+ */
+internal fun sweepIsDue(force: Boolean, lastSweep: Long, anyMissing: Boolean, now: Long, everyMs: Long = 86_400_000L) =
+    force || lastSweep == 0L || now - lastSweep > everyMs || anyMissing

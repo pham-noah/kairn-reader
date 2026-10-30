@@ -4,6 +4,7 @@ Reading aloud keeps going with the screen off.
 - Continue reading shows progress and when you were last in the book, with one progress bar.
 - Automatic backup: pick a folder once, and a backup lands there every few days.
 - Searching the text inside books is cached, so a repeat search is quick.
-- The device scan runs once a day instead of on every open; "Find books on this device" still forces it.
+- The device scan no longer runs on every open; "Find books on this device" still forces it.
 - Settings shows the size of the search cache and can clear it.
+- After restoring a backup your books come back without needing a rescan.
 - Built against Android 16, with current libraries.

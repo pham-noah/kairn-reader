@@ -17,4 +17,8 @@ that cache. Settings shows how much space it uses and clears it.
 **Lighter on open.** The device-wide scan runs once a day instead of every time the library opens. "Find books
 on this device" still runs it immediately.
 
+**Update, restore, no rescan.** Files you pick are now copied into Kairn's own folder, and a book whose file
+link died is re-attached to that copy on load. If anything is ever missing, the device scan runs on its own
+instead of waiting for you to press it. Restoring a backup lands you back in your library, not in a scan.
+
 Built against Android 16 (SDK 36), with current AndroidX libraries.
