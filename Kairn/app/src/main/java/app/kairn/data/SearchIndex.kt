@@ -119,6 +119,17 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
     /** The number of books with a dump, and how much disk they use - shown in Settings. */
     fun stats(): Pair<Int, Long> = dir.listFiles().orEmpty().let { files -> files.size to files.sumOf { it.length() } }
 
+    /** A book left the library: its dump must not outlive it. */
+    fun forget(id: String) { runCatching { fileFor(id).delete() } }
+
+    /** Drops dumps for books that are no longer in the library (a delete that raced, or a crash). */
+    fun prune(known: Set<String>) {
+        dir.listFiles().orEmpty().forEach { f ->
+            val id = f.name.removeSuffix(".json.gz")
+            if (id !in known) runCatching { f.delete() }
+        }
+    }
+
     fun clear() {
         dir.listFiles()?.forEach { runCatching { it.delete() } }
         dir.delete()

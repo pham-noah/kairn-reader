@@ -31,6 +31,7 @@ class KairnApp : Application() {
         backup = Backup(this, store)
         autoBackup = AutoBackup(this, store, backup)
         searchIndex = SearchIndex(this, store, readium)
+        store.onRemove = { id -> searchIndex.forget(id) }
         // Reading + parsing every book file belongs on IO, not in Application.onCreate on the main thread.
         scope.launch { store.load() }
     }

@@ -27,8 +27,17 @@ class SweepDueTest {
         assertTrue(sweepIsDue(force = false, lastSweep = 5_000_000L, anyMissing = false, now = 5_000_000L + day + 1))
     }
 
-    @Test fun aMissingBookSweepsNowEvenAfterARecentSweep() {
-        assertTrue(sweepIsDue(force = false, lastSweep = 5_000_000L, anyMissing = true, now = 5_000_000L + 1_000L))
+    @Test fun aMissingBookDoesNotSweepAgainWithinTheHour() {
+        // The sweep walks every storage provider; a dead book must not turn every launch into that walk.
+        assertFalse(sweepIsDue(force = false, lastSweep = 5_000_000L, anyMissing = true, now = 5_000_000L + 60_000L))
+    }
+
+    @Test fun aMissingBookSweepsAgainAfterAnHour() {
+        assertTrue(sweepIsDue(force = false, lastSweep = 5_000_000L, anyMissing = true, now = 5_000_000L + 3_600_001L))
+    }
+
+    @Test fun aHealthyLibraryWaitsTheWholeDayEvenIfASweepIsOld() {
+        assertFalse(sweepIsDue(force = false, lastSweep = 5_000_000L, anyMissing = false, now = 5_000_000L + 3_600_001L))
     }
 
     @Test fun aForcedScanIgnoresEverything() {

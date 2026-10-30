@@ -235,8 +235,13 @@ data class AppSettings(
                 } ?: emptyList(),
                 defaults = ReaderPrefs.from(o.optJSONObject("defaults")),
                 onboarded = o.optBoolean("onboarded", false),
-                shelves = o.optJSONArray("shelves")?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(),
-                extraTags = o.optJSONArray("extraTags")?.let { a -> List(a.length()) { a.getString(it) } } ?: emptyList(),
+                // optString on a JSON null yields the string "null", and getString throws: skip both.
+                shelves = o.optJSONArray("shelves")?.let { a ->
+                    (0 until a.length()).mapNotNull { i -> if (a.isNull(i)) null else a.optString(i).takeIf { s -> s.isNotBlank() } }
+                } ?: emptyList(),
+                extraTags = o.optJSONArray("extraTags")?.let { a ->
+                    (0 until a.length()).mapNotNull { i -> if (a.isNull(i)) null else a.optString(i).takeIf { s -> s.isNotBlank() } }
+                } ?: emptyList(),
                 lastBackup = o.optLong("lastBackup", 0),
                 lastNudge = o.optLong("lastNudge", 0),
                 readingWpm = o.optInt("readingWpm", 240),

@@ -416,7 +416,26 @@ clears the inherited `lastSweep` and scans at once, and picked files are copied 
 pattern: it re-derives file locations from the filesystem instead of trusting a stored uri, which is why an
 update never asks its users to scan.
 
-Tests: 78 JVM, 30 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
+## 0.8.4 — 2026-10-30
+
+Seven items from the audit, each with a test:
+
+- `sweepIsDue` throttles a missing-book sweep to once an hour (7 unit cases) instead of walking storage on
+  every launch.
+- Settings survive a bad entry: `shelves`/`extraTags` skip JSON nulls (`getString` threw, which cost the whole
+  file and is why a restored install came up in onboarding), and `Store.readSettings` keeps an unparseable file
+  as `settings.json.bak` and drops keys one at a time instead of running on defaults (`SettingsResilienceDeviceTest`).
+- `relinkOwnedCopies` takes a stat-only fast path for our own copies (`RelinkDeviceTest`).
+- `SearchIndex.forget` via `Store.onRemove`, `prune(known)` for orphans (`SearchPruneDeviceTest`); cache stats
+  measured on IO, not in composition.
+- Auto-backup decisions extracted as `autoBackupIsDue`/`staleBackups` (6 unit cases). The SAF round trip stays
+  unproven: a test `DocumentsProvider` is impossible ("Provider must be protected by MANAGE_DOCUMENTS"), so
+  that hop needs a phone.
+- `TtsFollowBehindLockTest` proves a page turns while the activity is STOPPED, with a resumed control: first run
+  failed at progress 0.0 because the hook fired before page positions existed - a test bug, not a product one.
+- `WifiTransferTest` retried once on a socket error (flaky under a loaded machine, not a server bug).
+
+Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
 ## Distribution state (checked 2026-10-30)

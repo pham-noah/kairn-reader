@@ -111,11 +111,10 @@ class Store private constructor(val root: File, val copiesDir: File) {
         books.value = booksDir.listFiles { f -> f.extension == "json" }.orEmpty().mapNotNull { f ->
             runCatching { Book.from(JSONObject(f.readText())) }.getOrNull()
         }
-        // Keep the previous settings on a parse failure instead of replacing them with defaults: the next
-        runCatching { AppSettings.from(JSONObject(settingsFile.readText())) }
-            .onSuccess { settings.value = it }
-            // Only a REAL parse failure warns: no settings file yet is the normal first launch, not an error.
-            .onFailure { if (settingsFile.exists()) Log.w("KairnStore", "settings.json could not be read; keeping the current settings", it) }
+        // A settings file that will not parse must not cost the reader their theme, folders and onboarding
+        // state: keep the previous values, keep a copy of the broken file, and salvage what can be salvaged.
+        readSettings()?.let { settings.value = it }
+
         // Reading stats are a separate file and a separate flow: a broken stats.json must not cost the
         // reader their library, their positions or their settings.
         runCatching { ReadingStats.from(JSONObject(statsFile.readText())) }
@@ -124,6 +123,34 @@ class Store private constructor(val root: File, val copiesDir: File) {
     }
 
     fun get(id: String) = books.value.firstOrNull { it.id == id }
+
+
+    /**
+     * Reads settings.json. On a parse failure the file is copied to settings.json.bak (so nothing is lost when
+     * the next save overwrites it) and the keys are dropped one at a time until the rest parses: one bad value
+     * costs that one setting, not all of them.
+     */
+    private fun readSettings(): AppSettings? {
+        if (!settingsFile.exists()) return null
+        val text = runCatching { settingsFile.readText() }.getOrNull() ?: return null
+        runCatching { AppSettings.from(JSONObject(text)) }.onSuccess { return it }
+        runCatching { settingsFile.copyTo(File(root, "settings.json.bak"), overwrite = true) }
+        val o = runCatching { JSONObject(text) }.getOrNull()
+            ?: return null.also { Log.w("KairnStore", "settings.json is not JSON; kept as settings.json.bak") }
+        // Greedy: drop one key at a time until the rest parses. Terminates because every pass removes one.
+        val dropped = mutableListOf<String>()
+        while (true) {
+            val parsed = runCatching { AppSettings.from(o) }.getOrNull()
+            if (parsed != null) {
+                if (dropped.isNotEmpty()) Log.w("KairnStore", "settings.json: dropped ${dropped.joinToString()}")
+                return parsed
+            }
+            val k = o.keys().asSequence().firstOrNull() ?: break
+            o.remove(k); dropped += k
+        }
+        Log.w("KairnStore", "settings.json could not be salvaged; kept as settings.json.bak")
+        return null
+    }
 
     /** Lookup by location. Used on scan so an unchanged file costs no hashing. */
     fun findByUri(uri: String) = books.value.firstOrNull { it.uri == uri }
@@ -148,8 +175,12 @@ class Store private constructor(val root: File, val copiesDir: File) {
     @Synchronized
     fun update(id: String, f: (Book) -> Book) { get(id)?.let { put(f(it)) } }
 
+    /** Called when a book leaves the library, so its search dump is not left on disk. */
+    var onRemove: ((String) -> Unit)? = null
+
     @Synchronized
     fun remove(id: String) {
+        onRemove?.invoke(id)
         books.update { l -> l.filterNot { it.id == id } }
         // Queued like writes, so a pending older write for the same file cannot bring it back.
         for (f in listOf(File(booksDir, "$id.json"), coverFile(id), thumbFile(id))) enqueue(f) { f.delete() }

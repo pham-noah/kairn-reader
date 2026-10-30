@@ -143,8 +143,12 @@ class Library(private val ctx: Context, private val store: Store, private val re
         val copies = store.copiesDir.listFiles()?.associateBy { it.name } ?: return
         var changed = false
         for (b in store.books.value) {
+            if (b.broken) continue
             val u = Uri.parse(b.uri)
-            val alive = if (u.scheme == "file") u.path?.let { File(it).exists() } == true
+            // Fast path first: our own copy, checked with one stat and no provider round trip.
+            val ours = u.scheme == "file" && u.path?.let { File(it).parentFile == store.copiesDir } == true
+            val alive = if (ours) File(u.path!!).exists()
+                        else if (u.scheme == "file") u.path?.let { File(it).exists() } == true
                         else DocumentFile.fromSingleUri(ctx, u)?.exists() == true
             if (alive) continue
             val name = u.lastPathSegment ?: continue
@@ -311,5 +315,11 @@ class Library(private val ctx: Context, private val store: Store, private val re
  * book counts as due because after a restore onto a fresh install the records are back and the files are not,
  * and the sweep is what re-attaches them.
  */
-internal fun sweepIsDue(force: Boolean, lastSweep: Long, anyMissing: Boolean, now: Long, everyMs: Long = 86_400_000L) =
-    force || lastSweep == 0L || now - lastSweep > everyMs || anyMissing
+internal fun sweepIsDue(
+    force: Boolean,
+    lastSweep: Long,
+    anyMissing: Boolean,
+    now: Long,
+    everyMs: Long = 86_400_000L,
+    missingEveryMs: Long = 3_600_000L,
+) = force || lastSweep == 0L || now - lastSweep > everyMs || (anyMissing && now - lastSweep > missingEveryMs)

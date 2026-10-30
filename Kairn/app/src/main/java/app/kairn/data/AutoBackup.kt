@@ -20,8 +20,7 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
     suspend fun runIfDue(): Boolean = withContext(Dispatchers.IO) {
         val s = store.settings.value
         val tree = s.autoBackupFolder.takeIf { it.isNotBlank() } ?: return@withContext false
-        val every = s.autoBackupDays.coerceAtLeast(1) * DAY_MS
-        if (s.lastAutoBackup > 0 && System.currentTimeMillis() - s.lastAutoBackup < every) return@withContext false
+        if (!autoBackupIsDue(s.lastAutoBackup, System.currentTimeMillis(), s.autoBackupDays)) return@withContext false
 
         runCatching {
             val dir = DocumentFile.fromTreeUri(ctx, Uri.parse(tree)) ?: error("folder is gone")
@@ -37,11 +36,9 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
 
     /** Keeps the newest [keep] of our own zips. Names sort by date. */
     private fun prune(dir: DocumentFile, keep: Int) {
-        dir.listFiles()
-            .filter { it.isFile && it.name.orEmpty().startsWith(PREFIX) }
-            .sortedByDescending { it.name.orEmpty() }
-            .drop(keep.coerceAtLeast(1))
-            .forEach { runCatching { it.delete() } }
+        val files = dir.listFiles()
+        val stale = staleBackups(files.filter { it.isFile }.mapNotNull { it.name }, keep).toSet()
+        files.filter { it.name in stale }.forEach { runCatching { it.delete() } }
     }
 
     companion object {
@@ -50,3 +47,11 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
         private const val DAY_MS = 24 * 60 * 60 * 1000L
     }
 }
+
+/** Due when never written, or when the interval has passed. One day is the floor. */
+internal fun autoBackupIsDue(lastAutoBackup: Long, now: Long, days: Int, dayMs: Long = 86_400_000L) =
+    lastAutoBackup == 0L || now - lastAutoBackup >= days.coerceAtLeast(1) * dayMs
+
+/** Names of OUR backups to delete: everything but the newest [keep]. Names sort by date. */
+internal fun staleBackups(names: List<String>, keep: Int, prefix: String = AutoBackup.PREFIX) =
+    names.filter { it.startsWith(prefix) }.sortedDescending().drop(keep.coerceAtLeast(1))

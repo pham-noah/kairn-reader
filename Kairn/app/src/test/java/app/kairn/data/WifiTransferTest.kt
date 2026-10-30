@@ -27,15 +27,29 @@ class WifiTransferTest {
         try { block(wifi, dir, received) } finally { wifi.stop() }
     }
 
-    /** One request, one response; returns status and body. */
-    private fun request(port: Int, head: String, body: ByteArray = ByteArray(0)): Pair<Int, String> =
-        Socket("127.0.0.1", port).use { s ->
-            s.soTimeout = 5_000
-            s.getOutputStream().apply { write(head.toByteArray()); write(body); flush() }
-            val raw = s.getInputStream().readBytes().toString(Charsets.UTF_8)
-            val status = raw.substringAfter(' ').substringBefore(' ').toIntOrNull() ?: -1
-            status to raw.substringAfter("\r\n\r\n", "")
+    /**
+     * One request, one response; returns status and body. Retried once on a socket error: the server answers
+     * and closes, so on a loaded machine the client can lose the race between writing and reading the reply.
+     * Nothing about the response changes, so a retry cannot hide a wrong answer.
+     */
+    private fun request(port: Int, head: String, body: ByteArray = ByteArray(0)): Pair<Int, String> {
+        var last: Exception? = null
+        repeat(2) {
+            try {
+                return Socket("127.0.0.1", port).use { s ->
+                    s.soTimeout = 5_000
+                    s.getOutputStream().apply { write(head.toByteArray()); write(body); flush() }
+                    val raw = s.getInputStream().readBytes().toString(Charsets.UTF_8)
+                    val status = raw.substringAfter(' ').substringBefore(' ').toIntOrNull() ?: -1
+                    status to raw.substringAfter("\r\n\r\n", "")
+                }
+            } catch (e: java.net.SocketException) {
+                last = e
+                Thread.sleep(50)
+            }
         }
+        throw last!!
+    }
 
     private fun upload(port: Int, name: String, bytes: ByteArray, path: String = "/upload?name="): Pair<Int, String> {
         val query = URLEncoder.encode(name, "UTF-8")

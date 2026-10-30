@@ -54,8 +54,15 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     var shelf by remember { mutableStateOf<String?>(null) }
     val backupUi = remember { BackupUi() }
-    // Recomputed when the tab composes, and after clearing: the number is a hint, not a live counter.
-    var cacheStats by remember { mutableStateOf(app.searchIndex.stats()) }
+    // Measured off the main thread: listing the dump directory on the composition thread janks the first paint
+    // of Settings on a large library.
+    var cacheStats by remember { mutableStateOf(0 to 0L) }
+    LaunchedEffect(Unit) {
+        cacheStats = withContext(Dispatchers.IO) {
+            app.searchIndex.prune(app.store.books.value.map { it.id }.toSet())
+            app.searchIndex.stats()
+        }
+    }
     val cacheLabel = remember(cacheStats) {
         val (n, bytes) = cacheStats
         if (n == 0) "" else ctx.resources.getQuantityString(R.plurals.search_cache_size, n, n, android.text.format.Formatter.formatShortFileSize(ctx, bytes))

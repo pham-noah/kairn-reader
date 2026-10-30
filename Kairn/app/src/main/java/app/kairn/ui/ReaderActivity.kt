@@ -830,6 +830,28 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         lifecycleScope.launch { nav?.go(chapter[idx], animated = false) }
     }
 
+    /**
+     * Drives the exact path the TTS callback drives, from a test: takes the current chapter's text, pretends
+     * the voice reached [ratio] of it, and lets [followVoice] turn the page. Used to prove the reader still
+     * turns pages while the activity is stopped, i.e. behind a locked screen.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun followVoiceForTest(ratio: Float) = lifecycleScope.launch {
+        val p = pub ?: return@launch
+        val loc = nav?.currentLocator?.value ?: return@launch
+        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
+        if (text.isNullOrEmpty()) return@launch
+        spokenText = text
+        spokenHref = loc.href.toString()
+        lastSentence = -1
+        followedPage = -1
+        followAt = 0L
+        ui.ttsOn = true
+        ui.ttsPaused = false
+        ui.prefs = ui.prefs.copy(scroll = false)     // page mode: the case that has to navigate
+        followVoice((text.length * ratio).coerceIn(0f, text.length - 1f).toInt())
+    }
+
     /** The chapter ended by itself: turn the page and keep reading, unless this was the last one. */
     private fun advanceWithTts() {
         // A timer set to "end of chapter" is fulfilled here, before the next chapter can start.
