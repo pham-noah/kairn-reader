@@ -354,4 +354,11 @@ before anyone reopens it:
   recipe needs to set it for the F-Droid build (a resource override or a small source patch) or the store
   build will offer in-app updates, which F-Droid policy forbids.
 
+- **A draft recipe now exists in the repo:** `fdroid/app.kairn.yml`, brought up to 0.8.0 (versionCode 10,
+  commit `v0.8.0`, subdir `Kairn`), written from the build files rather than guessed. It parses as YAML, its
+  summary is 68 characters and the description 574, and the `self_update` sed in it was run against
+  `values/bools.xml` and confirmed to flip the flag. Two lines are marked REVIEW: the flag override (a gradle
+  property would be cleaner than editing source) and the fact that the release build type signs with the debug
+  keystore, which F-Droid has to strip before it builds.
+
 Do not rediscover this as news: the submission is closed and stale, not pending.

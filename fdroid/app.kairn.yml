@@ -1,0 +1,52 @@
+# Draft metadata recipe for F-Droid (fdroid/fdroiddata, file: metadata/app.kairn.yml).
+# NOT submitted. The earlier merge request (!52993) was closed on 2026-10-19 against v0.3.0; this is the
+# same recipe brought up to 0.8.0 so a resubmission is a copy, not a rewrite. Two lines below are marked
+# REVIEW - they are the parts I could not settle without changing the app's build.
+#
+# Everything else here was read off the repo, not guessed: applicationId app.kairn, minSdk 26, targetSdk 35,
+# compileSdk 35, versionCode 10 / versionName 0.8.0, subdir Kairn, gradle build, Apache-2.0.
+
+Categories:
+  - Reading
+License: Apache-2.0
+AuthorName: Noah Pham
+SourceCode: https://github.com/pham-noah/kairn-reader
+IssueTracker: https://github.com/pham-noah/kairn-reader/issues
+Changelog: https://github.com/pham-noah/kairn-reader/releases
+
+AutoName: Kairn
+Summary: Offline EPUB reader. Your books, notes and place stay on your phone.
+Description: |-
+  Kairn reads the books you already own. No account, no subscription, nothing to import into: point it at a
+  folder, or let it find the EPUBs already on your device.
+
+  Nothing phones home. The only network code is the LAN transfer server, and it only listens - no analytics,
+  no crash reporting, no update check, no outgoing request.
+
+  Your data is files, not a database: positions, highlights, notes and settings are plain JSON in the app's
+  folder, one file per book. Books are identified by their content, so renaming or moving a file keeps every
+  highlight and your place in it.
+
+RepoType: git
+Repo: https://github.com/pham-noah/kairn-reader
+
+Builds:
+  - versionName: 0.8.0
+    versionCode: 10
+    commit: v0.8.0
+    subdir: Kairn
+    gradle:
+      - yes
+    # REVIEW 1 - the updater must be off in the store build. res/values/bools.xml carries the gate and the
+    # recipe turns it off here, because F-Droid forbids an app updating itself. A gradle property would be
+    # cleaner than editing source; that is a small change to app/build.gradle.kts and is Noah's call.
+    prebuild: sed -i 's|<bool name="self_update">true</bool>|<bool name="self_update">false</bool>|' app/src/main/res/values/bools.xml
+      # REVIEW 2 - the release build type currently signs with the debug keystore
+      # (signingConfig = signingConfigs.getByName("debug")). F-Droid signs with its own key, so the gradle
+      # build has to stop signing first. Dropping the line is what fdroiddata recipes usually do; a
+      # -PkairnUnsigned property guard in build.gradle.kts would be the tidier fix.
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.8.0
+CurrentVersionCode: 10
