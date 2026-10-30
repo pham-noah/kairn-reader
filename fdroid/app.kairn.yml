@@ -66,9 +66,9 @@ RepoType: git
 Repo: https://github.com/pham-noah/kairn-reader
 
 Builds:
-  - versionName: 0.8.0
-    versionCode: 10
-    commit: v0.8.0
+  - versionName: 0.8.2
+    versionCode: 12
+    commit: v0.8.2
     subdir: Kairn
     gradle:
       - yes
@@ -77,7 +77,7 @@ Builds:
     # out unsigned.
     prebuild:
       - sed -i 's|<bool name="self_update">true</bool>|<bool name="self_update">false</bool>|' app/src/main/res/values/bools.xml
-      - sed -i '/signingConfig = signingConfigs.getByName("debug")/d' app/build.gradle.kts
+      - sed -i '/signingConfig = if (hasReleaseKey)/d' app/build.gradle.kts
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

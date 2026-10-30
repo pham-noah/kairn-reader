@@ -1,23 +1,48 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// A release key outside the repo: with a key that never changes, an update installs over the old app and the
+// library, places and settings survive. Without it (CI, F-Droid) the release is built unsigned, as before.
+val keystoreProps = Properties().apply {
+    val candidates = listOf(
+        System.getenv("KAIRN_KEYSTORE_PROPS"),
+        rootProject.file("../../Kairn-keys/keystore.properties").absolutePath,
+    )
+    candidates.filterNotNull().map(::File).firstOrNull { it.exists() }?.inputStream()?.use { load(it) }
+}
+val hasReleaseKey = keystoreProps.getProperty("storeFile") != null
+
 android {
     namespace = "app.kairn"
     compileSdk = 35
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
     defaultConfig {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.8.1"
+        versionCode = 12
+        versionName = "0.8.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
+            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else null
             isMinifyEnabled = true       // N-03: small install
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

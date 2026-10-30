@@ -74,9 +74,11 @@ lets the scan see EPUBs already on the device, and the folder picker covers ever
 
 ## Install
 
-**The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** It is
-signed with a debug key on purpose, so it installs over an earlier Kairn and keeps your library. A
-store-signed build cannot install over it - take a backup in the app before switching.
+**The signed APK is on the [releases page](https://github.com/pham-noah/kairn-reader/releases).** Every release is
+signed with the same dedicated key, so an update installs over the one before it and your library, places and
+settings survive. (Up to 0.8.1 it was signed with a debug key, which is per-machine and not guaranteed to match
+— that is why 0.8.2 needs one uninstall first.) A store-signed build cannot install over these; take a backup
+in the app before switching.
 
 Once installed, Kairn can update itself: Settings > About > "Check for updates" (on by default, once a day)
 offers the new APK, downloads it, checks it against the size the release publishes, and hands it to
@@ -95,9 +97,13 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 
     ./gradlew :app:assembleDebug
     ./gradlew :app:testDebugUnitTest          # 73 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 27 on-device tests, needs a phone or emulator
+    ./gradlew :app:connectedDebugAndroidTest  # 28 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
-    ./gradlew :app:assembleRelease            # unsigned; a store signs its own
+    ./gradlew :app:assembleRelease            # signed with the release key when one is present
+    # Signing: put keystore.properties (storeFile, storePassword, keyAlias, keyPassword) in
+    # ../Kairn-keys/ next to this repo, or point KAIRN_KEYSTORE_PROPS at it. Without it the release APK is
+    # unsigned, which is what CI and F-Droid want. The key is not in the repo and must not be lost: only it
+    # can install over an existing install.
 
 Every user-facing string is a resource and every count is a plural, so a translation is a
 `values-xx/strings.xml` away. [SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0

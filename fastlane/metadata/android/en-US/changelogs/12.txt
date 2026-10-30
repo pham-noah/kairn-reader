@@ -1,0 +1,4 @@
+Kairn 0.8.2
+
+- Releases are signed with a key of their own, so an update installs over the old app and keeps your library, places, highlights and settings.
+- Nothing else changed. This is the update that needs one uninstall first, because a new key cannot replace the old one.

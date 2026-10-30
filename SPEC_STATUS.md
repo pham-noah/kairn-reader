@@ -357,6 +357,24 @@ Released on GitHub as v0.8.1, versionCode 11, signed APK md5 490319efedd8e0eca35
 leaves Continue reading, Share and Look up move into the selection toolbar with their own Settings switches,
 Settings > About credits the developer with a link to github.com/pham-noah, and the store copy reads plainly.
 
+## 0.8.2 — a key of its own (2026-10-30, built not released)
+
+Releases were signed with the debug keystore, which is per-machine: any APK built elsewhere or after that
+keystore was regenerated cannot install over the last one, so Android demands an uninstall, and the uninstall
+takes filesDir with it — library, places, highlights, settings, folder grants. That is the whole reason the
+phone needed a rescan after every update.
+
+Now: a 4096-bit RSA release key, CN=Kairn / O=Noah Pham, valid 10,000 days, kept at
+`C:\Users\Noah\Documents\Kairn-keys\kairn-release.jks` with its passwords in `keystore.properties` beside it.
+`app/build.gradle.kts` reads that file from `../../Kairn-keys/` (or `KAIRN_KEYSTORE_PROPS`), and signs the
+release build when it is present; without it the APK is unsigned, which is what CI and F-Droid want. `*.jks`,
+`*.keystore` and `keystore.properties` are in .gitignore.
+
+Verified: `app-release.apk` is signed by CN=Kairn (cert SHA-256 69086f40...), the old 0.8.1 carries d3a627ec...
+so the two cannot replace each other — installing 0.8.2 over 0.8.1 on the emulator failed with
+INSTALL_FAILED_UPDATE_INCOMPATIBLE, exactly as predicted, and a clean install then ran versionCode 12. That
+uninstall is a one-time cost; from 0.8.2 on, updates land in place and keep the data.
+
 ## Distribution state (checked 2026-10-30)
 
 GitHub Releases is live and is where the updater points: `pham-noah/kairn-reader`, tag `v0.8.0`, asset
