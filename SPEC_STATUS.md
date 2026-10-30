@@ -337,6 +337,19 @@ cleartext (the phone only ever listens, the browser is the client) and that poli
 stack, so an HTTP client in a test fails with "Cleartext HTTP traffic not permitted". CI has no device, so
 it COMPILES the instrumented sources (`assembleDebugAndroidTest`) rather than running them.
 
+## Follow-ups from testing 0.8.0 on the phone (2026-10-30, unreleased)
+
+Three things Noah hit while testing, two of them built and verified the same day:
+
+- **A finished book is not something to continue.** `LibraryScreen`'s shelf filter now excludes
+  `Status.FINISHED` as well as missing and broken books. A finished book stays in the grid; it just stops
+  asking to be picked up. Guarded by `ContinueShelfTest.a_finished_book_is_not_something_to_continue`, which
+  was mutation-checked: with the filter removed it fails, reverted it passes.
+- **Share and Look up are in the selection toolbar, not behind the three dots**, and each has its own switch
+  under Settings > Reading (`shareSelection`, `lookupSelection`, both default on). Off means the menu item is
+  never added. Seen on the device: the toolbar reads Copy, Note, Share, Look up, then the first colour swatch
+  and an overflow for the rest.
+
 ## Distribution state (checked 2026-10-30)
 
 GitHub Releases is live and is where the updater points: `pham-noah/kairn-reader`, tag `v0.8.0`, asset

@@ -10,8 +10,9 @@ folder, or let it find the EPUBs already on your device.
 
 ## Why it is built this way
 
-- **Nothing phones home.** The only network code is the LAN transfer server, and it only listens - no
-  analytics, no crash reporting, no update check, no outgoing request.
+- **Nothing phones home.** No analytics, no crash reporting, no accounts. The LAN transfer server only
+  listens. The one request Kairn makes is the update check you can switch off, and with it off the app opens
+  no outgoing connection at all.
 - **Your data is files, not a database.** Positions, highlights, notes and settings are plain JSON in the
   app's folder, one file per book.
 - **A moved book keeps its history.** Books are identified by their content, so renaming or moving a file
