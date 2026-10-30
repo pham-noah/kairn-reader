@@ -357,7 +357,11 @@ Released on GitHub as v0.8.1, versionCode 11, signed APK md5 490319efedd8e0eca35
 leaves Continue reading, Share and Look up move into the selection toolbar with their own Settings switches,
 Settings > About credits the developer with a link to github.com/pham-noah, and the store copy reads plainly.
 
-## 0.8.2 — a key of its own (2026-10-30, built not released)
+## 0.8.2 — released 2026-10-30
+
+Tag v0.8.2, release at /releases/tag/v0.8.2, asset Kairn-release.apk 5,092,957 bytes, md5
+efa97ac42ce0fc496b49c4b60c493410 (downloaded back after publishing and matched). Adds the "Kairn on GitHub"
+row in About and is the first release signed with the dedicated key.
 
 Releases were signed with the debug keystore, which is per-machine: any APK built elsewhere or after that
 keystore was regenerated cannot install over the last one, so Android demands an uninstall, and the uninstall
