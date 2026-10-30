@@ -409,7 +409,14 @@ What changed, and where the sharp edges are:
 - **Rough edges.** Release assembly fails without a keystore unless `-PallowUnsigned`; dead link taps say why;
   the update sheet explains a refused install.
 
-Tests: 73 JVM, 30 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
+Re-released the same day (same versionCode 13, new APK) after a reader who restored a backup was left needing
+a scan. Three changes: a missing book makes the sweep due immediately (`sweepIsDue`, unit tested), restore
+clears the inherited `lastSweep` and scans at once, and picked files are copied into the app's folder like
+"Open with" with `relinkOwnedCopies()` re-pointing records whose uri died. Read Mihon's `DownloadCache` for the
+pattern: it re-derives file locations from the filesystem instead of trusting a stored uri, which is why an
+update never asks its users to scan.
+
+Tests: 78 JVM, 30 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
 ## Distribution state (checked 2026-10-30)
