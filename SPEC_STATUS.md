@@ -350,6 +350,13 @@ Three things Noah hit while testing, two of them built and verified the same day
   never added. Seen on the device: the toolbar reads Copy, Note, Share, Look up, then the first colour swatch
   and an overflow for the rest.
 
+## 0.8.1 (2026-10-30)
+
+Released on GitHub as v0.8.1, versionCode 11, signed APK md5 490319efedd8e0eca358e1def51585a9
+(5,194,116 bytes), asset downloaded after publishing and checked against that md5. Changes: a finished book
+leaves Continue reading, Share and Look up move into the selection toolbar with their own Settings switches,
+Settings > About credits the developer with a link to github.com/pham-noah, and the store copy reads plainly.
+
 ## Distribution state (checked 2026-10-30)
 
 GitHub Releases is live and is where the updater points: `pham-noah/kairn-reader`, tag `v0.8.0`, asset
