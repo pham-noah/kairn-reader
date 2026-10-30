@@ -336,3 +336,21 @@ not from `progress`, which is legitimately 0.0 at the start of a book - wait for
 cleartext (the phone only ever listens, the browser is the client) and that policy is enforced by the HTTP
 stack, so an HTTP client in a test fails with "Cleartext HTTP traffic not permitted". CI has no device, so
 it COMPILES the instrumented sources (`assembleDebugAndroidTest`) rather than running them.
+
+## Distribution state (checked 2026-10-30)
+
+GitHub Releases is live and is where the updater points: `pham-noah/kairn-reader`, tag `v0.8.0`, asset
+`Kairn-release.apk`, signed with the debug key. That is the whole channel today.
+
+F-Droid: merge request **!52993** ("New app: Kairn (app.kairn)") was **closed by a maintainer on
+2026-10-19**, and it was submitted against **v0.3.0** — five releases stale. Two consequences worth knowing
+before anyone reopens it:
+
+- **No store metadata exists in this repo.** There is no `fastlane/metadata/android/en-US/` directory and no
+  `fdroid.yml`; both lived only inside that merge request. A resubmission has to write them first: name,
+  summary, full description, icon, and a changelog per version code.
+- **The store build must ship with `self_update=false`.** `res/values/bools.xml` carries the gate, but the
+  recipe needs to set it for the F-Droid build (a resource override or a small source patch) or the store
+  build will offer in-app updates, which F-Droid policy forbids.
+
+Do not rediscover this as news: the submission is closed and stale, not pending.
