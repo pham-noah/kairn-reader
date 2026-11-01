@@ -64,9 +64,10 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
             val known = app.store.books.value.map { it.id }.toSet()
             app.searchIndex.prune(known)
             app.positionsCache.prune(known)
-            val (indexed, indexBytes) = app.searchIndex.stats()
-            val (measured, measuredBytes) = app.positionsCache.stats()
-            indexed + measured to indexBytes + measuredBytes
+            val (_, indexBytes) = app.searchIndex.stats()
+            val (_, measuredBytes) = app.positionsCache.stats()
+            // One book can hold both a dump and a measurement, so count the union rather than the sum.
+            (app.searchIndex.ids() + app.positionsCache.ids()).size to indexBytes + measuredBytes
         }
     }
     val cacheLabel = remember(cacheStats) {

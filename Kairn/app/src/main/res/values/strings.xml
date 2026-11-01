@@ -29,8 +29,8 @@
     <string name="s_automatic_backup">Automatic backup</string>
     <string name="s_no_browser">No browser on this device to open links</string>
     <string name="s_install_refused_hint">If Android says the app was not installed, the Kairn on this phone was signed with an older key. Back up, uninstall Kairn, then install this file. It only happens once.</string>
-    <string name="s_search_cache">Search cache</string>
-    <string name="s_search_cache_cleared">Search cache cleared</string>
+    <string name="s_search_cache">Cached data</string>
+    <string name="s_search_cache_cleared">Cached data cleared</string>
     <plurals name="search_cache_size">
         <item quantity="one">%1$d book · %2$s - tap to clear</item>
         <item quantity="other">%1$d books · %2$s - tap to clear</item>

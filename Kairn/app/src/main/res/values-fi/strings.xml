@@ -28,8 +28,8 @@
     <string name="s_automatic_backup">Automaattinen varmuuskopio</string>
     <string name="s_no_browser">Laitteessa ei ole selainta linkkien avaamiseen</string>
     <string name="s_install_refused_hint">Jos Android ilmoittaa, ettei sovellusta asennettu, tämän puhelimen Kairn on allekirjoitettu vanhemmalla avaimella. Tee varmuuskopio, poista Kairn ja asenna sitten tämä tiedosto. Näin käy vain kerran.</string>
-    <string name="s_search_cache">Hakuvälimuisti</string>
-    <string name="s_search_cache_cleared">Hakuvälimuisti tyhjennetty</string>
+    <string name="s_search_cache">Välimuistitiedot</string>
+    <string name="s_search_cache_cleared">Välimuistitiedot tyhjennetty</string>
     <plurals name="search_cache_size">
         <item quantity="one">%1$d kirja · %2$s - napauta tyhjentääksesi</item>
         <item quantity="other">%1$d kirjaa · %2$s - napauta tyhjentääksesi</item>

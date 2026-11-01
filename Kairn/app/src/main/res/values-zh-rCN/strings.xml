@@ -28,8 +28,8 @@
     <string name="s_automatic_backup">自动备份</string>
     <string name="s_no_browser">这台设备上没有可打开链接的浏览器</string>
     <string name="s_install_refused_hint">如果 Android 提示应用未安装，说明这台手机上的 Kairn 是用旧密钥签名的。请先备份，卸载 Kairn，再安装这个文件。只会出现一次。</string>
-    <string name="s_search_cache">搜索缓存</string>
-    <string name="s_search_cache_cleared">搜索缓存已清除</string>
+    <string name="s_search_cache">缓存数据</string>
+    <string name="s_search_cache_cleared">缓存数据已清除</string>
     <plurals name="search_cache_size">
         <item quantity="other">%1$d本书 · %2$s，点按清除</item>
     </plurals>

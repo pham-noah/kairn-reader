@@ -28,8 +28,8 @@
     <string name="s_automatic_backup">Tự động sao lưu</string>
     <string name="s_no_browser">Máy này không có trình duyệt để mở liên kết</string>
     <string name="s_install_refused_hint">Nếu Android báo chưa cài được ứng dụng, bản Kairn trên máy này được ký bằng khóa cũ. Hãy sao lưu, gỡ Kairn rồi cài tệp này. Việc này chỉ xảy ra một lần.</string>
-    <string name="s_search_cache">Bộ nhớ đệm tìm kiếm</string>
-    <string name="s_search_cache_cleared">Đã xóa bộ nhớ đệm tìm kiếm</string>
+    <string name="s_search_cache">Dữ liệu đệm</string>
+    <string name="s_search_cache_cleared">Đã xóa dữ liệu đệm</string>
     <plurals name="search_cache_size">
         <item quantity="other">%1$d sách · %2$s - chạm để xóa</item>
     </plurals>

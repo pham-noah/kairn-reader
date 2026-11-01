@@ -28,8 +28,8 @@
     <string name="s_automatic_backup">自動バックアップ</string>
     <string name="s_no_browser">リンクを開くブラウザがありません</string>
     <string name="s_install_refused_hint">Androidが「アプリはインストールされていません」と表示する場合、この端末のKairnは古いキーで署名されています。バックアップしてからKairnをアンインストールし、このファイルをインストールしてください。これは一度だけ起こります。</string>
-    <string name="s_search_cache">検索キャッシュ</string>
-    <string name="s_search_cache_cleared">検索キャッシュを削除しました</string>
+    <string name="s_search_cache">キャッシュデータ</string>
+    <string name="s_search_cache_cleared">キャッシュデータを削除しました</string>
     <plurals name="search_cache_size">
         <item quantity="other">%1$d冊・%2$s タップで削除</item>
     </plurals>

@@ -86,6 +86,11 @@ class PositionsCache(private val ctx: Context) {
         dir.delete()
     }
 
+    /** Which books have a stored list. Settings counts them together with the search dumps, without double-counting. */
+    fun ids(): Set<String> =
+        dir.listFiles().orEmpty().filter { it.name.endsWith(".json.gz") }
+            .map { it.name.removeSuffix(".json.gz") }.toSet()
+
     /** Books with a stored list, and the disk they use - shown in Settings next to the search cache. */
     fun stats(): Pair<Int, Long> =
         dir.listFiles().orEmpty().filter { it.name.endsWith(".json.gz") }

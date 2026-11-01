@@ -28,8 +28,8 @@
     <string name="s_automatic_backup">Copia automática</string>
     <string name="s_no_browser">No hay navegador en este dispositivo para abrir enlaces</string>
     <string name="s_install_refused_hint">Si Android dice que la app no se instaló, el Kairn de este teléfono se firmó con una clave anterior. Haz una copia, desinstala Kairn e instala este archivo. Solo pasa una vez.</string>
-    <string name="s_search_cache">Caché de búsqueda</string>
-    <string name="s_search_cache_cleared">Caché de búsqueda vaciada</string>
+    <string name="s_search_cache">Datos en caché</string>
+    <string name="s_search_cache_cleared">Datos en caché borrados</string>
     <plurals name="search_cache_size">
         <item quantity="one">%1$d libro · %2$s - toca para vaciar</item>
         <item quantity="other">%1$d libros · %2$s - toca para vaciar</item>

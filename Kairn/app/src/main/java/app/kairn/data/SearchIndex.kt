@@ -118,6 +118,9 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
         out
     }
 
+    /** Which books have a dump. Settings counts them together with the positions cache, without double-counting. */
+    fun ids(): Set<String> = dir.listFiles().orEmpty().map { it.name.removeSuffix(".json.gz") }.toSet()
+
     /** The number of books with a dump, and how much disk they use - shown in Settings. */
     fun stats(): Pair<Int, Long> = dir.listFiles().orEmpty().let { files -> files.size to files.sumOf { it.length() } }
 
