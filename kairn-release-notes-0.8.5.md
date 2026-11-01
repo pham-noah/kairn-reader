@@ -20,9 +20,11 @@ books the room instead of the buttons.
 - Rows in Settings are one line each: the descriptions under action rows are gone, and the Appearance card
   is label-and-control like every other group, which brings the reading settings up a screen earlier.
 
-**Copy**
+**Copy and contrast**
 - "Check for updates now" instead of "Check now", in all six languages.
 - Finnish says *Lukulista* for the reading list and *Nimi* for a title, everywhere it appeared.
+- The accent green on the two pale themes was too light to read against the page: 4.09:1 on Light and 3.56:1
+  on Sepia, under AA for the chapter name above the progress bar. Both are now 5.39:1 and 4.69:1.
 
 **Under the hood**
 - Opening a book and saving your place are split into pieces with tests of their own: 93 JVM tests, up
