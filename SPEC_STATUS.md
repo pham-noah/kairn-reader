@@ -321,8 +321,9 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
     ui/nav/  AppShell — the 3 tabs, overlays and system pickers
     ui/screens/ Library, Collections, Add books, Settings, Backup, Onboarding, Annotations
 
-Tests live in `app/src/test` and run on the JVM (93): model round-trips, `Store`'s writer (coalescing,
-delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
+Tests live in `app/src/test` and run on the JVM (99): model round-trips, `Store`'s writer (coalescing,
+delete-not-overtaken, flush, unchanged guards), the restore/merge path, the reader's chapter-title map and
+save timing, and the save order in `ReaderProgress`.
 
 `app/src/androidTest` holds 38 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`

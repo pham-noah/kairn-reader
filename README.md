@@ -62,6 +62,11 @@ on its own, keeping the newest few.
 Open the transfer page, then drop EPUBs on it from a browser on the same Wi-Fi. The address carries a
 four-digit code, and nothing else on the network can reach it.
 
+## Languages
+
+English, Español, Suomi, 日本語, Tiếng Việt and 简体中文, switched from Settings without leaving the app, with
+"System" handing the choice back to the phone. The choice survives a restart.
+
 ## Privacy
 
 Kairn makes no outgoing request unless you start the Wi-Fi transfer or leave the update check on. The
@@ -96,8 +101,8 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 89 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 36 on-device tests, needs a phone or emulator
+    ./gradlew :app:testDebugUnitTest          # 99 JVM tests, no device needed
+    ./gradlew :app:connectedDebugAndroidTest  # 38 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
     python3 tools/check_translations.py       # key parity, format arguments, plural categories
