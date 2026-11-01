@@ -5,7 +5,6 @@
 
 package app.kairn.ui
 
-import androidx.core.net.toUri
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -55,19 +54,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.HyperlinkNavigator
-import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
-import org.readium.r2.navigator.epub.css.FontStyle
-import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.preferences.ColumnCount
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.publication.services.content.content
 import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.publication.services.search.SearchIterator
