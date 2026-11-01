@@ -404,7 +404,7 @@
     <string name="s_stats_local_note">Lưu trong stats.json trên máy này. Không có gì được tải lên.</string>
     <string name="s_check_for_updates">Kiểm tra cập nhật</string>
     <string name="s_check_for_updates_hint">Một yêu cầu mỗi ngày tới GitHub, không gì khác</string>
-    <string name="s_check_now">Kiểm tra ngay</string>
+    <string name="s_check_now">Kiểm tra cập nhật ngay</string>
     <string name="s_software_update">Cập nhật phần mềm</string>
     <string name="s_checking_for_updates">Đang kiểm tra…</string>
     <string name="s_version_available">Đã có Kairn %1$s</string>

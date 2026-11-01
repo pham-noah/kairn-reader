@@ -404,7 +404,7 @@
     <string name="s_stats_local_note">保存在这台手机上的 stats.json 中，不会上传任何内容。</string>
     <string name="s_check_for_updates">检查更新</string>
     <string name="s_check_for_updates_hint">每天向 GitHub 请求一次，仅此而已</string>
-    <string name="s_check_now">立即检查</string>
+    <string name="s_check_now">立即检查更新</string>
     <string name="s_software_update">软件更新</string>
     <string name="s_checking_for_updates">正在检查…</string>
     <string name="s_version_available">有新的 Kairn %1$s</string>

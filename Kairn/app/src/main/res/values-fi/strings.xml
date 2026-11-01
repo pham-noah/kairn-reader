@@ -127,7 +127,7 @@
     <string name="s_the_soft_colour_glow_behind_the_panels">Pehmeä värihehku paneelien takana.</string>
     <string name="s_these_settings_are_remembered_for_this_b">Nämä asetukset muistetaan tälle kirjalle.</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">Kolme tapaa lisätä EPUB-tiedostoja. Voit käyttää mitä tahansa niistä myöhemminkin.</string>
-    <string name="s_title">Nimike</string>
+    <string name="s_title">Nimi</string>
     <string name="s_try_another_search_or_clear_the_filters">Kokeile toista hakua tai tyhjennä suodattimet, niin näet koko kirjaston.</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">Kaksi sivua sopii tabletille tai leveälle näytölle.</string>
     <string name="s_volume_keys_turn_pages">Äänenvoimakkuusnäppäimet kääntävät sivuja</string>
@@ -219,7 +219,7 @@
     <string name="s_translucent_panels_with_a_light_sheen_th">Läpikuultavat paneelit kevyellä hohteella. Oletus.</string>
     <string name="s_try_again">Yritä uudelleen</string>
     <string name="s_untitled">Nimetön</string>
-    <string name="s_want">Haluan lukea</string>
+    <string name="s_want">Lukulista</string>
     <string name="s_your_data_is_unchanged"> Tietosi ovat ennallaan.</string>
     <string name="value_percent">%1$d%%</string>
     <string name="s_system">Järjestelmä</string>
@@ -417,7 +417,7 @@
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Tarkista päivitykset</string>
     <string name="s_check_for_updates_hint">Yksi pyyntö päivässä GitHubiin, ei muuta</string>
-    <string name="s_check_now">Tarkista nyt</string>
+    <string name="s_check_now">Tarkista päivitykset nyt</string>
     <string name="s_software_update">Ohjelmistopäivitys</string>
     <string name="s_checking_for_updates">Tarkistetaan…</string>
     <string name="s_version_available">Kairn %1$s on saatavilla</string>

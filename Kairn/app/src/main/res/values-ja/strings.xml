@@ -404,7 +404,7 @@
     <string name="s_stats_local_note">この端末のstats.jsonに保存されます。どこにも送信されません。</string>
     <string name="s_check_for_updates">アップデートを確認</string>
     <string name="s_check_for_updates_hint">GitHubへの1日1回の問い合わせのみ</string>
-    <string name="s_check_now">今すぐ確認</string>
+    <string name="s_check_now">今すぐアップデートを確認</string>
     <string name="s_software_update">ソフトウェアアップデート</string>
     <string name="s_checking_for_updates">確認中…</string>
     <string name="s_version_available">Kairn %1$s が利用可能です</string>

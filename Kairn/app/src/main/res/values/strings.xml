@@ -417,7 +417,7 @@
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Check for updates</string>
     <string name="s_check_for_updates_hint">One request a day to GitHub, nothing else</string>
-    <string name="s_check_now">Check now</string>
+    <string name="s_check_now">Check for updates now</string>
     <string name="s_software_update">Software update</string>
     <string name="s_checking_for_updates">Checking…</string>
     <string name="s_version_available">Kairn %1$s is available</string>
