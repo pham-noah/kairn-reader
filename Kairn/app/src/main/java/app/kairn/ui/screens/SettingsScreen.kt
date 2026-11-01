@@ -109,8 +109,8 @@ fun SettingsScreen(
         }
         KGroup(stringResource(R.string.s_group_reading)) {
             KCard {
-                KRow(stringResource(R.string.s_keep_screen_on), subtitle = stringResource(R.string.s_while_a_book_is_open)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
-                KRow(stringResource(R.string.s_full_screen), subtitle = stringResource(R.string.s_hide_the_status_bar_with_the_bars), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
+                KRow(stringResource(R.string.s_keep_screen_on)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
+                KRow(stringResource(R.string.s_full_screen), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
                 KRow(stringResource(R.string.s_volume_keys_turn_pages), divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
                 // The time left is a guess about how fast YOU read; this is that guess.
                 Row(
@@ -126,7 +126,7 @@ fun SettingsScreen(
                         modifier = Modifier.width(240.dp),
                     )
                 }
-                KRow(stringResource(R.string.s_swipe_to_change_chapter), subtitle = stringResource(R.string.s_in_scroll_mode_left_for_next_right_for_p), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
+                KRow(stringResource(R.string.s_swipe_to_change_chapter), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
                 if (s.swipeChapters) {
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
@@ -144,20 +144,20 @@ fun SettingsScreen(
                 }
                 // The selection menu's two optional actions. Off means the item is not built at all - a
                 // disabled row in a text-selection toolbar has nowhere to explain itself.
-                KRow(stringResource(R.string.s_share_a_passage), subtitle = stringResource(R.string.s_share_a_passage_hint), divider = true) {
+                KRow(stringResource(R.string.s_share_a_passage), divider = true) {
                     KSwitch(s.shareSelection, { v -> store.saveSettings { it.copy(shareSelection = v) } })
                 }
-                KRow(stringResource(R.string.s_look_a_word_up), subtitle = stringResource(R.string.s_look_a_word_up_hint), divider = true) {
+                KRow(stringResource(R.string.s_look_a_word_up), divider = true) {
                     KSwitch(s.lookupSelection, { v -> store.saveSettings { it.copy(lookupSelection = v) } })
                 }
                 // Type size, spacing and margins are per book, so a reader who needs large type otherwise
                 // re-sets them on every new book.
-                KRow(stringResource(R.string.s_reading_defaults), subtitle = stringResource(R.string.s_new_books_open_with_these), divider = true, onClick = { defaultsOpen = true }) { KChevron() }
+                KRow(stringResource(R.string.s_reading_defaults), divider = true, onClick = { defaultsOpen = true }) { KChevron() }
             }
         }
         KGroup(stringResource(R.string.s_group_library)) {
             KCard {
-                KRow(stringResource(R.string.s_find_books_on_this_device), subtitle = stringResource(R.string.s_scan_for_epubs_already_on_your_phone_lik)) {
+                KRow(stringResource(R.string.s_find_books_on_this_device)) {
                     KSwitch(s.autoDetect, { v ->
                         store.saveSettings { it.copy(autoDetect = v) }
                         if (v) { onScan(); if (library.needsAllFilesAccess()) library.requestAllFilesAccess() }
@@ -183,7 +183,7 @@ fun SettingsScreen(
                 // DS-04: the one request Kairn makes on its own, with its own switch next to it. A store
                 // build (F-Droid) has no updater at all, so the rows are not shown there.
                 if (showUpdates) {
-                    KRow(stringResource(R.string.s_check_for_updates), subtitle = stringResource(R.string.s_check_for_updates_hint), divider = true) {
+                    KRow(stringResource(R.string.s_check_for_updates), divider = true) {
                         KSwitch(s.checkUpdates, { v -> store.saveSettings { it.copy(checkUpdates = v) } })
                     }
                     KRow(stringResource(R.string.s_check_now), divider = true, onClick = onCheckUpdates) { KChevron() }
@@ -200,7 +200,7 @@ fun SettingsScreen(
                 }) { KChevron() }
                 KRow(stringResource(R.string.s_open_source_licences), divider = true, onClick = { licences = true }) { KChevron() }
                 // No network code of our own: the browser opens the tracker.
-                KRow(stringResource(R.string.s_report_problem), subtitle = stringResource(R.string.s_report_problem_hint), divider = false, onClick = {
+                KRow(stringResource(R.string.s_report_problem), divider = false, onClick = {
                     openRow(ctx, "https://github.com/pham-noah/kairn-reader/issues")
                 }) { KChevron() }
             }

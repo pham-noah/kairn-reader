@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
 import app.kairn.data.Book
 import app.kairn.data.Store
+import app.kairn.ui.kit.KIconButton
 import app.kairn.ui.kit.*
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
@@ -55,7 +56,7 @@ fun CollectionsScreen(store: Store, onOpenShelf: (String) -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = Dim.screenPad.dp).padding(bottom = 24.dp)) {
-        KScreenHeader(stringResource(R.string.tab_collections), Modifier.padding(top = 16.dp)) { KButton(stringResource(R.string.s_new), { creating = 0 }, style = KButtonStyle.Secondary, small = true) }
+        KScreenHeader(stringResource(R.string.tab_collections), Modifier.padding(top = 16.dp)) { KIconButton(Icons.Default.Add, stringResource(R.string.s_new), { creating = 0 }, bordered = true) }
         KGroup(stringResource(R.string.s_group_your_collections)) {
             if (collections.isEmpty()) Text(stringResource(R.string.s_no_collections_yet_a_collection_groups_b), style = KType.small, modifier = Modifier.padding(horizontal = 4.dp))
             else KCard {
