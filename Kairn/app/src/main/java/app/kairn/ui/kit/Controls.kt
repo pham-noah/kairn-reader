@@ -121,7 +121,7 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
                 // carry the shape, so a dark swatch gets a lighter one than a light swatch does.
                 .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else if (ui.light) K.grab else Color(0xFF5B646C), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { if (selected) Icon(Icons.Default.Check, null, tint = if (ui.light) Color(0xFF14876A) else K.mint) }
+        ) { if (selected) Icon(Icons.Default.Check, null, tint = ui.accent) }
         Text(theme.name.lowercase().replaceFirstChar(Char::uppercase), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) K.txt else K.mut)
     }
 }

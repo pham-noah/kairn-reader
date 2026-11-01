@@ -56,8 +56,8 @@ private val READER_UI: Map<ThemeId, ReaderUi> = ThemeId.entries.associateWith { 
 
 private fun buildReaderUi(t: ThemeId): ReaderUi = when (t) {
     ThemeId.DARK -> ReaderUi(Color(0xFF111418), Color(0xFFD9DDE0), Color(0xFF8C969D), Color(0xF5111418), Color(0xFFE6EAED), Color(0x1FFFFFFF), K.mint, false)
-    ThemeId.LIGHT -> ReaderUi(Color(0xFFF6F5F1), Color(0xFF1D1E20), Color(0xFF6A6C70), Color(0xF7F6F5F1), Color(0xFF1D1E20), Color(0x24000000), Color(0xFF14876A), true)
-    ThemeId.SEPIA -> ReaderUi(Color(0xFFF1E4CF), Color(0xFF3A2E21), Color(0xFF6E5F4C), Color(0xF7F1E4CF), Color(0xFF3A2E21), Color(0x2E3C280A), Color(0xFF14876A), true)
+    ThemeId.LIGHT -> ReaderUi(Color(0xFFF6F5F1), Color(0xFF1D1E20), Color(0xFF6A6C70), Color(0xF7F6F5F1), Color(0xFF1D1E20), Color(0x24000000), Color(0xFF0F7259), true)
+    ThemeId.SEPIA -> ReaderUi(Color(0xFFF1E4CF), Color(0xFF3A2E21), Color(0xFF6E5F4C), Color(0xF7F1E4CF), Color(0xFF3A2E21), Color(0x2E3C280A), Color(0xFF0F7259), true)
     ThemeId.BLACK -> ReaderUi(Color(0xFF000000), Color(0xFFC9CED2), Color(0xFF7F898F), Color(0xF7000000), Color(0xFFE6EAED), Color(0x1FFFFFFF), K.mint, false)
     // Charcoal, not mid grey: 8.5:1 for body text and 4.8:1 for the muted chrome, both measured on #3A4045.
     ThemeId.GRAY -> ReaderUi(Color(0xFF3A4045), Color(0xFFE4E8EB), Color(0xFFA8B0B6), Color(0xF53A4045), Color(0xFFE4E8EB), Color(0x1FFFFFFF), K.mint, false)
