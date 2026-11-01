@@ -290,27 +290,27 @@ fun LibraryScreen(
                 }
             }
         }
-        // Add and the grid/list toggle sit with the filters, not in the title bar: they act on what is
-        // below them, and the header stays a title and a search.
-        Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (shelf != null) item { KChip(shelf, true, { onShelf(null) }) }
+            item { KChip(stringResource(R.string.s_all), status == null, { status = null }, count = books.size) }
+            // Every status that can be set has a chip, so any new value is filterable instead of folding
+            // into Finished.
+            items(Status.entries.filter { it != Status.NONE }) { s ->
+                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
+            }
+        }
+        // Collections are one tap away instead of two screens: the same chips the sheets use. Add and the
+        // grid/list toggle ride at the end of this row, next to the collections they act on - and the row
+        // itself is always here, so they exist even when there is no collection yet.
+        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (shelf != null) item { KChip(shelf, true, { onShelf(null) }) }
-                item { KChip(stringResource(R.string.s_all), status == null, { status = null }, count = books.size) }
-                // Every status that can be set has a chip, so any new value is filterable instead of folding
-                // into Finished.
-                items(Status.entries.filter { it != Status.NONE }) { s ->
-                    KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
+                items(knownCols.size) { i ->
+                    val name = knownCols[i]
+                    KChip(name, shelf == name, { onShelf(if (shelf == name) null else name) })
                 }
             }
             KIconButton(Icons.Default.Add, stringResource(R.string.s_add_books), onAdd, bordered = true)
             KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid }, bordered = true)
-        }
-        // Collections are one tap away instead of two screens: the same chips the sheets use.
-        if (knownCols.isNotEmpty()) LazyRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(knownCols.size) { i ->
-                val name = knownCols[i]
-                KChip(name, shelf == name, { onShelf(if (shelf == name) null else name) })
-            }
         }
         // A backup is the one chore that costs you your notes if you skip it for long enough.
         val quiet = maxOf(shelves.lastBackup, shelves.lastNudge)
