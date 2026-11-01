@@ -387,7 +387,7 @@ fun LibraryScreen(
                 Modifier.align(Alignment.TopCenter).fillMaxWidth().background(K.surf).statusBarsPadding().padding(horizontal = Dim.screenPad.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 1, modifier = Modifier.weight(1f))
                 // Picking several books is only worth it if the bar can also finish or remove them.
                 KIconButton(Icons.Default.CheckCircle, stringResource(R.string.s_mark_as_finished), {
                     val n = picked.size
@@ -395,10 +395,12 @@ fun LibraryScreen(
                     toast.show(ctx.resources.getQuantityString(R.plurals.books_marked_finished, n, n))
                     selecting = false; picked = emptySet()
                 }, tint = K.mint)
-                KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
+                // Icons, not labelled buttons: with the label the row overflowed and "Cancel" wrapped to 25dp.
                 KIconButton(Icons.Default.Sell, stringResource(R.string.s_group_tags), { bulkTag = true }, tint = K.mint)
-                KButton(stringResource(R.string.s_add_to_collection), { bulkTo = true }, small = true, enabled = picked.isNotEmpty())
-                KButton(stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() }, style = KButtonStyle.Secondary, small = true)
+                KIconButton(Icons.Default.BookmarkAdd, stringResource(R.string.s_add_to_collection), { bulkTo = true }, tint = K.mint)
+                KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
+                // An X, not a labelled Cancel: at 360dp the label left the count 16dp wide and it stacked vertically.
+                KIconButton(Icons.Default.Close, stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() })
             }
         }
     }
