@@ -64,6 +64,8 @@ internal class ReaderSession(
         } else {
             val tp = android.os.SystemClock.elapsedRealtime()
             // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
+            // This rides the reader's own scope on purpose - leaving the book before it finishes cancels the
+            // measurement, so a book that was only glanced at is never measured or cached in the background.
             scope.launch {
                 val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
                 positionsCache.save(book, computed)
