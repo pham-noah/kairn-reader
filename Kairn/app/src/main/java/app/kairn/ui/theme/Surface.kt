@@ -37,8 +37,6 @@ object Glass {
     /** Panel fill. Deliberately a DARK translucent tint, not a white one: with no backdrop blur, a white tint over a dark page reads as a hazy white box. */
     val panelFill = Color(0x9E262C33)     // ~62% of the dark surface colour
     val fill = Color(0x14FFFFFF)          // subtle fill for small controls (chips, buttons)
-    val fillHi = Color(0x2EFFFFFF)        // pressed / selected
-    val sheetFill = Color(0x94303642)     // rgba(48,54,66,.58)
     val well = Color(0x42000000)          // rgba(0,0,0,.26) inset wells: fields, tracks
     val hairline = Color(0x14FFFFFF)      // very subtle edge (~8% white), close to the fill - never a bright outline
 
