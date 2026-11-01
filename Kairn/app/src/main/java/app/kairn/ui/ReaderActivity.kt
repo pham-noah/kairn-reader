@@ -101,7 +101,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val wordSplit = Regex("\\s+")
     // Every write to this book's record goes through one place; see ReaderWriter.
     private val writer by lazy { ReaderWriter(app.store, bookId) }
-    private val session by lazy { ReaderSession(this, app.readium, lifecycleScope) }
+    private val session by lazy { ReaderSession(this, app.readium, lifecycleScope, app.positionsCache) }
     /**
      * Reads the chapter aloud. Tapping play speaks from the reader's own position; when a chapter runs out
      * the page turns and the next one starts, which is also what happens if the reader turns it themselves.
@@ -200,11 +200,11 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             showShare = { app.store.settings.value.shareSelection },
             showLookup = { app.store.settings.value.lookupSelection },
         )
-        val prepared = session.prepare(book.uri, highlightCallback) { publication, computed, ms ->
+        val prepared = session.prepare(book, highlightCallback) { publication, computed, ms, fromCache ->
             ui.positions = computed
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
             measurePending()                                                            // a chapter measured before this arrived
-            Log.i("KairnPerf", "positions n=${computed.size} ${ms}ms")
+            Log.i("KairnPerf", "positions n=${computed.size} ${if (fromCache) "cached" else "${ms}ms"}")
             // Import already counted the words. A record imported before that existed is counted once here.
             if (ui.bookWords == 0) {
                 val t0w = SystemClock.elapsedRealtime()

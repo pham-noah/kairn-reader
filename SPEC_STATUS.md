@@ -266,7 +266,13 @@ Verified against the real 3.0.0 artifacts, not from memory:
 - `Publication.positions()` is the slow part of opening a book and must run on `Dispatchers.IO`. So must
   the book parse in `ReadiumHelper.open`: neither `AssetRetriever` nor `PublicationOpener` switches
   dispatcher itself.
-- A disk cache for positions was tried and removed — it was slower than recomputing.
+- A disk cache for positions was tried once, removed for being slower than recomputing, and put back in
+  0.8.5 with the cost measured rather than assumed. On the emulator, `Long Test`: first open measured
+  `positions n=24 3791ms` and wrote a 415-byte file; the next open logged `positions n=24 cached` and
+  `openBook` fell from 1904 ms to 649 ms. A garbage file in the cache slot falls back to measuring, opens
+  normally, and is rewritten — the failure mode is slow, not broken. What the earlier attempt did
+  differently is not recorded; if a real device ever measures the cached path slower, delete
+  `PositionsCache` and the `FORMAT` constant is enough to retire every stored list.
 - `EpubNavigatorFragment.Listener` requires `onExternalLinkActivated`.
 - Readium's `TextAlign` and `Color` clash with Compose's; alias both imports.
 - `Metadata.readingProgression` is the current property; `effectiveReadingProgression` is deprecated.
@@ -408,6 +414,13 @@ What changed, and where the sharp edges are:
   cannot stat a `file://` book (stat the copy directly), and `Link.href` is an `Href` wrapper while `Locator`
   wants a `Url`, whose `String` constructor is deprecated to ERROR level (use the `Url(String)` factory).
   Covered by `SearchIndexDeviceTest`.
+- **Positions cache.** [PositionsCache](Kairn/app/src/main/java/app/kairn/data/PositionsCache.kt) stores the
+  locator list `positions()` returns, one gzipped file per book under `filesDir/positions/`, valid against the
+  same size+mtime stamp and a `FORMAT` constant that a pagination change bumps. Storing locators (rather than
+  just counts) is what makes it worth it: the progress slider navigates with the restored `Locator` objects,
+  via `Locator.toJSON()`/`Locator.fromJSON()`, which exist in 3.0.0. Written `.tmp`-then-rename so a kill
+  mid-write cannot leave a half file. Settings' cache row counts search dumps and positions together, and
+  "Clear cache" drops both.
 - **Daily sweep.** The MediaStore + storage walk now runs at most once every 24 h (`settings.lastSweep`);
   watched folders stay live and "Find books on this device" still forces it.
 - **Rough edges.** Release assembly fails without a keystore unless `-PallowUnsigned`; dead link taps say why;

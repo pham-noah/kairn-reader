@@ -2,6 +2,8 @@ package app.kairn.ui
 
 import android.content.Context
 import app.kairn.R
+import app.kairn.data.Book
+import app.kairn.data.PositionsCache
 import app.kairn.data.ReadiumHelper
 import app.kairn.ui.theme.K
 import androidx.compose.ui.graphics.toArgb
@@ -30,6 +32,7 @@ internal class ReaderSession(
     private val ctx: Context,
     private val readium: ReadiumHelper,
     private val scope: CoroutineScope,
+    private val positionsCache: PositionsCache,
 ) {
 
     class Prepared(
@@ -43,22 +46,29 @@ internal class ReaderSession(
     /**
      * Null means the file could not be opened (N-04): the caller owns the message.
      *
-     * [onPositions] is handed the measured positions and how long measuring took, on [scope] - the count
-     * is the slow half of opening, so it must never hold up the parse.
+     * [onPositions] is handed the positions, how long they took, and whether they came from the cache -
+     * measuring is the slow half of opening, so it must never hold up the parse. `true` means the store was
+     * hit and nothing was measured.
      */
     suspend fun prepare(
-        uri: String,
+        book: Book,
         highlightCallback: HighlightActionModeCallback,
-        onPositions: suspend (Publication, List<Locator>, Long) -> Unit,
+        onPositions: suspend (Publication, List<Locator>, Long, Boolean) -> Unit,
     ): Prepared? {
         // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
-        val p = withContext(Dispatchers.IO) { readium.open(uri.toUri()) } ?: return null
+        val p = withContext(Dispatchers.IO) { readium.open(book.uri.toUri()) } ?: return null
 
-        val tp = android.os.SystemClock.elapsedRealtime()
-        // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
-        scope.launch {
-            val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
-            onPositions(p, computed, android.os.SystemClock.elapsedRealtime() - tp)
+        val cached = positionsCache.load(book)
+        if (cached != null) {
+            onPositions(p, cached, 0L, true)
+        } else {
+            val tp = android.os.SystemClock.elapsedRealtime()
+            // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
+            scope.launch {
+                val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
+                positionsCache.save(book, computed)
+                onPositions(p, computed, android.os.SystemClock.elapsedRealtime() - tp, false)
+            }
         }
 
         return Prepared(

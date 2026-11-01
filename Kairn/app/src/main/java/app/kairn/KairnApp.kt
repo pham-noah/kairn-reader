@@ -5,6 +5,7 @@ import app.kairn.data.AutoBackup
 import app.kairn.data.Backup
 import app.kairn.data.Library
 import app.kairn.data.ReadiumHelper
+import app.kairn.data.PositionsCache
 import app.kairn.data.SearchIndex
 import app.kairn.data.Store
 import kotlinx.coroutines.launch
@@ -17,6 +18,7 @@ class KairnApp : Application() {
     lateinit var backup: Backup; private set
     lateinit var autoBackup: AutoBackup; private set
     lateinit var searchIndex: SearchIndex; private set
+    lateinit var positionsCache: PositionsCache; private set
 
     /** Application-scoped work: the initial library read. Cancelled with the process. */
     private val scope = kotlinx.coroutines.CoroutineScope(
@@ -31,7 +33,8 @@ class KairnApp : Application() {
         backup = Backup(this, store)
         autoBackup = AutoBackup(this, store, backup)
         searchIndex = SearchIndex(this, store, readium)
-        store.onRemove = { id -> searchIndex.forget(id) }
+        positionsCache = PositionsCache(this)
+        store.onRemove = { id -> searchIndex.forget(id); positionsCache.forget(id) }
         // Reading + parsing every book file belongs on IO, not in Application.onCreate on the main thread.
         scope.launch { store.load() }
     }

@@ -62,6 +62,11 @@ on its own, keeping the newest few.
 Open the transfer page, then drop EPUBs on it from a browser on the same Wi-Fi. The address carries a
 four-digit code, and nothing else on the network can reach it.
 
+## Opening a book
+
+The first open of a book measures its pages once and stores the measurement; later opens read it back instead
+of walking the whole file again. Settings shows how much that and the search index use, and clears both.
+
 ## Languages
 
 English, Español, Suomi, 日本語, Tiếng Việt and 简体中文, switched from Settings without leaving the app, with

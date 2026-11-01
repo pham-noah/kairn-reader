@@ -61,8 +61,12 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     var cacheStats by remember { mutableStateOf(0 to 0L) }
     LaunchedEffect(Unit) {
         cacheStats = withContext(Dispatchers.IO) {
-            app.searchIndex.prune(app.store.books.value.map { it.id }.toSet())
-            app.searchIndex.stats()
+            val known = app.store.books.value.map { it.id }.toSet()
+            app.searchIndex.prune(known)
+            app.positionsCache.prune(known)
+            val (indexed, indexBytes) = app.searchIndex.stats()
+            val (measured, measuredBytes) = app.positionsCache.stats()
+            indexed + measured to indexBytes + measuredBytes
         }
     }
     val cacheLabel = remember(cacheStats) {
@@ -228,6 +232,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                 searchCacheLabel = cacheLabel,
                                 onClearSearchCache = {
                                     app.searchIndex.clear()
+                                    app.positionsCache.clear()
                                     cacheStats = 0 to 0L
                                     toast.show(ctx.getString(R.string.s_search_cache_cleared))
                                 },
