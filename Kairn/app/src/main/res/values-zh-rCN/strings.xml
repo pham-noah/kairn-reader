@@ -365,8 +365,6 @@
     <string name="s_tts_chapter_failed">这一章无法朗读</string>
     <string name="s_typeface">字体</string>
     <string name="s_font_default">默认</string>
-    <string name="s_font_serif">衬线</string>
-    <string name="s_font_sans">无衬线</string>
     <string name="s_font_mono">等宽</string>
     <string name="s_auto_scroll">自动滚动</string>
     <string name="s_scroll_speed">滚动速度</string>

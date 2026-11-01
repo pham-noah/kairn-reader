@@ -30,7 +30,9 @@ folder, or let it find the EPUBs already on your device.
 - Select a passage to copy it, highlight it, write a note on it, share it as plain text, or look a word up in
   whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one. Share and
   Look up sit in the selection toolbar itself, and either can be switched off in Settings.
-- Typeface, text size, line and paragraph spacing, margins, justification and hyphenation - per book, with
+- Three real typefaces, not CSS keywords: Literata, Manrope and Libron are bundled and served to the reader
+  from the app's own assets, on top of the publication's typeface and a monospace fallback. Plus text size,
+  line and paragraph spacing, margins, justification, hyphenation and vertical text - per book, with
   one action to put a book back on your defaults, and a Reading defaults screen that decides what a book
   you have not touched yet opens with.
 - Five page tones from light to true black, plus any custom page and ink pair. Warm light; brightness for
@@ -116,9 +118,13 @@ user-facing string is a resource and every count is a plural, so the next langua
 away.
 
 **Next.** Image zoom inside the page: Readium has no zoom of its own, so this means scaling the page itself.
-Vertical text and a typeface from your own font files are both reachable in Readium 3.0.0 - a preference and a
-font-face declaration - so those are a matter of building the controls. F-Droid, once the project has the
-history its reviewers ask for.
+Typefaces from the user's own font files: Readium serves fonts only from the app's bundled assets, so a font
+picked from the device would have to arrive as a base64 `@font-face` injected per resource - possible, and
+heavier than it looks. F-Droid, once the project has the history its reviewers ask for.
+
+**Fonts.** Literata and Manrope are licensed under the SIL Open Font License; they are embedded copies of the
+faces Kairn's own interface uses. Libron is (c) Nico Verbruggen, built on Readerly and Newsreader, and also
+OFL - its licence and copyright notice ship in the APK at `assets/fonts/`.
 
 ## Credits and licence
 

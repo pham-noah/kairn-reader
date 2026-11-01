@@ -379,8 +379,6 @@
     <string name="s_tts_chapter_failed">This chapter can\'t be read aloud</string>
     <string name="s_typeface">Typeface</string>
     <string name="s_font_default">Default</string>
-    <string name="s_font_serif">Serif</string>
-    <string name="s_font_sans">Sans</string>
     <string name="s_font_mono">Mono</string>
     <string name="s_auto_scroll">Auto scroll</string>
     <string name="s_scroll_speed">Scroll speed</string>

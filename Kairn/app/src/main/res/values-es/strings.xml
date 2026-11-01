@@ -393,8 +393,6 @@
     <string name="s_tts_chapter_failed">Este capítulo no se puede leer en voz alta</string>
     <string name="s_typeface">Tipografía</string>
     <string name="s_font_default">Predeterminada</string>
-    <string name="s_font_serif">Serif</string>
-    <string name="s_font_sans">Sans</string>
     <string name="s_font_mono">Mono</string>
     <string name="s_auto_scroll">Desplazamiento automático</string>
     <string name="s_scroll_speed">Velocidad del desplazamiento</string>

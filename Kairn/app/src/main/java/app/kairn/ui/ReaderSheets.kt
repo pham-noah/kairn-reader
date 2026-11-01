@@ -127,9 +127,15 @@ internal fun NoteEditor(target: NoteTarget, initial: String = "", onSave: (Strin
 }
 
 // Readium ships no fonts of its own, so these are the families Android's WebView can resolve.
-private val fontModes = listOf(R.string.s_font_default, R.string.s_font_serif, R.string.s_font_sans, R.string.s_font_mono)
-private val fontValues: List<String?> = listOf(null, "serif", "sans-serif", "monospace")
+// The three app typefaces are declared to Readium in ReaderActivity, from assets/fonts. Their names are
+// proper nouns and stay untranslated; Default and Mono are words and do not.
+private val fontValues: List<String?> = listOf(null, "Literata", "Manrope", "Libron", "monospace")
 private fun fontIndexOf(family: String?): Int = fontValues.indexOf(family).takeIf { it >= 0 } ?: 0
+@Composable private fun fontLabel(i: Int): String = when (i) {
+    0 -> stringResource(R.string.s_font_default)
+    fontValues.lastIndex -> stringResource(R.string.s_font_mono)
+    else -> fontValues[i]!!
+}
 
 @Composable
 internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true, onReset: (() -> Unit)? = null) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
@@ -164,8 +170,8 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
         }
         Text(stringResource(R.string.s_two_pages_suits_a_tablet_or_a_wide_scree), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 4.dp))
     }
-    KControl(stringResource(R.string.s_typeface), stringResource(fontModes[fontIndexOf(prefs.fontFamily)])) {
-        KSegmented(fontModes.map { stringResource(it) }, fontIndexOf(prefs.fontFamily), {
+    KControl(stringResource(R.string.s_typeface), fontLabel(fontIndexOf(prefs.fontFamily))) {
+        KSegmented(fontValues.indices.map { fontLabel(it) }, fontIndexOf(prefs.fontFamily), {
             onChange(prefs.copy(fontFamily = fontValues[it]))
         })
     }

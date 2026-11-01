@@ -60,6 +60,8 @@ import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
+import org.readium.r2.navigator.epub.css.FontStyle
+import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.preferences.ColumnCount
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.shared.publication.Link
@@ -264,7 +266,31 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 override fun onExternalLinkActivated(url: AbsoluteUrl) {}   // external links are ignored
             },
             // A-02: the system selection menu (long-press) gets Kairn's highlight colours.
-            configuration = EpubNavigatorFragment.Configuration(selectionActionModeCallback = highlightCallback),
+            configuration = EpubNavigatorFragment.Configuration(
+                selectionActionModeCallback = highlightCallback,
+                servedAssets = listOf("fonts/.*"),      // the app's own typefaces, served to the webview
+            ).apply {
+                // Literata and Manrope are variable: one file spans the weight axis, so the range is the face.
+                addFontFamilyDeclaration(FontFamily("Literata"), listOf(FontFamily("serif"))) {
+                    addFontFace {
+                        addSource("fonts/literata.ttf", preload = true)
+                        setFontWeight(400..800)
+                    }
+                }
+                addFontFamilyDeclaration(FontFamily("Manrope"), listOf(FontFamily("sans-serif"))) {
+                    addFontFace {
+                        addSource("fonts/manrope.ttf", preload = true)
+                        setFontWeight(300..800)
+                    }
+                }
+                // Libron is static: four files, one per style/weight pair.
+                addFontFamilyDeclaration(FontFamily("Libron"), listOf(FontFamily("serif"))) {
+                    addFontFace { addSource("fonts/Libron-Regular.ttf", preload = true); setFontStyle(FontStyle.NORMAL); setFontWeight(FontWeight.NORMAL) }
+                    addFontFace { addSource("fonts/Libron-Bold.ttf"); setFontStyle(FontStyle.NORMAL); setFontWeight(FontWeight.BOLD) }
+                    addFontFace { addSource("fonts/Libron-Italic.ttf"); setFontStyle(FontStyle.ITALIC); setFontWeight(FontWeight.NORMAL) }
+                    addFontFace { addSource("fonts/Libron-BoldItalic.ttf"); setFontStyle(FontStyle.ITALIC); setFontWeight(FontWeight.BOLD) }
+                }
+            },
         )
         supportFragmentManager.commitNow { replace(container.id, EpubNavigatorFragment::class.java, Bundle(), "reader") }
         val n = supportFragmentManager.findFragmentByTag("reader") as EpubNavigatorFragment

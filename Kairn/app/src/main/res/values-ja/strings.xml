@@ -365,8 +365,6 @@
     <string name="s_tts_chapter_failed">この章は読み上げできません</string>
     <string name="s_typeface">書体</string>
     <string name="s_font_default">既定</string>
-    <string name="s_font_serif">セリフ</string>
-    <string name="s_font_sans">サンセリフ</string>
     <string name="s_font_mono">等幅</string>
     <string name="s_auto_scroll">自動スクロール</string>
     <string name="s_scroll_speed">スクロール速度</string>

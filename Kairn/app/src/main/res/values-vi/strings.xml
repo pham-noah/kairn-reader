@@ -365,8 +365,6 @@
     <string name="s_tts_chapter_failed">Không đọc thành tiếng được chương này</string>
     <string name="s_typeface">Kiểu chữ</string>
     <string name="s_font_default">Mặc định</string>
-    <string name="s_font_serif">Serif</string>
-    <string name="s_font_sans">Sans</string>
     <string name="s_font_mono">Mono</string>
     <string name="s_auto_scroll">Tự động cuộn</string>
     <string name="s_scroll_speed">Tốc độ cuộn</string>
