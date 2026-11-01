@@ -16,8 +16,10 @@ import java.util.zip.GZIPOutputStream
  * (`filesDir/positions/<id>.json.gz`), so only the first open of a book pays.
  *
  * Validity is the book id (a content hash) plus the file's size and mtime, the same stamp SearchIndex uses.
- * [FORMAT] is bumped when a change in how pages are laid out makes every stored list wrong: positions are a
- * function of the engine's pagination, not just of the file.
+ * The reader's own settings are deliberately not part of the key: Readium's positions come from the
+ * publication's content, not from how it is laid out here. Measured with text at 100% and then at 242%, the
+ * same book returned 212 positions both times. [FORMAT] is bumped only when Readium's own way of counting
+ * positions changes.
  */
 class PositionsCache(private val ctx: Context) {
 

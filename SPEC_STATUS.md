@@ -421,7 +421,9 @@ What changed, and where the sharp edges are:
   locator list `positions()` returns, one gzipped file per book under `filesDir/positions/`, valid against the
   same size+mtime stamp and a `FORMAT` constant that a pagination change bumps. Storing locators (rather than
   just counts) is what makes it worth it: the progress slider navigates with the restored `Locator` objects,
-  via `Locator.toJSON()`/`Locator.fromJSON()`, which exist in 3.0.0. Written `.tmp`-then-rename so a kill
+  via `Locator.toJSON()`/`Locator.fromJSON()`, which exist in 3.0.0. The reader's type size, margins and mode
+  are deliberately not part of the key: positions come from the publication's content, so the same book gives
+  212 either way, measured at 100% and at 242%. Written `.tmp`-then-rename so a kill
   mid-write cannot leave a half file. Settings' cache row counts search dumps and positions together, and
   "Clear cache" drops both. Covered by `PositionsCacheDeviceTest`: the JSON round-trip keeps hrefs, titles and
   progressions, a file that changed under the cache is rejected, rubbish reads as no cache, forget deletes.
