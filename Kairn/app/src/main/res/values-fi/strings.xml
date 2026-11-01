@@ -5,7 +5,7 @@
     <string name="tab_library">Kirjasto</string>
     <string name="tab_collections">Kokoelmat</string>
     <string name="tab_settings">Asetukset</string>
-    <string name="search_hint">Hae nimikkeellä tai tekijällä</string>
+    <string name="search_hint">Hae nimellä tai tekijällä</string>
     <string name="continue_reading">Jatka lukemista</string>
     <string name="empty_title">Ei vielä kirjoja</string>
     <string name="add_folder">Seuraa kansiota</string>
@@ -279,7 +279,7 @@
     <string name="s_no_backup_yet">Ei vielä varmuuskopiota</string>
     <string name="s_last_backup_on">Viimeisin varmuuskopio %1$s</string>
     <string name="s_sort_recent">Viimeksi luetut</string>
-    <string name="s_sort_title">Nimike</string>
+    <string name="s_sort_title">Nimi</string>
     <string name="s_sort_author">Tekijä</string>
     <string name="s_sort_added">Lisäyspäivä</string>
     <string name="s_list_file_missing">Tiedosto puuttuu. Lukukohtasi ja muistiinpanosi säilytetään.</string>
