@@ -311,17 +311,19 @@ Benchmark variants are not built by `assembleDebug` / `assembleRelease`:
 
     data/    Models (JSON round-trip), Store (single writer + StateFlows), Library (import, scan,
              content-hash ids), ReadiumHelper (thin Readium wrapper), Backup (zip, validate, merge)
-    ui/      MainActivity, ReaderActivity (navigator, input, debounced save, search), ReaderScreen (all
-             reader UI from ReaderUiState), ReaderSheets, ReaderWriter, ReaderLogic, ReadiumSelection
+    ui/      MainActivity, ReaderActivity (lifecycle, input, the fragment, search), ReaderSession (the open
+             sequence: parse, positions, chapter titles, navigator factory and fonts), ReaderProgress (the
+             save debounce), ReaderScreen (all reader UI from ReaderUiState), ReaderSheets, ReaderWriter,
+             ReaderLogic, ReadiumSelection
     ui/kit/  Buttons, Controls, Surfaces, Navigation, Overlays, Cover
     ui/theme/ Tokens, Type, Surface (glass vs solid), KairnTheme
     ui/nav/  AppShell — the 3 tabs, overlays and system pickers
     ui/screens/ Library, Collections, Add books, Settings, Backup, Onboarding, Annotations
 
-Tests live in `app/src/test` and run on the JVM (73): model round-trips, `Store`'s writer (coalescing,
+Tests live in `app/src/test` and run on the JVM (93): model round-trips, `Store`'s writer (coalescing,
 delete-not-overtaken, flush, unchanged guards) and the restore/merge path.
 
-`app/src/androidTest` holds 28 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 38 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
