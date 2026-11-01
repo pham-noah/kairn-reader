@@ -41,8 +41,8 @@ folder, or let it find the EPUBs already on your device.
 
 Grid or list; a "Continue reading" shelf showing each book's progress and when you were last in it; search
 over titles and over the text inside every book, cached after the first pass so a repeat search is instant;
-sort, reading status, collections and tags you can rename or delete; several books to one collection at
-once; watched folders; a scan for the EPUBs
+sort, reading status, collections and tags you can rename or delete; several books to one collection or one
+tag at once; watched folders; a scan for the EPUBs
 already on your device; generated covers for books without one; "Open with" from any file manager.
 
 ## Notes, highlights, backup

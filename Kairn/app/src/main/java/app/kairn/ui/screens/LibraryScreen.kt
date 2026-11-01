@@ -82,10 +82,10 @@ private fun PickMark(modifier: Modifier = Modifier) =
 private fun knownCollections(books: List<Book>, shelves: List<String>): List<String> =
     (shelves + books.flatMap { it.collections }).distinct().sortedBy { it.lowercase() }
 
-/** Chips over existing collections, so books join a collection instead of a near-duplicate being typed. */
+/** Chips over existing names (collections or tags), so books join one instead of a near-duplicate being typed. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CollectionChips(
+private fun NameChips(
     known: List<String>,
     cols: Set<String>,
     emptyHint: String? = null,
@@ -205,9 +205,14 @@ fun LibraryScreen(
     var selecting by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
     var bulkTo by remember { mutableStateOf(false) }
+    var bulkTag by remember { mutableStateOf(false) }
     var confirmBulkRemove by remember { mutableStateOf(false) }
     val shelves by store.settings.collectAsStateWithLifecycle()
     val knownCols = remember(books, shelves.shelves) { knownCollections(books, shelves.shelves) }
+    // Tags, the same way: every tag a book carries plus any created but not yet applied.
+    val knownTags = remember(books, shelves.extraTags) {
+        (shelves.extraTags + books.flatMap { it.tags }).distinct().sortedBy { it.lowercase() }
+    }
 
     // `shelf` is a parameter: a bare read inside remember{ derivedStateOf } would capture the first
     // value forever; rememberUpdatedState keeps reading the current one.
@@ -391,6 +396,7 @@ fun LibraryScreen(
                     selecting = false; picked = emptySet()
                 }, tint = K.mint)
                 KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
+                KIconButton(Icons.Default.Sell, stringResource(R.string.s_group_tags), { bulkTag = true }, tint = K.mint)
                 KButton(stringResource(R.string.s_add_to_collection), { bulkTo = true }, small = true, enabled = picked.isNotEmpty())
                 KButton(stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() }, style = KButtonStyle.Secondary, small = true)
             }
@@ -439,11 +445,21 @@ fun LibraryScreen(
     }
     if (bulkTo) KSheet({ bulkTo = false }, stringResource(R.string.s_add_to_collection)) {
         Text(pluralStringResource(R.plurals.books_picked, picked.size, picked.size), style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))
-        CollectionChips(knownCols, emptySet()) { name ->
+        NameChips(knownCols, emptySet()) { name ->
             val n = picked.size
             picked.forEach { id -> store.update(id) { b -> b.copy(collections = (b.collections + name).distinct()) } }
             toast.show(ctx.resources.getQuantityString(R.plurals.books_added_to, n, n, name))
             bulkTo = false; selecting = false; picked = emptySet()
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+    if (bulkTag) KSheet({ bulkTag = false }, stringResource(R.string.s_group_tags)) {
+        Text(pluralStringResource(R.plurals.books_picked, picked.size, picked.size), style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))
+        NameChips(knownTags, emptySet(), stringResource(R.string.s_no_tags_yet)) { t ->
+            val n = picked.size
+            picked.forEach { id -> store.update(id) { b -> b.copy(tags = (b.tags + t).distinct()) } }
+            toast.show(ctx.resources.getQuantityString(R.plurals.books_added_to, n, n, t))
+            bulkTag = false; selecting = false; picked = emptySet()
         }
         Spacer(Modifier.height(16.dp))
     }
@@ -452,7 +468,7 @@ fun LibraryScreen(
         val cur = books.firstOrNull { it.id == opened.id } ?: opened
         KSheet({ quickAdd = null }, stringResource(R.string.tab_collections)) {
             Text(stringResource(R.string.s_tap_a_collection_to_put_this_book_in_it), style = KType.small, modifier = Modifier.padding(start = 4.dp, bottom = 14.dp))
-            CollectionChips(knownCols, cur.collections.toSet()) { name ->
+            NameChips(knownCols, cur.collections.toSet()) { name ->
                 store.update(cur.id) { b -> b.copy(collections = if (name in b.collections) b.collections - name else (b.collections + name).distinct()) }
             }
             Spacer(Modifier.height(16.dp))
@@ -542,7 +558,7 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         Text(stringResource(R.string.s_status), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
         KSegmented(opts.map { stringResource(it.second) }, opts.indexOfFirst { it.first == status }, { status = opts[it].first })
         Text(stringResource(R.string.tab_collections), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
-        CollectionChips(known, cols, stringResource(R.string.s_no_collections_here)) { name -> cols = if (name in cols) cols - name else cols + name }
+        NameChips(known, cols, stringResource(R.string.s_no_collections_here)) { name -> cols = if (name in cols) cols - name else cols + name }
         if (addingCol) {
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) { KField(newCol, { newCol = it }, placeholder = stringResource(R.string.s_new_collection_name)) }
@@ -551,7 +567,7 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         } else KButton(stringResource(R.string.s_new_collection), { addingCol = true }, Modifier.padding(top = 10.dp), style = KButtonStyle.Secondary, small = true)
         if (knownTags.isNotEmpty()) {
             Text(stringResource(R.string.s_existing_tags), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
-            CollectionChips(knownTags, split(tags).toSet(), stringResource(R.string.s_no_tags_yet)) { t ->
+            NameChips(knownTags, split(tags).toSet(), stringResource(R.string.s_no_tags_yet)) { t ->
                 val cur = split(tags).toSet()
                 tags = (if (t in cur) cur - t else cur + t).joinToString(", ")
             }
