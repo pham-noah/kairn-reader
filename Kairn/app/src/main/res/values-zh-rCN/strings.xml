@@ -437,4 +437,7 @@
     <string name="s_stop">停止</string>
     <string name="s_reading_defaults">阅读默认设置</string>
     <string name="s_new_books_open_with_these">没有改动过的书会按这些设置打开。</string>
+    <string name="s_language">语言</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">SIL 开放字体许可，随应用内置</string>
 </resources>

@@ -448,4 +448,7 @@
     <string name="s_stop">Stop</string>
     <string name="s_reading_defaults">Reading defaults</string>
     <string name="s_new_books_open_with_these">A book you have not changed opens with these.</string>
+    <string name="s_language">Language</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">SIL Open Font License, bundled with the app</string>
 </resources>

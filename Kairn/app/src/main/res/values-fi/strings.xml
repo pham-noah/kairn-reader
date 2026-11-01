@@ -448,4 +448,7 @@
     <string name="s_stop">Lopeta</string>
     <string name="s_reading_defaults">Lukemisen oletukset</string>
     <string name="s_new_books_open_with_these">Kirja, jota et ole muuttanut, avautuu näillä asetuksilla.</string>
+    <string name="s_language">Kieli</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">SIL Open Font License, mukana sovelluksessa</string>
 </resources>

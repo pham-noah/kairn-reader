@@ -437,4 +437,7 @@
     <string name="s_stop">Dừng</string>
     <string name="s_reading_defaults">Mặc định đọc</string>
     <string name="s_new_books_open_with_these">Sách chưa chỉnh sẽ mở bằng các cài đặt này.</string>
+    <string name="s_language">Ngôn ngữ</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">Giấy phép SIL Open Font, đóng gói kèm ứng dụng</string>
 </resources>

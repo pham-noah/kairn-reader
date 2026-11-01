@@ -437,4 +437,7 @@
     <string name="s_stop">停止</string>
     <string name="s_reading_defaults">読書の既定値</string>
     <string name="s_new_books_open_with_these">変更していない本はこの設定で開きます。</string>
+    <string name="s_language">言語</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">SIL Open Font License、アプリに同梱</string>
 </resources>

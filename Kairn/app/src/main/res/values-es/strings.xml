@@ -468,4 +468,7 @@
     <string name="s_stop">Detener</string>
     <string name="s_reading_defaults">Lectura por defecto</string>
     <string name="s_new_books_open_with_these">Un libro que no hayas cambiado se abre con esto.</string>
+    <string name="s_language">Idioma</string>
+    <string name="s_libron">Libron</string>
+    <string name="s_libron_licence">Licencia de fuentes abiertas SIL, incluida con la aplicación</string>
 </resources>

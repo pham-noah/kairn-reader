@@ -1,6 +1,8 @@
 package app.kairn.ui.screens
 
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.net.toUri
+import androidx.core.os.LocaleListCompat
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,6 +34,18 @@ import java.util.Date
 private val SectionTitle = KType.title.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
 private val SmallDim = KType.small.copy(color = K.dim)
 
+/** null is "follow the system". The names are the languages' own names, deliberately not translated. */
+private val languageTags: List<String?> = listOf(null, "en", "es", "fi", "ja", "vi", "zh-CN")
+@Composable private fun languageLabel(tag: String?): String = when (tag) {
+    null, "" -> stringResource(R.string.s_system)
+    "es" -> "Español"
+    "fi" -> "Suomi"
+    "ja" -> "日本語"
+    "vi" -> "Tiếng Việt"
+    "zh-CN" -> "简体中文"
+    else -> "English"
+}
+
 /** N-07: one place for appearance, library, data and about. */
 @Composable
 fun SettingsScreen(
@@ -46,6 +60,10 @@ fun SettingsScreen(
     var licences by remember { mutableStateOf(false) }
     var statsOpen by remember { mutableStateOf(false) }
     var defaultsOpen by remember { mutableStateOf(false) }
+    var langOpen by remember { mutableStateOf(false) }
+    // Read from AppCompat, not from a file of our own: it is what actually decides the resource locale,
+    // and on API 33+ it is backed by the system's per-app language setting.
+    val currentLang = AppCompatDelegate.getApplicationLocales().toLanguageTags().ifBlank { null }
     val stats by store.stats.collectAsStateWithLifecycle()
     val books by store.books.collectAsStateWithLifecycle()
     val finishedCount = remember(books) { books.count { it.status == Status.FINISHED } }
@@ -159,10 +177,13 @@ fun SettingsScreen(
         }
         KGroup(stringResource(R.string.s_group_about)) {
             KCard {
+                // In the About card rather than a section of its own: it is one row, and a language is
+                // something you set once.
+                KRow(stringResource(R.string.s_language), subtitle = languageLabel(currentLang), onClick = { langOpen = true }) { KChevron() }
                 // DS-04: the one request Kairn makes on its own, with its own switch next to it. A store
                 // build (F-Droid) has no updater at all, so the rows are not shown there.
                 if (showUpdates) {
-                    KRow(stringResource(R.string.s_check_for_updates), subtitle = stringResource(R.string.s_check_for_updates_hint), divider = false) {
+                    KRow(stringResource(R.string.s_check_for_updates), subtitle = stringResource(R.string.s_check_for_updates_hint), divider = true) {
                         KSwitch(s.checkUpdates, { v -> store.saveSettings { it.copy(checkUpdates = v) } })
                     }
                     KRow(stringResource(R.string.s_check_now), divider = true, onClick = onCheckUpdates) { KChevron() }
@@ -192,10 +213,24 @@ fun SettingsScreen(
         KCard {
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
             KRow(stringResource(R.string.s_manrope_and_literata), subtitle = stringResource(R.string.s_sil_open_font_license_bundled_with_the_a), divider = true)
+            KRow(stringResource(R.string.s_libron), subtitle = stringResource(R.string.s_libron_licence))
         }
     }
     if (defaultsOpen) KSheet({ defaultsOpen = false }, stringResource(R.string.s_reading_defaults)) {
         ReadingDefaults(s.defaults) { prefs -> store.saveSettings { it.copy(defaults = prefs) } }
+    }
+    if (langOpen) KSheet({ langOpen = false }, stringResource(R.string.s_language)) {
+        KCard {
+            languageTags.forEachIndexed { i, tag ->
+                KRow(languageLabel(tag), divider = i > 0, onClick = {
+                    // AppCompat recreates the activities itself; the framework takes over on API 33+.
+                    AppCompatDelegate.setApplicationLocales(
+                        if (tag == null) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tag)
+                    )
+                    langOpen = false
+                }) { if (tag == currentLang) Text("\u2713", style = KType.title.copy(color = K.mint)) }
+            }
+        }
     }
 }
 
