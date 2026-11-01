@@ -93,18 +93,15 @@ fun SettingsScreen(
             KCard(padding = 16) {
                 Text(stringResource(R.string.s_surface), style = SectionTitle, modifier = Modifier.padding(bottom = 10.dp))
                 KSegmented(surfaceOpts.map { stringResource(it) }, if (s.glass) 0 else 1, { i -> store.saveSettings { it.copy(glass = i == 0) } })
-                Text(if (s.glass) stringResource(R.string.s_translucent_panels_with_a_light_sheen_th) else stringResource(R.string.s_flat_opaque_panels_the_earlier_look), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
                 if (s.glass) {
                     Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                     KSegmented(ambientNames, ambients.indexOf(s.ambient), { i -> store.saveSettings { it.copy(ambient = ambients[i]) } })
-                    Text(stringResource(R.string.s_the_soft_colour_glow_behind_the_panels), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
                 }
                 Text(stringResource(R.string.s_reading_theme), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 KSegmented(themeNames, themes.indexOf(s.theme), { i -> store.saveSettings { it.copy(theme = themes[i], defaults = it.defaults.copy(theme = themes[i])) } })
                 Text(stringResource(R.string.s_switch_automatically), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
                 // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
                 KSegmented(autoOpts.map { stringResource(it) }, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
-                Text(if (s.autoSwitch) stringResource(R.string.s_follows_your_phone_s_light_and_dark_sett) else stringResource(R.string.s_kairn_opens_in_the_theme_you_pick_above), style = SmallDim, modifier = Modifier.padding(top = 12.dp))
             }
         }
         KGroup(stringResource(R.string.s_group_reading)) {

@@ -117,7 +117,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">コレクションをタップするとこの本が入ります。もう一度タップすると外れます。</string>
     <string name="s_tap_an_epub_in_any_app">どのアプリでもEPUBをタップ</string>
     <string name="s_text_size">文字サイズ</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">パネルの後ろのやわらかな光。</string>
     <string name="s_these_settings_are_remembered_for_this_b">これらの設定はこの本ごとに記憶されます。</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">EPUBを追加する方法は3つあります。あとからどれを使ってもかまいません。</string>
     <string name="s_title">タイトル</string>
@@ -171,10 +170,7 @@
     <string name="s_display">表示</string>
     <string name="s_edit_details">詳細を編集</string>
     <string name="s_finished">読了</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">平面的で不透明なパネル（以前の見た目）。</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">端末のライト／ダーク設定に従います。</string>
     <string name="s_include_book_files">本のファイルを含める</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairnは上で選んだテーマで開きます。</string>
     <string name="s_last_backup">最後のバックアップ</string>
     <string name="s_less">折りたたむ</string>
     <string name="s_makes_the_backup_larger">バックアップが大きくなります</string>
@@ -206,7 +202,6 @@
     <string name="s_tag_name_2">タグ名</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">ファイルが移動または削除されました。読んでいた位置とメモは残っています。ファイルを戻すか、この項目を削除してください。</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">書いたメモは削除されます。元に戻せません。</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">かすかな光沢のある半透明パネル。既定。</string>
     <string name="s_try_again">もう一度</string>
     <string name="s_untitled">無題</string>
     <string name="s_want">読みたい</string>

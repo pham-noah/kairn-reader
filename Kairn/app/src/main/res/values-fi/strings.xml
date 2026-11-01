@@ -119,7 +119,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">Napauta kokoelmaa lisätäksesi kirjan siihen tai napauta uudelleen poistaaksesi sen.</string>
     <string name="s_tap_an_epub_in_any_app">Napauta EPUB-tiedostoa missä tahansa sovelluksessa</string>
     <string name="s_text_size">Tekstikoko</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">Pehmeä värihehku paneelien takana.</string>
     <string name="s_these_settings_are_remembered_for_this_b">Nämä asetukset muistetaan tälle kirjalle.</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">Kolme tapaa lisätä EPUB-tiedostoja. Voit käyttää mitä tahansa niistä myöhemminkin.</string>
     <string name="s_title">Nimi</string>
@@ -175,10 +174,7 @@
     <string name="s_display">Näyttö</string>
     <string name="s_edit_details">Muokkaa tietoja</string>
     <string name="s_finished">Luettu</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">Tasaiset, peittävät paneelit (aiempi ulkoasu).</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">Seuraa puhelimesi vaaleaa ja tummaa asetusta.</string>
     <string name="s_include_book_files">Sisällytä kirjatiedostot</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn avautuu yllä valitsemassasi teemassa.</string>
     <string name="s_last_backup">Viimeisin varmuuskopio</string>
     <string name="s_less">Vähemmän</string>
     <string name="s_makes_the_backup_larger">Kasvattaa varmuuskopiota</string>
@@ -210,7 +206,6 @@
     <string name="s_tag_name_2">Tunnisteen nimi</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">Tiedosto on siirretty tai poistettu. Lukukohtasi ja muistiinpanosi säilytetään. Palauta tiedosto tai poista tämä merkintä.</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">Kirjoittamasi muistiinpano poistetaan. Tätä ei voi perua.</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">Läpikuultavat paneelit kevyellä hohteella. Oletus.</string>
     <string name="s_try_again">Yritä uudelleen</string>
     <string name="s_untitled">Nimetön</string>
     <string name="s_want">Lukulista</string>

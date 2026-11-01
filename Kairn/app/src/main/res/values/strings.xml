@@ -120,7 +120,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">Tap a collection to put this book in it, or tap again to take it out.</string>
     <string name="s_tap_an_epub_in_any_app">Tap an EPUB in any app</string>
     <string name="s_text_size">Text size</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">The soft colour glow behind the panels.</string>
     <string name="s_these_settings_are_remembered_for_this_b">These settings are remembered for this book.</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">Three ways to add EPUB files. You can use any of them later too.</string>
     <string name="s_title">Title</string>
@@ -176,10 +175,7 @@
     <string name="s_display">Display</string>
     <string name="s_edit_details">Edit details</string>
     <string name="s_finished">Finished</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">Flat, opaque panels (the earlier look).</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">Follows your phone\'s light and dark setting.</string>
     <string name="s_include_book_files">Include book files</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn opens in the theme you pick above.</string>
     <string name="s_last_backup">Last backup</string>
     <string name="s_less">Less</string>
     <string name="s_makes_the_backup_larger">Makes the backup larger</string>
@@ -211,7 +207,6 @@
     <string name="s_tag_name_2">Tag name</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">The file was moved or deleted. Your place and notes are kept. Put the file back, or remove this entry.</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">The note you wrote will be removed. This can\'t be undone.</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">Translucent panels with a light sheen. The default.</string>
     <string name="s_try_again">Try again</string>
     <string name="s_untitled">Untitled</string>
     <string name="s_want">Want</string>

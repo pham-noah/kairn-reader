@@ -121,7 +121,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">Toca una colección para poner este libro en ella, o toca otra vez para quitarlo.</string>
     <string name="s_tap_an_epub_in_any_app">Toca un EPUB en cualquier app</string>
     <string name="s_text_size">Tamaño del texto</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">El brillo de color suave detrás de los paneles.</string>
     <string name="s_these_settings_are_remembered_for_this_b">Estos ajustes se recuerdan para este libro.</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">Tres formas de añadir archivos EPUB. Puedes usar cualquiera más adelante.</string>
     <string name="s_title">Título</string>
@@ -179,10 +178,7 @@
     <string name="s_display">Pantalla</string>
     <string name="s_edit_details">Editar detalles</string>
     <string name="s_finished">Terminado</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">Paneles planos y opacos (el estilo anterior).</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">Sigue el ajuste claro u oscuro de tu teléfono.</string>
     <string name="s_include_book_files">Incluir archivos de libros</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn se abre con el tema que elijas arriba.</string>
     <string name="s_last_backup">Última copia</string>
     <string name="s_less">Menos</string>
     <string name="s_makes_the_backup_larger">Hace la copia más grande</string>
@@ -214,7 +210,6 @@
     <string name="s_tag_name_2">Nombre de la etiqueta</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">El archivo se movió o se borró. Tu posición y tus notas se conservan. Vuelve a poner el archivo o quita esta entrada.</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">La nota que escribiste se eliminará. Esto no se puede deshacer.</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">Paneles translúcidos con un brillo ligero. El predeterminado.</string>
     <string name="s_try_again">Reintentar</string>
     <string name="s_untitled">Sin título</string>
     <string name="s_want">Por leer</string>

@@ -117,7 +117,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">点按合集把这本书放进去，再点一下取出。</string>
     <string name="s_tap_an_epub_in_any_app">在任何应用中点按 EPUB</string>
     <string name="s_text_size">字号</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">面板背后柔和的光晕。</string>
     <string name="s_these_settings_are_remembered_for_this_b">这些设置只对这本书生效。</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">三种添加 EPUB 文件的方式。之后也可以随时使用。</string>
     <string name="s_title">书名</string>
@@ -171,10 +170,7 @@
     <string name="s_display">显示</string>
     <string name="s_edit_details">编辑信息</string>
     <string name="s_finished">已读完</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">平整的不透明面板（早期外观）。</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">跟随手机的浅色和深色设置。</string>
     <string name="s_include_book_files">包含书籍文件</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn 会以上面选定的主题打开。</string>
     <string name="s_last_backup">上次备份</string>
     <string name="s_less">收起</string>
     <string name="s_makes_the_backup_larger">会让备份文件变大</string>
@@ -206,7 +202,6 @@
     <string name="s_tag_name_2">标签名称</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">文件已被移动或删除。阅读位置和笔记会保留。请把文件放回原处，或移除这条记录。</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">你写的笔记将被删除，且无法撤销。</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">带轻微光泽的半透明面板。默认。</string>
     <string name="s_try_again">重试</string>
     <string name="s_untitled">无标题</string>
     <string name="s_want">想读</string>

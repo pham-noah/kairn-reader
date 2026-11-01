@@ -117,7 +117,6 @@
     <string name="s_tap_a_collection_to_put_this_book_in_it">Chạm vào bộ sưu tập để thêm sách này, chạm lần nữa để bỏ ra.</string>
     <string name="s_tap_an_epub_in_any_app">Chạm vào tệp EPUB trong bất kỳ ứng dụng nào</string>
     <string name="s_text_size">Cỡ chữ</string>
-    <string name="s_the_soft_colour_glow_behind_the_panels">Vầng màu dịu phía sau các bảng.</string>
     <string name="s_these_settings_are_remembered_for_this_b">Các cài đặt này được ghi nhớ cho sách này.</string>
     <string name="s_three_ways_to_add_epub_files_you_can_use">Ba cách thêm tệp EPUB. Bạn cũng có thể dùng lại bất cứ cách nào sau này.</string>
     <string name="s_title">Tên sách</string>
@@ -171,10 +170,7 @@
     <string name="s_display">Hiển thị</string>
     <string name="s_edit_details">Sửa thông tin</string>
     <string name="s_finished">Đã đọc xong</string>
-    <string name="s_flat_opaque_panels_the_earlier_look">Bảng phẳng, đục (kiểu cũ).</string>
-    <string name="s_follows_your_phone_s_light_and_dark_sett">Theo chế độ sáng/tối của điện thoại.</string>
     <string name="s_include_book_files">Gồm cả tệp sách</string>
-    <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn mở bằng chủ đề bạn chọn ở trên.</string>
     <string name="s_last_backup">Lần sao lưu cuối</string>
     <string name="s_less">Ít hơn</string>
     <string name="s_makes_the_backup_larger">Làm bản sao lưu lớn hơn</string>
@@ -206,7 +202,6 @@
     <string name="s_tag_name_2">Tên thẻ</string>
     <string name="s_the_file_was_moved_or_deleted_your_place">Tệp đã bị di chuyển hoặc xóa. Vị trí đọc và ghi chú của bạn được giữ. Hãy đặt tệp về chỗ cũ, hoặc xóa mục này.</string>
     <string name="s_the_note_you_wrote_will_be_removed_this">Ghi chú bạn viết sẽ bị xóa. Không thể hoàn tác.</string>
-    <string name="s_translucent_panels_with_a_light_sheen_th">Bảng trong mờ với ánh nhẹ. Mặc định.</string>
     <string name="s_try_again">Thử lại</string>
     <string name="s_untitled">Không tên</string>
     <string name="s_want">Muốn đọc</string>
