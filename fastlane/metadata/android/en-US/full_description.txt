@@ -6,10 +6,12 @@ A book is recognised by what is inside it rather than by its file name, so renam
 another folder brings your place and your highlights along.
 
 Reading
-Page or scroll, whichever you prefer. Text size, spacing, margins, justification and hyphenation are set per
-book. Five page tones from light to true black, a warm filter for late nights, and brightness that either
-applies to Kairn alone or follows the rest of the phone. The slider at the bottom shows where you are and
-roughly how long is left.
+Page or scroll, whichever you prefer, and auto scroll moves the page by itself at a speed you set. Text size,
+spacing, margins, justification and hyphenation are set per book. Three typefaces ship inside the app -
+Literata, Manrope and Libron - along with the book's own font, so nothing is downloaded to render a page.
+Five page tones from light to true black, a warm filter for late nights, and brightness that either applies
+to Kairn alone or follows the rest of the phone. The slider at the bottom shows where you are and roughly
+how long is left.
 
 Read aloud
 Kairn can speak the book with the voice your phone already has, at the speed you like. A sleep timer stops
@@ -34,15 +36,22 @@ the page. A four digit code is part of the address, so nobody else on the networ
 transfer stops as soon as you leave the screen.
 
 Backup
-One zip with everything in it, and you can include the book files too. Restoring checks the archive before it
+One zip with everything in it, and you can include the book files too. Point Kairn at a folder once and it
+writes that zip every few days on its own, keeping the newest few. Restoring checks the archive before it
 touches anything, takes a safety copy first, and can either merge with or replace what is on the phone.
 
 Your reading
-A quiet record of the days you read, how long for, and how many books you have finished.
+A quiet record of the days you read, how long for, and how many books you have finished. A Continue reading
+shelf puts the book you are in the middle of back in front of you, with how far in you are and when you were
+last in it.
+
+Languages
+English, Español, Suomi, 日本語, Tiếng Việt and 简体中文, switched from Settings without leaving the app.
 
 Privacy
-No analytics, no crash reporting, no accounts, no ads. Kairn opens no outgoing connection. The only network
-code is the Wi-Fi transfer, and even that only listens: the browser on your computer makes the request, and
-the server stops when you leave the screen.
+No analytics, no crash reporting, no accounts, no ads. The one connection Kairn makes on its own is the
+update check, and only in builds that ship from GitHub - a store build has no update check at all. The other
+piece of network code is the Wi-Fi transfer, and even that only listens: the browser on your computer makes
+the request, and the server stops when you leave the screen.
 
 Android 8.0 or newer. Apache-2.0. Built on the Readium Kotlin Toolkit and AndroidX.
