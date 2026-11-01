@@ -63,10 +63,8 @@
     <string name="s_footnote">Footnote</string>
     <string name="s_from_a_computer_no_cable">From a computer, no cable</string>
     <string name="s_full_screen">Full screen</string>
-    <string name="s_hide_the_status_bar_with_the_bars">Hide the status bar with the bars</string>
     <string name="s_hyphenation">Hyphenation</string>
     <string name="s_vertical_text">Vertical text</string>
-    <string name="s_in_scroll_mode_left_for_next_right_for_p">In scroll mode: left for next, right for previous</string>
     <string name="s_justify_text">Justify text</string>
     <string name="s_footer_tagline">No account, no ads, nothing tracked. Just a reading app, made by one person.</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn saves a safety copy of your current data first, so you can undo.</string>
@@ -105,7 +103,6 @@
     <string name="s_save">Save</string>
     <string name="s_save_name">Save name</string>
     <string name="s_save_note">Save note</string>
-    <string name="s_scan_for_epubs_already_on_your_phone_lik">Scan for EPUBs already on your phone, like Lithium</string>
     <string name="s_search_in_this_book">Search in this book</string>
     <string name="s_select_several_books">Select several books</string>
     <string name="s_send_over_wi_fi">Send over Wi-Fi</string>
@@ -117,9 +114,7 @@
     <string name="s_swipe_distance">Swipe distance</string>
     <string name="s_swipe_to_change_chapter">Swipe to change chapter</string>
     <string name="s_share_a_passage">Share a passage</string>
-    <string name="s_share_a_passage_hint">Send the selected text to another app</string>
     <string name="s_look_a_word_up">Look a word up</string>
-    <string name="s_look_a_word_up_hint">Open the selected word in your dictionary app</string>
     <string name="s_switch_automatically">Switch automatically</string>
     <string name="s_tags_comma_separated">Tags (comma separated)</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">Tap a collection to put this book in it, or tap again to take it out.</string>
@@ -134,7 +129,6 @@
     <string name="s_volume_keys_turn_pages">Volume keys turn pages</string>
     <string name="s_warm_light">Warm light</string>
     <string name="s_watched_folders">Watched folders</string>
-    <string name="s_while_a_book_is_open">While a book is open</string>
     <string name="s_your_books_stay_usable_while_this_runs">Your books stay usable while this runs.</string>
     <string name="s_your_note">Your note</string>
     <string name="toast_note_saved">Note saved</string>
@@ -365,7 +359,6 @@
     <string name="s_speed_fast">Fast</string>
     <string name="s_speed_vfast">Very fast</string>
     <string name="s_report_problem">Report a problem</string>
-    <string name="s_report_problem_hint">Opens the issue tracker in a browser</string>
     <string name="s_read_aloud">Read aloud</string>
     <string name="s_stop_reading">Stop reading</string>
     <string name="s_tts_starting">Starting…</string>
@@ -416,7 +409,6 @@
 
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Check for updates</string>
-    <string name="s_check_for_updates_hint">One request a day to GitHub, nothing else</string>
     <string name="s_check_now">Check for updates now</string>
     <string name="s_software_update">Software update</string>
     <string name="s_checking_for_updates">Checking…</string>

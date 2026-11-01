@@ -60,10 +60,8 @@
     <string name="s_footnote">Chú thích</string>
     <string name="s_from_a_computer_no_cable">Từ máy tính, không cần cáp</string>
     <string name="s_full_screen">Toàn màn hình</string>
-    <string name="s_hide_the_status_bar_with_the_bars">Ẩn thanh trạng thái cùng các thanh</string>
     <string name="s_hyphenation">Ngắt từ</string>
     <string name="s_vertical_text">Chữ dọc</string>
-    <string name="s_in_scroll_mode_left_for_next_right_for_p">Ở chế độ cuộn: trái để tới, phải để lùi</string>
     <string name="s_justify_text">Căn đều hai bên</string>
     <string name="s_footer_tagline">Không tài khoản, không quảng cáo, không theo dõi. Chỉ là một ứng dụng đọc sách, do một người làm.</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn lưu trước một bản sao an toàn dữ liệu hiện tại, để bạn có thể hoàn tác.</string>
@@ -102,7 +100,6 @@
     <string name="s_save">Lưu</string>
     <string name="s_save_name">Lưu tên</string>
     <string name="s_save_note">Lưu ghi chú</string>
-    <string name="s_scan_for_epubs_already_on_your_phone_lik">Quét tệp EPUB có sẵn trên máy, như Lithium</string>
     <string name="s_search_in_this_book">Tìm trong sách này</string>
     <string name="s_select_several_books">Chọn nhiều sách</string>
     <string name="s_send_over_wi_fi">Gửi qua Wi-Fi</string>
@@ -114,9 +111,7 @@
     <string name="s_swipe_distance">Khoảng vuốt</string>
     <string name="s_swipe_to_change_chapter">Vuốt để đổi chương</string>
     <string name="s_share_a_passage">Chia sẻ đoạn văn</string>
-    <string name="s_share_a_passage_hint">Gửi đoạn văn đã chọn sang ứng dụng khác</string>
     <string name="s_look_a_word_up">Tra từ</string>
-    <string name="s_look_a_word_up_hint">Mở từ đã chọn trong ứng dụng từ điển</string>
     <string name="s_switch_automatically">Tự động chuyển</string>
     <string name="s_tags_comma_separated">Thẻ (cách nhau bằng dấu phẩy)</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">Chạm vào bộ sưu tập để thêm sách này, chạm lần nữa để bỏ ra.</string>
@@ -131,7 +126,6 @@
     <string name="s_volume_keys_turn_pages">Phím âm lượng lật trang</string>
     <string name="s_warm_light">Ánh sáng ấm</string>
     <string name="s_watched_folders">Thư mục đang theo dõi</string>
-    <string name="s_while_a_book_is_open">Khi đang mở sách</string>
     <string name="s_your_books_stay_usable_while_this_runs">Sách của bạn vẫn dùng được trong lúc chạy.</string>
     <string name="s_your_note">Ghi chú của bạn</string>
     <string name="toast_note_saved">Đã lưu ghi chú</string>
@@ -351,7 +345,6 @@
     <string name="s_speed_fast">Nhanh</string>
     <string name="s_speed_vfast">Rất nhanh</string>
     <string name="s_report_problem">Báo lỗi</string>
-    <string name="s_report_problem_hint">Mở trang báo lỗi trong trình duyệt</string>
     <string name="s_read_aloud">Đọc thành tiếng</string>
     <string name="s_stop_reading">Dừng đọc</string>
     <string name="s_tts_starting">Đang bắt đầu…</string>
@@ -403,7 +396,6 @@
     </plurals>
     <string name="s_stats_local_note">Lưu trong stats.json trên máy này. Không có gì được tải lên.</string>
     <string name="s_check_for_updates">Kiểm tra cập nhật</string>
-    <string name="s_check_for_updates_hint">Một yêu cầu mỗi ngày tới GitHub, không gì khác</string>
     <string name="s_check_now">Kiểm tra cập nhật ngay</string>
     <string name="s_software_update">Cập nhật phần mềm</string>
     <string name="s_checking_for_updates">Đang kiểm tra…</string>

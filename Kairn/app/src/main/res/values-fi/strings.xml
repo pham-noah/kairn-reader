@@ -62,10 +62,8 @@
     <string name="s_footnote">Alaviite</string>
     <string name="s_from_a_computer_no_cable">Tietokoneesta, ilman kaapelia</string>
     <string name="s_full_screen">Koko näyttö</string>
-    <string name="s_hide_the_status_bar_with_the_bars">Piilota tilapalkki palkkien mukana</string>
     <string name="s_hyphenation">Tavutus</string>
     <string name="s_vertical_text">Pystysuora teksti</string>
-    <string name="s_in_scroll_mode_left_for_next_right_for_p">Vieritystilassa: vasen seuraavaan, oikea edelliseen</string>
     <string name="s_justify_text">Tasaa teksti</string>
     <string name="s_footer_tagline">Ei tiliä, ei mainoksia, ei seurantaa. Vain lukusovellus, yhden ihmisen tekemä.</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn tallentaa ensin turvakopion nykyisistä tiedoistasi, joten voit perua toiminnon.</string>
@@ -104,7 +102,6 @@
     <string name="s_save">Tallenna</string>
     <string name="s_save_name">Tallenna nimi</string>
     <string name="s_save_note">Tallenna muistiinpano</string>
-    <string name="s_scan_for_epubs_already_on_your_phone_lik">Skannaa puhelimessa jo olevat EPUB-tiedostot, kuten Lithium</string>
     <string name="s_search_in_this_book">Hae tästä kirjasta</string>
     <string name="s_select_several_books">Valitse useita kirjoja</string>
     <string name="s_send_over_wi_fi">Lähetä Wi-Fi:n yli</string>
@@ -116,9 +113,7 @@
     <string name="s_swipe_distance">Pyyhkäisymatka</string>
     <string name="s_swipe_to_change_chapter">Vaihda lukua pyyhkäisemällä</string>
     <string name="s_share_a_passage">Jaa katkelma</string>
-    <string name="s_share_a_passage_hint">Lähetä valittu teksti toiseen sovellukseen</string>
     <string name="s_look_a_word_up">Etsi sana</string>
-    <string name="s_look_a_word_up_hint">Avaa valittu sana sanakirjasovelluksessasi</string>
     <string name="s_switch_automatically">Vaihda automaattisesti</string>
     <string name="s_tags_comma_separated">Tunnisteet (pilkulla erotettuna)</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">Napauta kokoelmaa lisätäksesi kirjan siihen tai napauta uudelleen poistaaksesi sen.</string>
@@ -133,7 +128,6 @@
     <string name="s_volume_keys_turn_pages">Äänenvoimakkuusnäppäimet kääntävät sivuja</string>
     <string name="s_warm_light">Lämmin valo</string>
     <string name="s_watched_folders">Seuratut kansiot</string>
-    <string name="s_while_a_book_is_open">Kun kirja on auki</string>
     <string name="s_your_books_stay_usable_while_this_runs">Kirjasi pysyvät käytettävissä tämän aikana.</string>
     <string name="s_your_note">Muistiinpanosi</string>
     <string name="toast_note_saved">Muistiinpano tallennettu</string>
@@ -365,7 +359,6 @@
     <string name="s_speed_fast">Nopea</string>
     <string name="s_speed_vfast">Hyvin nopea</string>
     <string name="s_report_problem">Ilmoita ongelmasta</string>
-    <string name="s_report_problem_hint">Avaa ongelmaseurannan selaimessa</string>
     <string name="s_read_aloud">Lue ääneen</string>
     <string name="s_stop_reading">Lopeta lukeminen</string>
     <string name="s_tts_starting">Aloitetaan…</string>
@@ -416,7 +409,6 @@
 
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Tarkista päivitykset</string>
-    <string name="s_check_for_updates_hint">Yksi pyyntö päivässä GitHubiin, ei muuta</string>
     <string name="s_check_now">Tarkista päivitykset nyt</string>
     <string name="s_software_update">Ohjelmistopäivitys</string>
     <string name="s_checking_for_updates">Tarkistetaan…</string>

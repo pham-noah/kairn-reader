@@ -1,8 +1,11 @@
 package app.kairn.ui.screens
 
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -56,7 +59,10 @@ class ContinueShelfTest {
         // Once above, once in the grid.
         compose.onAllNodesWithText("Alpha").assertCountEquals(2)
         compose.onAllNodesWithText("Charlie").assertCountEquals(2)
-        // A book that was never opened belongs in the grid only.
+        // A book that was never opened belongs in the grid only. The grid is scrolled first: with the
+        // collections row above it, four cards no longer fit the first screen, and an uncomposed Lazy
+        // item would make this count measure the window instead of the shelf.
+        compose.onNodeWithTag("library-grid").performScrollToNode(hasText("Never Opened"))
         compose.onAllNodesWithText("Never Opened").assertCountEquals(1)
     }
 

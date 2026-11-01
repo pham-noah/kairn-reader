@@ -60,10 +60,8 @@
     <string name="s_footnote">脚注</string>
     <string name="s_from_a_computer_no_cable">从电脑发送，不用数据线</string>
     <string name="s_full_screen">全屏</string>
-    <string name="s_hide_the_status_bar_with_the_bars">随系统栏一同隐藏状态栏</string>
     <string name="s_hyphenation">断字</string>
     <string name="s_vertical_text">竖排文字</string>
-    <string name="s_in_scroll_mode_left_for_next_right_for_p">滚动模式下：向左为下一章，向右为上一章</string>
     <string name="s_justify_text">两端对齐</string>
     <string name="s_footer_tagline">没有账号，没有广告，不做追踪。只是一个阅读器，由一个人做成。</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn 会先保存一份当前数据的安全副本，以便撤销。</string>
@@ -102,7 +100,6 @@
     <string name="s_save">保存</string>
     <string name="s_save_name">保存名称</string>
     <string name="s_save_note">保存笔记</string>
-    <string name="s_scan_for_epubs_already_on_your_phone_lik">扫描手机上已有的 EPUB，比如 Lithium</string>
     <string name="s_search_in_this_book">在本书中搜索</string>
     <string name="s_select_several_books">选择多本书</string>
     <string name="s_send_over_wi_fi">通过 Wi-Fi 发送</string>
@@ -114,9 +111,7 @@
     <string name="s_swipe_distance">滑动距离</string>
     <string name="s_swipe_to_change_chapter">滑动切换章节</string>
     <string name="s_share_a_passage">分享一段文字</string>
-    <string name="s_share_a_passage_hint">将选中的文字发送到其他应用</string>
     <string name="s_look_a_word_up">查词</string>
-    <string name="s_look_a_word_up_hint">在词典应用中打开选中的词</string>
     <string name="s_switch_automatically">自动切换</string>
     <string name="s_tags_comma_separated">标签（逗号分隔）</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">点按合集把这本书放进去，再点一下取出。</string>
@@ -131,7 +126,6 @@
     <string name="s_volume_keys_turn_pages">音量键翻页</string>
     <string name="s_warm_light">暖光</string>
     <string name="s_watched_folders">监视的文件夹</string>
-    <string name="s_while_a_book_is_open">打开书本时</string>
     <string name="s_your_books_stay_usable_while_this_runs">运行期间书籍仍可正常使用。</string>
     <string name="s_your_note">你的笔记</string>
     <string name="toast_note_saved">笔记已保存</string>
@@ -351,7 +345,6 @@
     <string name="s_speed_fast">快</string>
     <string name="s_speed_vfast">很快</string>
     <string name="s_report_problem">反馈问题</string>
-    <string name="s_report_problem_hint">在浏览器中打开问题追踪页</string>
     <string name="s_read_aloud">朗读</string>
     <string name="s_stop_reading">停止朗读</string>
     <string name="s_tts_starting">正在启动…</string>
@@ -403,7 +396,6 @@
     </plurals>
     <string name="s_stats_local_note">保存在这台手机上的 stats.json 中，不会上传任何内容。</string>
     <string name="s_check_for_updates">检查更新</string>
-    <string name="s_check_for_updates_hint">每天向 GitHub 请求一次，仅此而已</string>
     <string name="s_check_now">立即检查更新</string>
     <string name="s_software_update">软件更新</string>
     <string name="s_checking_for_updates">正在检查…</string>

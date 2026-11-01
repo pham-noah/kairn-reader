@@ -153,4 +153,41 @@ class ReaderLogicTest {
         assertNull(ReaderLogic.chapterKey("   "))
         assertEquals("ch1.xhtml", ReaderLogic.chapterKey("ch1.xhtml#"))
     }
+
+    // --- chapterTitles -------------------------------------------------------------------------
+
+    private fun link(href: String, title: String? = null, children: List<ReaderLogic.TocNode> = emptyList()) =
+        ReaderLogic.TocNode(href, title, children)
+
+    @Test fun toc_titles_are_keyed_by_full_href_and_last_segment() {
+        val m = ReaderLogic.chapterTitles(listOf(link("OEBPS/ch01.xhtml", "One")), emptyList())
+        assertEquals("One", m["OEBPS/ch01.xhtml"])
+        assertEquals("One", m["ch01.xhtml"])
+    }
+
+    @Test fun children_are_walked_and_a_blank_title_is_absent() {
+        val toc = listOf(link("a.xhtml", "A", listOf(link("b.xhtml", "B"), link("c.xhtml", " "))))
+        val m = ReaderLogic.chapterTitles(toc, emptyList())
+        assertEquals("B", m["b.xhtml"])
+        assertNull(m["c.xhtml"])
+        assertNull(ReaderLogic.chapterTitles(listOf(link("d.xhtml")), emptyList())["d.xhtml"])
+    }
+
+    @Test fun reading_order_fills_a_gap_but_never_overwrites_the_toc() {
+        val toc = listOf(link("ch01.xhtml", "From the toc"))
+        val order = listOf(link("ch01.xhtml", "From the spine"), link("ch02.xhtml", "Only in the spine"))
+        val m = ReaderLogic.chapterTitles(toc, order)
+        assertEquals("From the toc", m["ch01.xhtml"])
+        assertEquals("Only in the spine", m["ch02.xhtml"])
+    }
+
+    // --- the save debounce ----------------------------------------------------------------------
+
+    @Test fun a_first_locator_saves_at_once_and_a_quick_turn_waits() {
+        // now is elapsedRealtime, so a zero lastSaved is a boot-time gap, not a fresh start at zero.
+        assertEquals(0L, ReaderLogic.saveDelay(now = 1_000_000, lastSaved = 0))            // nothing saved yet
+        assertEquals(800L, ReaderLogic.saveDelay(now = 1_000, lastSaved = 900))            // 100 ms ago
+        assertEquals(800L, ReaderLogic.saveDelay(now = 1_004_999, lastSaved = 1_000_000))  // 1 ms short
+        assertEquals(0L, ReaderLogic.saveDelay(now = 1_005_000, lastSaved = 1_000_000))    // exactly the floor
+    }
 }

@@ -64,10 +64,8 @@
     <string name="s_footnote">Nota al pie</string>
     <string name="s_from_a_computer_no_cable">Desde un ordenador, sin cable</string>
     <string name="s_full_screen">Pantalla completa</string>
-    <string name="s_hide_the_status_bar_with_the_bars">Oculta la barra de estado con las barras</string>
     <string name="s_hyphenation">División de palabras</string>
     <string name="s_vertical_text">Texto vertical</string>
-    <string name="s_in_scroll_mode_left_for_next_right_for_p">En modo desplazamiento: izquierda para siguiente, derecha para anterior</string>
     <string name="s_justify_text">Justificar texto</string>
     <string name="s_footer_tagline">Sin cuenta, sin anuncios, nada rastreado. Solo una app de lectura, hecha por una persona.</string>
     <string name="s_kairn_saves_a_safety_copy_of_your_curren">Kairn guarda antes una copia de tus datos actuales, para que puedas deshacer.</string>
@@ -106,7 +104,6 @@
     <string name="s_save">Guardar</string>
     <string name="s_save_name">Guardar nombre</string>
     <string name="s_save_note">Guardar nota</string>
-    <string name="s_scan_for_epubs_already_on_your_phone_lik">Busca EPUB que ya estén en tu teléfono, como Lithium</string>
     <string name="s_search_in_this_book">Buscar en este libro</string>
     <string name="s_select_several_books">Seleccionar varios libros</string>
     <string name="s_send_over_wi_fi">Enviar por Wi-Fi</string>
@@ -118,9 +115,7 @@
     <string name="s_swipe_distance">Distancia del gesto</string>
     <string name="s_swipe_to_change_chapter">Desliza para cambiar de capítulo</string>
     <string name="s_share_a_passage">Compartir un fragmento</string>
-    <string name="s_share_a_passage_hint">Envía el texto seleccionado a otra app</string>
     <string name="s_look_a_word_up">Buscar una palabra</string>
-    <string name="s_look_a_word_up_hint">Abre la palabra seleccionada en tu app de diccionario</string>
     <string name="s_switch_automatically">Cambiar automáticamente</string>
     <string name="s_tags_comma_separated">Etiquetas (separadas por comas)</string>
     <string name="s_tap_a_collection_to_put_this_book_in_it">Toca una colección para poner este libro en ella, o toca otra vez para quitarlo.</string>
@@ -135,7 +130,6 @@
     <string name="s_volume_keys_turn_pages">Las teclas de volumen pasan página</string>
     <string name="s_warm_light">Luz cálida</string>
     <string name="s_watched_folders">Carpetas vigiladas</string>
-    <string name="s_while_a_book_is_open">Con un libro abierto</string>
     <string name="s_your_books_stay_usable_while_this_runs">Puedes seguir usando tus libros mientras esto ocurre.</string>
     <string name="s_your_note">Tu nota</string>
     <string name="toast_note_saved">Nota guardada</string>
@@ -379,7 +373,6 @@
     <string name="s_speed_fast">Rápida</string>
     <string name="s_speed_vfast">Muy rápida</string>
     <string name="s_report_problem">Informar de un problema</string>
-    <string name="s_report_problem_hint">Abre el gestor de incidencias en un navegador</string>
     <string name="s_read_aloud">Leer en voz alta</string>
     <string name="s_stop_reading">Dejar de leer</string>
     <string name="s_tts_starting">Iniciando…</string>
@@ -434,7 +427,6 @@
 
     <!-- 0.8.0: actualizaciones (DS-04) -->
     <string name="s_check_for_updates">Buscar actualizaciones</string>
-    <string name="s_check_for_updates_hint">Una petición al día a GitHub, nada más</string>
     <string name="s_check_now">Buscar actualizaciones ahora</string>
     <string name="s_software_update">Actualización</string>
     <string name="s_checking_for_updates">Comprobando…</string>

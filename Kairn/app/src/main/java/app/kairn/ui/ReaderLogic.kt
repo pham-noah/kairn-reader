@@ -8,6 +8,46 @@ import app.kairn.data.Mark
  */
 object ReaderLogic {
 
+    /** Saving on every locator would write the disk on every page turn; this is the floor between saves. */
+    const val SAVE_INTERVAL_MS = 5_000L
+
+    /** A page turn inside the floor waits this long, so a run of turns costs one write. */
+    const val SAVE_DEBOUNCE_MS = 800L
+
+    /** No wait if the floor has passed, otherwise the debounce. */
+    fun saveDelay(now: Long, lastSaved: Long): Long =
+        if (now - lastSaved >= SAVE_INTERVAL_MS) 0 else SAVE_DEBOUNCE_MS
+
+    /**
+     * A table-of-contents entry reduced to what the title map needs. Readium's Link is unusable in a JVM
+     * test (Href parses through android.net.Uri), so the walk takes this instead of a Link.
+     */
+    class TocNode(val href: String, val title: String?, val children: List<TocNode> = emptyList())
+
+    /**
+     * href -> chapter title, from the table of contents, so scrubbing can name the chapter. A TOC href
+     * carries its folder (OEBPS/ch03.xhtml) while a locator often carries only ch03.xhtml, so key both.
+     * The readingOrder is a flat spine: it fills chapters the TOC skipped and never overwrites one.
+     */
+    fun chapterTitles(toc: List<TocNode>, readingOrder: List<TocNode>): Map<String, String> {
+        val map = HashMap<String, String>()
+        fun walk(ls: List<TocNode>) {
+            ls.forEach { l ->
+                l.title?.takeIf { it.isNotBlank() }?.let { title ->
+                    val href = l.href.toString()
+                    map[href] = title
+                    map[href.substringAfterLast('/')] = title
+                }
+                walk(l.children)
+            }
+        }
+        walk(toc)
+        readingOrder.forEach { l ->
+            l.title?.takeIf { it.isNotBlank() }?.let { map.putIfAbsent(l.href.toString(), it) }
+        }
+        return map
+    }
+
     /** The reading speed behind the time-left estimate. */
     const val WPM = 240
 

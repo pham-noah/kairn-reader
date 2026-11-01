@@ -106,6 +106,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val wordSplit = Regex("\\s+")
     // Every write to this book's record goes through one place; see ReaderWriter.
     private val writer by lazy { ReaderWriter(app.store, bookId) }
+    private val session by lazy { ReaderSession(this, app.readium, lifecycleScope) }
     /**
      * Reads the chapter aloud. Tapping play speaks from the reader's own position; when a chapter runs out
      * the page turns and the next one starts, which is also what happens if the reader turns it themselves.
@@ -187,54 +188,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     private suspend fun openBook(book: Book) {
         val t0 = SystemClock.elapsedRealtime()
-        // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
-        val p = withContext(Dispatchers.IO) { app.readium.open(book.uri.toUri()) }
-        if (p == null) {                                    // N-04: message, never a crash
-            writer.markBroken(); ui.error = "bad"; ui.loading = false; return
-        }
-        pub = p
-        ui.pub = p                    // state: Contents and the seek fallback read it during composition
-        rtl = p.metadata.readingProgression == ReadingProgression.RTL
-        // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
-        val tp = SystemClock.elapsedRealtime()
-        lifecycleScope.launch {
-            val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
-            ui.positions = computed
-            positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
-            measurePending()                                                            // a chapter measured before this arrived
-            android.util.Log.i("KairnPerf", "positions n=${ui.positions.size} ${SystemClock.elapsedRealtime() - tp}ms")
-            // Import already counted the words. A record imported before that existed is counted once here.
-            if (ui.bookWords == 0) {
-                val t0w = SystemClock.elapsedRealtime()
-                val words = withContext(Dispatchers.IO) { app.readium.countWords(p) }
-                if (words > 0) {
-                    ui.bookWords = words
-                    writer.saveWords(words)
-                }
-                android.util.Log.i("KairnPerf", "words=$words ${SystemClock.elapsedRealtime() - t0w}ms (counted on open)")
-            }
-        }
-        // href -> chapter title, from the table of contents, so scrubbing can name the chapter.
-        run {
-            val map = HashMap<String, String>()
-            fun walk(ls: List<Link>) {
-                ls.forEach { l ->
-                    l.title?.takeIf { it.isNotBlank() }?.let { t -> map[l.href.toString()] = t; map[l.href.toString().substringAfterLast('/')] = t }
-                    walk(l.children)
-                }
-            }
-            walk(p.tableOfContents)
-            p.readingOrder.forEach { l -> l.title?.takeIf { it.isNotBlank() }?.let { t -> map.putIfAbsent(l.href.toString(), t) } }
-            ui.chapterTitles = map
-        }
-
-        val factory = EpubNavigatorFactory(p)
-        // Palette order in Tokens.kt decides these labels.
-        val colourNames = listOf(
-            R.string.s_colour_amber, R.string.s_colour_mint, R.string.s_colour_rose,
-            R.string.s_colour_blue, R.string.s_colour_violet, R.string.s_colour_sand,
-        )
-        val colourLabels = K.highlightColors.zip(colourNames).map { (pair, name) -> getString(name) to pair.second.toArgb() }
+        // Palette order in Tokens.kt decides these labels, and the system selection menu shows them.
+        val colourLabels = session.colourLabels()
         val highlightCallback = HighlightActionModeCallback(
             colourLabels,
             copyLabel = getString(R.string.s_menu_copy),
@@ -250,6 +205,31 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             showShare = { app.store.settings.value.shareSelection },
             showLookup = { app.store.settings.value.lookupSelection },
         )
+        val prepared = session.prepare(book.uri, highlightCallback) { publication, computed, ms ->
+            ui.positions = computed
+            positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
+            measurePending()                                                            // a chapter measured before this arrived
+            Log.i("KairnPerf", "positions n=${computed.size} ${ms}ms")
+            // Import already counted the words. A record imported before that existed is counted once here.
+            if (ui.bookWords == 0) {
+                val t0w = SystemClock.elapsedRealtime()
+                val words = withContext(Dispatchers.IO) { app.readium.countWords(publication) }
+                if (words > 0) {
+                    ui.bookWords = words
+                    writer.saveWords(words)
+                }
+                Log.i("KairnPerf", "words=$words ${SystemClock.elapsedRealtime() - t0w}ms (counted on open)")
+            }
+        }
+        if (prepared == null) {                             // N-04: message, never a crash
+            writer.markBroken(); ui.error = "bad"; ui.loading = false; return
+        }
+        pub = prepared.publication
+        ui.pub = prepared.publication   // state: Contents and the seek fallback read it during composition
+        rtl = prepared.rtl
+        ui.chapterTitles = prepared.chapterTitles
+        val factory = prepared.factory
+
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = (startLocator ?: book.locator)?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
             initialPreferences = toEpub(ui.prefs),
@@ -266,31 +246,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 override fun onExternalLinkActivated(url: AbsoluteUrl) {}   // external links are ignored
             },
             // A-02: the system selection menu (long-press) gets Kairn's highlight colours.
-            configuration = EpubNavigatorFragment.Configuration(
-                selectionActionModeCallback = highlightCallback,
-                servedAssets = listOf("fonts/.*"),      // the app's own typefaces, served to the webview
-            ).apply {
-                // Literata and Manrope are variable: one file spans the weight axis, so the range is the face.
-                addFontFamilyDeclaration(FontFamily("Literata"), listOf(FontFamily("serif"))) {
-                    addFontFace {
-                        addSource("fonts/literata.ttf", preload = true)
-                        setFontWeight(400..800)
-                    }
-                }
-                addFontFamilyDeclaration(FontFamily("Manrope"), listOf(FontFamily("sans-serif"))) {
-                    addFontFace {
-                        addSource("fonts/manrope.ttf", preload = true)
-                        setFontWeight(300..800)
-                    }
-                }
-                // Libron is static: four files, one per style/weight pair.
-                addFontFamilyDeclaration(FontFamily("Libron"), listOf(FontFamily("serif"))) {
-                    addFontFace { addSource("fonts/Libron-Regular.ttf", preload = true); setFontStyle(FontStyle.NORMAL); setFontWeight(FontWeight.NORMAL) }
-                    addFontFace { addSource("fonts/Libron-Bold.ttf"); setFontStyle(FontStyle.NORMAL); setFontWeight(FontWeight.BOLD) }
-                    addFontFace { addSource("fonts/Libron-Italic.ttf"); setFontStyle(FontStyle.ITALIC); setFontWeight(FontWeight.NORMAL) }
-                    addFontFace { addSource("fonts/Libron-BoldItalic.ttf"); setFontStyle(FontStyle.ITALIC); setFontWeight(FontWeight.BOLD) }
-                }
-            },
+            configuration = prepared.configuration,
         )
         supportFragmentManager.commitNow { replace(container.id, EpubNavigatorFragment::class.java, Bundle(), "reader") }
         val n = supportFragmentManager.findFragmentByTag("reader") as EpubNavigatorFragment
@@ -329,8 +285,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         android.util.Log.i("KairnPerf", "openBook ${SystemClock.elapsedRealtime() - t0}ms title='${book.title.take(32)}'")
 
         // R-09: save the position, debounced. The UI state follows every locator immediately; only
+        val progress = ReaderProgress()
         lifecycleScope.launch {
-            var lastSaved = 0L
             n.currentLocator.collectLatest { loc ->
                 if (ui.loading) ui.loading = false        // first real position: reveal the page
                 // WHOLE-BOOK progression, not the chapter's: the slider and the time left are about
@@ -344,8 +300,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                     if (ui.ttsOn && !ui.ttsStarting) speakChapter(loc)   // follow the reader into the next chapter
                 }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
-                delay(if (SystemClock.elapsedRealtime() - lastSaved >= 5_000) 0 else 800)
-                lastSaved = SystemClock.elapsedRealtime()
+                delay(progress.delayFor())
+                progress.markSaved()                  // on the write, not on the schedule
                 savePosition(loc)
             }
         }
