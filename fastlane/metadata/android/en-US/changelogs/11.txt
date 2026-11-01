@@ -1,6 +1,5 @@
-Kairn 0.8.1
-
-- A book you have finished no longer appears in Continue reading. It stays in the grid.
-- Share and Look up sit in the selection toolbar instead of behind the three dots.
-- Both can be turned off under Settings > Reading.
-- Settings > About credits the developer with a link to their GitHub.
+0.8.1
+- Finished books leave the Continue reading shelf; a Finished filter shows them in the library.
+- Share and Look up sit in the selection toolbar, each with its own switch in Settings.
+- A credit row and a source link in About.
+- Store copy rewritten for people instead of keywords.

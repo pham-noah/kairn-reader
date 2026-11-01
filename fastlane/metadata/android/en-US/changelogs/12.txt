@@ -1,5 +1,4 @@
-Kairn 0.8.2
-
-- Releases are signed with a key of their own, so an update installs over the old app and keeps your library, places, highlights and settings.
-- This is the update that needs one uninstall first, because a new key cannot replace the old one. Back up in Settings, then restore after installing.
-- Settings > About now links to the source code as well as the developer's GitHub.
+0.8.2
+- Releases are signed with a dedicated key, so later updates install over this one and keep your library.
+- Coming from 0.8.1 this needs a single uninstall: back up first in Settings.
+- About links to the source repository.

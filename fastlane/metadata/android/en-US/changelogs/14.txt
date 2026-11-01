@@ -1,7 +1,5 @@
-Fixed and faster.
-
-- After restoring a backup, or updating, your books come back without a rescan.
-- The device scan no longer runs on every open; if a book's file is missing it runs on its own, at most once an hour.
-- A settings file written by another version no longer resets your theme, folders and onboarding; a copy of the old file is kept.
-- The search cache no longer keeps entries for books you removed, and its size is measured off the main thread.
-- Searching your library stays quick on a large shelf.
+0.8.4
+- After an update or a restore, a book whose file link died re-attaches to Kairn's own copy, so no rescan.
+- The device scan runs only when a book is missing, and at most once an hour.
+- Settings survive a bad entry or an unreadable file instead of resetting to defaults.
+- The search cache drops entries for books you removed.
