@@ -436,4 +436,6 @@
     <string name="s_days_ago">%1$d日前</string>
     <string name="s_reading_aloud_hint">タップでページに戻る</string>
     <string name="s_stop">停止</string>
+    <string name="s_reading_defaults">読書の既定値</string>
+    <string name="s_new_books_open_with_these">変更していない本はこの設定で開きます。</string>
 </resources>

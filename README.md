@@ -31,7 +31,8 @@ folder, or let it find the EPUBs already on your device.
   whatever dictionary app you already have. Kairn bundles no dictionary and asks no server for one. Share and
   Look up sit in the selection toolbar itself, and either can be switched off in Settings.
 - Typeface, text size, line and paragraph spacing, margins, justification and hyphenation - per book, with
-  one action to put a book back on your defaults.
+  one action to put a book back on your defaults, and a Reading defaults screen that decides what a book
+  you have not touched yet opens with.
 - Five page tones from light to true black, plus any custom page and ink pair. Warm light; brightness for
   this app alone or from the system; full screen.
 - A whole-book progress slider, and a time left worked out from the book's real word count at your reading

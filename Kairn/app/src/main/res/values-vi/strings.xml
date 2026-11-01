@@ -436,4 +436,6 @@
     <string name="s_days_ago">%1$d ngày trước</string>
     <string name="s_reading_aloud_hint">Chạm để về lại trang</string>
     <string name="s_stop">Dừng</string>
+    <string name="s_reading_defaults">Mặc định đọc</string>
+    <string name="s_new_books_open_with_these">Sách chưa chỉnh sẽ mở bằng các cài đặt này.</string>
 </resources>

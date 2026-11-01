@@ -42,6 +42,7 @@ fun SettingsScreen(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var licences by remember { mutableStateOf(false) }
     var statsOpen by remember { mutableStateOf(false) }
+    var defaultsOpen by remember { mutableStateOf(false) }
     val stats by store.stats.collectAsStateWithLifecycle()
     val books by store.books.collectAsStateWithLifecycle()
     val finishedCount = remember(books) { books.count { it.status == Status.FINISHED } }
@@ -128,6 +129,9 @@ fun SettingsScreen(
                 KRow(stringResource(R.string.s_look_a_word_up), subtitle = stringResource(R.string.s_look_a_word_up_hint), divider = true) {
                     KSwitch(s.lookupSelection, { v -> store.saveSettings { it.copy(lookupSelection = v) } })
                 }
+                // Type size, spacing and margins are per book, so a reader who needs large type otherwise
+                // re-sets them on every new book.
+                KRow(stringResource(R.string.s_reading_defaults), subtitle = stringResource(R.string.s_new_books_open_with_these), divider = true, onClick = { defaultsOpen = true }) { KChevron() }
             }
         }
         KGroup(stringResource(R.string.s_group_library)) {
@@ -185,6 +189,27 @@ fun SettingsScreen(
         KCard {
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
             KRow(stringResource(R.string.s_manrope_and_literata), subtitle = stringResource(R.string.s_sil_open_font_license_bundled_with_the_a), divider = true)
+        }
+    }
+    if (defaultsOpen) KSheet({ defaultsOpen = false }, stringResource(R.string.s_reading_defaults)) {
+        Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+            KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (s.defaults.fontScale * 100).toInt())) {
+                KSlider(s.defaults.fontScale.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(fontScale = v.toDouble())) } }, 0.7f..2.5f)
+            }
+            KControl(stringResource(R.string.s_line_spacing), stringResource(R.string.s_2f).format(s.defaults.lineHeight)) {
+                KSlider(s.defaults.lineHeight.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(lineHeight = v.toDouble())) } }, 1.0f..2.2f)
+            }
+            KControl(stringResource(R.string.s_paragraph_spacing), stringResource(R.string.s_1f).format(s.defaults.paragraphSpacing)) {
+                KSlider(s.defaults.paragraphSpacing.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(paragraphSpacing = v.toDouble())) } }, 0f..2f)
+            }
+            KControl(stringResource(R.string.s_margins), stringResource(R.string.s_1f).format(s.defaults.margins)) {
+                KSlider(s.defaults.margins.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(margins = v.toDouble())) } }, 0.5f..2.5f)
+            }
+            KCard {
+                KRow(stringResource(R.string.s_justify_text)) { KSwitch(s.defaults.justify, { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(justify = v)) } }) }
+                KRow(stringResource(R.string.s_hyphenation), divider = true) { KSwitch(s.defaults.hyphens, { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(hyphens = v)) } }) }
+            }
+            Text(stringResource(R.string.s_new_books_open_with_these), style = SmallDim, modifier = Modifier.padding(start = 4.dp, top = 12.dp))
         }
     }
 }

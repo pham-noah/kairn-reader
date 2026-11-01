@@ -467,4 +467,6 @@
     <string name="s_days_ago">hace %1$dd</string>
     <string name="s_reading_aloud_hint">Toca para volver a la página</string>
     <string name="s_stop">Detener</string>
+    <string name="s_reading_defaults">Lectura por defecto</string>
+    <string name="s_new_books_open_with_these">Un libro que no hayas cambiado se abre con esto.</string>
 </resources>

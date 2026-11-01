@@ -447,4 +447,6 @@
     <string name="s_days_ago">%1$dd ago</string>
     <string name="s_reading_aloud_hint">Tap to go back to the page</string>
     <string name="s_stop">Stop</string>
+    <string name="s_reading_defaults">Reading defaults</string>
+    <string name="s_new_books_open_with_these">A book you have not changed opens with these.</string>
 </resources>

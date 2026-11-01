@@ -436,4 +436,6 @@
     <string name="s_days_ago">%1$d天前</string>
     <string name="s_reading_aloud_hint">点按返回页面</string>
     <string name="s_stop">停止</string>
+    <string name="s_reading_defaults">阅读默认设置</string>
+    <string name="s_new_books_open_with_these">没有改动过的书会按这些设置打开。</string>
 </resources>
