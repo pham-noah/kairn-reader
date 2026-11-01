@@ -10,7 +10,7 @@ against which spec item, what is not, and the things that will bite anyone touch
 | EPUB open + render via Readium | R-01 |
 | Page / scroll mode | R-03 |
 | Font size, line + paragraph spacing, margins, justify, hyphenation (live) | R-04 (partly) |
-| Typeface choice: the publication's own, or the system serif, sans or mono | R-04 (partly) |
+| Typeface: the publication's own, the bundled Literata / Manrope / Libron, or system serif, sans or mono | R-04 (partly) |
 | Custom page and ink pair, laid over any theme, per book | R-05 |
 | Light / sepia / grey / dark / true black, dark default, follow-system option | R-05, DEC-4 |
 | Warm-light overlay and in-app brightness (system settings untouched) | R-06 |
@@ -150,7 +150,8 @@ was not even reproducible. Start the next attempt from these facts, all measured
 - **R-12, RTL**: verified on a device with a real Arabic EPUB - it renders right-to-left and the LEFT edge
   pages forward (30 -> 28 -> 26 -> 24 min), while an LTR book pages forward on the right edge.
 - **Dead affordances**: the About sheet no longer advertises dictionary licences for a feature that does not
-  exist, and Settings no longer carries a "Language - English" row with nothing behind it.
+  exist. Settings' language row is no longer dead either: it lists the six shipped locales, switches the app
+  in place, and keeps the choice across a restart, with "System" handing control back to the phone.
 
 ## Verifying UI on the emulator: what does NOT work (measured 2026-10-27)
 
