@@ -22,8 +22,8 @@ import java.io.File
  * on the way out instead of stopping the voice.
  *
  * What is asserted here is the handoff, not the audio: leaving the reader while it reads leaves the service
- * running, and stopping the voice takes the service with it. Sound itself needs a speech engine and ears; this
- * is the part that used to be a `tts.stop()` in onPause and would regress silently.
+ * running, and stopping the voice takes the service with it. Sound itself needs a speech engine and ears; the
+ * handoff is what regresses silently, so it is what is asserted.
  */
 @RunWith(AndroidJUnit4::class)
 class SpeechServiceDeviceTest {
@@ -67,7 +67,7 @@ class SpeechServiceDeviceTest {
             Thread.sleep(1_000)
             assertFalse("foreground service runs only while reading", serviceRunning())
 
-            // CREATED is the background: the Activity's onPause runs, which is where the voice used to stop.
+            // CREATED is the background: onPause runs, and the voice must survive it.
             scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
             assertTrue("leaving the reader must keep the voice alive", awaitRunning(true))
 

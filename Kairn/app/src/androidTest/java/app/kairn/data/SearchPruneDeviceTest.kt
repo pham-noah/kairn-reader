@@ -11,8 +11,8 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * A book's search dump must not outlive the book. Deleting a book used to leave `<id>.json.gz` on disk, which
- * the cache-size row in Settings then reported as cache nobody could explain.
+ * A book's search dump must not outlive the book: deleting a book takes `<id>.json.gz` with it, so the
+ * cache-size row in Settings never counts cache for a book that is gone.
  */
 @RunWith(AndroidJUnit4::class)
 class SearchPruneDeviceTest {

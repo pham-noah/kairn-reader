@@ -37,8 +37,8 @@ class SettingsResilienceDeviceTest {
     private fun coldStore(): Store = Store(inst.targetContext).also { runBlocking { it.load() } }
 
     @Test fun oneUnreadableEntryDoesNotDiscardTheRest() {
-        // "shelves" with a null inside used to throw out of AppSettings.from and take every other setting
-        // with it, which is why a restored install came up asking to be onboarded again.
+        // A null inside "shelves" must cost that entry, not the file: losing the rest would drop the onboarding
+        // flag and bring a restored install up asking to be onboarded again.
         app.store.flush()
         file.writeText(
             """{"swipeThreshold":77,"onboarded":true,"theme":"DARK","shelves":[null,"Favourites"],"readingWpm":300}""",
