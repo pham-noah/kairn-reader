@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import app.kairn.R
 import app.kairn.data.Ambient
 import app.kairn.data.Library
+import app.kairn.data.ReaderPrefs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.data.Status
 import app.kairn.data.Store
@@ -192,27 +193,32 @@ fun SettingsScreen(
         }
     }
     if (defaultsOpen) KSheet({ defaultsOpen = false }, stringResource(R.string.s_reading_defaults)) {
-        Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
-            KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (s.defaults.fontScale * 100).toInt())) {
-                KSlider(s.defaults.fontScale.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(fontScale = v.toDouble())) } }, 0.7f..2.5f)
-            }
-            KControl(stringResource(R.string.s_line_spacing), stringResource(R.string.s_2f).format(s.defaults.lineHeight)) {
-                KSlider(s.defaults.lineHeight.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(lineHeight = v.toDouble())) } }, 1.0f..2.2f)
-            }
-            KControl(stringResource(R.string.s_paragraph_spacing), stringResource(R.string.s_1f).format(s.defaults.paragraphSpacing)) {
-                KSlider(s.defaults.paragraphSpacing.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(paragraphSpacing = v.toDouble())) } }, 0f..2f)
-            }
-            KControl(stringResource(R.string.s_margins), stringResource(R.string.s_1f).format(s.defaults.margins)) {
-                KSlider(s.defaults.margins.toFloat(), { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(margins = v.toDouble())) } }, 0.5f..2.5f)
-            }
-            KCard {
-                KRow(stringResource(R.string.s_justify_text)) { KSwitch(s.defaults.justify, { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(justify = v)) } }) }
-                KRow(stringResource(R.string.s_hyphenation), divider = true) { KSwitch(s.defaults.hyphens, { v -> store.saveSettings { it.copy(defaults = it.defaults.copy(hyphens = v)) } }) }
-            }
-            Text(stringResource(R.string.s_new_books_open_with_these), style = SmallDim, modifier = Modifier.padding(start = 4.dp, top = 12.dp))
-        }
+        ReadingDefaults(s.defaults) { prefs -> store.saveSettings { it.copy(defaults = prefs) } }
     }
 }
+
+/** The app-wide reading defaults: what a book with no prefs of its own opens with. */
+@Composable
+internal fun ReadingDefaults(defaults: ReaderPrefs, onChange: (ReaderPrefs) -> Unit) =
+    Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+        KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (defaults.fontScale * 100).toInt())) {
+            KSlider(defaults.fontScale.toFloat(), { v -> onChange(defaults.copy(fontScale = v.toDouble())) }, 0.7f..2.5f)
+        }
+        KControl(stringResource(R.string.s_line_spacing), stringResource(R.string.s_2f).format(defaults.lineHeight)) {
+            KSlider(defaults.lineHeight.toFloat(), { v -> onChange(defaults.copy(lineHeight = v.toDouble())) }, 1.0f..2.2f)
+        }
+        KControl(stringResource(R.string.s_paragraph_spacing), stringResource(R.string.s_1f).format(defaults.paragraphSpacing)) {
+            KSlider(defaults.paragraphSpacing.toFloat(), { v -> onChange(defaults.copy(paragraphSpacing = v.toDouble())) }, 0f..2f)
+        }
+        KControl(stringResource(R.string.s_margins), stringResource(R.string.s_1f).format(defaults.margins)) {
+            KSlider(defaults.margins.toFloat(), { v -> onChange(defaults.copy(margins = v.toDouble())) }, 0.5f..2.5f)
+        }
+        KCard {
+            KRow(stringResource(R.string.s_justify_text)) { KSwitch(defaults.justify, { onChange(defaults.copy(justify = it)) }) }
+            KRow(stringResource(R.string.s_hyphenation), divider = true) { KSwitch(defaults.hyphens, { onChange(defaults.copy(hyphens = it)) }) }
+        }
+        Text(stringResource(R.string.s_new_books_open_with_these), style = SmallDim, modifier = Modifier.padding(start = 4.dp, top = 12.dp))
+    }
 
 /** Opens a link; when no browser handles it, the tap says so instead of doing nothing. */
 private fun openRow(ctx: android.content.Context, url: String) {
