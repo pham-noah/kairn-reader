@@ -73,7 +73,7 @@
     <string name="s_keep_screen_on">Pidä näyttö päällä</string>
     <string name="s_keeps_both_if_a_book_is_in_both_the_late">Säilyttää molemmat. Jos kirja on molemmissa, myöhempi lukukohta voittaa.</string>
     <string name="s_line_spacing">Riviväli</string>
-    <string name="s_makes_this_phone_match_the_backup">Tee tästä puhelimesta varmuuskopion kaltainen.</string>
+    <string name="s_makes_this_phone_match_the_backup">Saa tämän puhelimen vastaamaan varmuuskopiota.</string>
     <string name="s_manrope_and_literata">Manrope ja Literata</string>
     <string name="s_margins">Marginaalit</string>
     <string name="s_merge_with_what_is_here">Yhdistä täällä olevaan</string>
@@ -318,7 +318,7 @@
     </plurals>
     <plurals name="selected_count">
         <item quantity="one">%1$d valittu</item>
-        <item quantity="other">%1$d valittu</item>
+        <item quantity="other">%1$d valittua</item>
     </plurals>
     <string name="s_bad_file_damaged">Tiedosto voi olla vahingoittunut tai liian suuri. Muut tietosi ovat tallessa.</string>
     <string name="s_backup_cannot_open">Tiedostoa ei voitu avata kirjoittamista varten.</string>
@@ -342,8 +342,8 @@
     <string name="s_backup_nudge">Et ole tehnyt varmuuskopiota vähään aikaan.</string>
     <string name="s_backup_nudge_body">Yksi zip sisältää lukukohdat, muistiinpanot ja korostukset.</string>
     <string name="s_later">Myöhemmin</string>
-    <string name="s_time_in_chapter">Luvun aika jäljellä</string>
-    <string name="s_time_in_book">Kirjan aika jäljellä</string>
+    <string name="s_time_in_chapter">Luvun aikaa jäljellä</string>
+    <string name="s_time_in_book">Kirjan aikaa jäljellä</string>
     <plurals name="books_marked_finished">
         <item quantity="one">%1$d kirja merkitty luetuksi</item>
         <item quantity="other">%1$d kirjaa merkitty luetuksi</item>
@@ -388,9 +388,9 @@
     <plurals name="s_hits_in_books"><item quantity="one">%1$d osuma kirjoissasi</item><item quantity="other">%1$d osumaa kirjoissasi</item></plurals>
     <!-- 0.8.0: the selection menu gains Share and Look up -->
     <string name="s_menu_share">Jaa</string>
-    <string name="s_menu_look_up">Hae</string>
+    <string name="s_menu_look_up">Etsi sana</string>
     <string name="s_share_selection">Jaa tämä katkelma</string>
-    <string name="s_look_up">Hae</string>
+    <string name="s_look_up">Etsi sana</string>
     <string name="s_no_dictionary_app">Sanakirjasovellusta ei ole asennettu</string>
 
     <!-- 0.8.0: sleep timer for read aloud (R-15) -->

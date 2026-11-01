@@ -181,7 +181,7 @@
     <string name="s_include_book_files">包含书籍文件</string>
     <string name="s_kairn_opens_in_the_theme_you_pick_above">Kairn 会以上面选定的主题打开。</string>
     <string name="s_last_backup">上次备份</string>
-    <string name="s_less">更小</string>
+    <string name="s_less">收起</string>
     <string name="s_makes_the_backup_larger">会让备份文件变大</string>
     <string name="s_mark_as_finished">标记为已读完</string>
     <string name="s_mark_as_reading">标记为在读</string>
@@ -311,7 +311,7 @@
         <item quantity="other">已选%1$d本</item>
     </plurals>
     <string name="s_bad_file_damaged">文件可能已损坏或过大。其他数据不受影响。</string>
-    <string name="s_backup_cannot_open">无法打开那个文件写入。</string>
+    <string name="s_backup_cannot_open">无法打开该文件进行写入。</string>
     <string name="s_backup_not_kairn">那个文件不是 Kairn 备份，因此没有做任何更改。</string>
     <string name="s_restore_failed_partway">恢复到一半失败了。你的原始数据在%1$s中。</string>
     <string name="s_folder">文件夹</string>
@@ -353,7 +353,7 @@
     <string name="s_report_problem_hint">在浏览器中打开问题追踪页</string>
     <string name="s_read_aloud">朗读</string>
     <string name="s_stop_reading">停止朗读</string>
-    <string name="s_tts_starting">正在开始…</string>
+    <string name="s_tts_starting">正在启动…</string>
     <string name="s_pause">暂停</string>
     <string name="s_resume">继续</string>
     <string name="s_reading_aloud">正在朗读</string>

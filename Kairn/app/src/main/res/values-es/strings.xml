@@ -200,7 +200,7 @@
     <string name="s_notes_and_highlights">Notas y subrayados</string>
     <string name="s_more">Más</string>
     <string name="s_reading">Leyendo</string>
-    <string name="s_reset_this_book_to_your_defaults">Restablecer este libro a tus valores</string>
+    <string name="s_reset_this_book_to_your_defaults">Restablecer este libro a tus valores predeterminados</string>
     <string name="s_restore_from_a_backup">Restaurar desde una copia</string>
     <string name="s_search_in_book">Buscar en el libro</string>
     <string name="s_select_text_and_pick_a_colour_to_highlig">Selecciona texto y elige un color para subrayarlo, toca Nota para escribir una nota, o toca el icono de marcador.</string>
@@ -342,8 +342,8 @@
     <string name="s_backup_nudge">Hace tiempo que no haces una copia.</string>
     <string name="s_backup_nudge_body">Un zip guarda tus posiciones, notas y subrayados.</string>
     <string name="s_later">Más tarde</string>
-    <string name="s_time_in_chapter">Tiempo del capítulo</string>
-    <string name="s_time_in_book">Tiempo del libro</string>
+    <string name="s_time_in_chapter">Tiempo restante del capítulo</string>
+    <string name="s_time_in_book">Tiempo restante del libro</string>
     <plurals name="books_marked_finished">
         <item quantity="one">%1$d libro marcado como terminado</item>
         <item quantity="other">%1$d libros marcados como terminados</item>
@@ -388,9 +388,9 @@
     <plurals name="s_hits_in_books"><item quantity="one">%1$d coincidencia en tus libros</item><item quantity="other">%1$d coincidencias en tus libros</item></plurals>
     <!-- 0.8.0: el menú de selección gana Compartir y Buscar -->
     <string name="s_menu_share">Compartir</string>
-    <string name="s_menu_look_up">Buscar</string>
+    <string name="s_menu_look_up">Consultar</string>
     <string name="s_share_selection">Compartir este fragmento</string>
-    <string name="s_look_up">Buscar</string>
+    <string name="s_look_up">Consultar</string>
     <string name="s_no_dictionary_app">No hay ninguna app de diccionario instalada</string>
 
     <!-- 0.8.0: temporizador de sueño para leer en voz alta (R-15) -->

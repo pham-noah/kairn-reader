@@ -284,7 +284,7 @@
     <string name="s_search_library">Tìm trong thư viện</string>
     <string name="s_switch_to_list">Chuyển sang dạng danh sách</string>
     <string name="s_switch_to_grid">Chuyển sang dạng lưới</string>
-    <string name="s_status_none">Không</string>
+    <string name="s_status_none">Không có</string>
     <string name="s_delete_desc">Xóa</string>
     <string name="s_back">Quay lại</string>
     <string name="s_group_folders_watched">Thư mục Kairn theo dõi</string>
@@ -359,7 +359,7 @@
     <string name="s_reading_aloud">Đang đọc thành tiếng</string>
     <string name="s_speech_rate">Tốc độ</string>
     <string name="s_speech_rate_value">%1$.2f×</string>
-    <string name="s_speech_rate_hint">Có hiệu lực từ từ tiếp theo.</string>
+    <string name="s_speech_rate_hint">Có hiệu lực từ chữ tiếp theo.</string>
     <string name="s_tts_unavailable">Máy này không hỗ trợ đọc thành tiếng</string>
     <string name="s_tts_chapter_failed">Không đọc thành tiếng được chương này</string>
     <string name="s_typeface">Kiểu chữ</string>

@@ -95,7 +95,7 @@
     <string name="s_remove_from_library">ライブラリから削除</string>
     <string name="s_removed_the_file_itself_was_not_touched">削除しました。ファイル自体は変更していません。</string>
     <string name="s_replace_everything">すべて置き換える</string>
-    <string name="s_require_a_code">コードを要求</string>
+    <string name="s_require_a_code">コードを必須にする</string>
     <string name="s_restore">復元</string>
     <string name="s_restore_from_a_file">ファイルから復元</string>
     <string name="s_save">保存</string>
@@ -192,7 +192,7 @@
     <string name="s_no_folders_yet_new_epub_files_in_a_watch">フォルダはまだありません。監視中のフォルダに新しいEPUBを置くと自動で表示されます。</string>
     <string name="s_no_network_address">ネットワークアドレスがありません</string>
     <string name="s_no_wi_fi_network_found_join_a_wi_fi_netw">Wi-Fiネットワークが見つかりません。Wi-Fiに接続してからもう一度お試しください。</string>
-    <string name="s_not_yet">未設定</string>
+    <string name="s_not_yet">未読</string>
     <string name="s_notes_and_highlights">メモとハイライト</string>
     <string name="s_more">もっと見る</string>
     <string name="s_reading">読書中</string>
