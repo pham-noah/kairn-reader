@@ -269,7 +269,10 @@ Verified against the real 3.0.0 artifacts, not from memory:
 - A disk cache for positions was tried once, removed for being slower than recomputing, and put back in
   0.8.5 with the cost measured rather than assumed. On the emulator, `Long Test`: first open measured
   `positions n=24 3791ms` and wrote a 415-byte file; the next open logged `positions n=24 cached` and
-  `openBook` fell from 1904 ms to 649 ms. A garbage file in the cache slot falls back to measuring, opens
+  `openBook` fell from 1904 ms to 649 ms. On a real Gutenberg book (Frankenstein, 78 201 words): first open
+  measured `positions n=212 3359ms` into a 2.7 KB file, the second logged `n=212 cached` with `openBook`
+  1001 ms against 1440 ms, and dragging the progress slider to ~65% saved position 133 of 212 at
+  `totalProgression 0.6226` - so the restored locators navigate, they are not just counts. A garbage file in the cache slot falls back to measuring, opens
   normally, and is rewritten — the failure mode is slow, not broken. What the earlier attempt did
   differently is not recorded; if a real device ever measures the cached path slower, delete
   `PositionsCache` and the `FORMAT` constant is enough to retire every stored list.
