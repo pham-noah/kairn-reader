@@ -20,6 +20,11 @@ books the room instead of the buttons.
 - Rows in Settings are one line each: the descriptions under action rows are gone, and the Appearance card
   is label-and-control like every other group, which brings the reading settings up a screen earlier.
 
+**Reopening is quick**
+- A book is measured the first time you open it and the result is kept, so the second open skips the walk.
+  On the test device that is 649 ms instead of 1904 ms; a book with more pages gains more. Delete the book and
+  the measurement goes with it, and Settings' cache row counts it, so "Clear cache" drops it.
+
 **Copy and contrast**
 - "Check for updates now" instead of "Check now", in all six languages.
 - Finnish says *Lukulista* for the reading list and *Nimi* for a title, everywhere it appeared.
@@ -27,7 +32,10 @@ books the room instead of the buttons.
   on Sepia, under AA for the chapter name above the progress bar. Both are now 5.39:1 and 4.69:1.
 
 **Under the hood**
-- Opening a book and saving your place are split into pieces with tests of their own: 93 JVM tests, up
+- Opening a book and saving your place are split into pieces with tests of their own: 99 JVM tests, up
   from 73. No behaviour change intended, and the place you left off was checked against a restart.
+- The kept measurement is covered by four device tests - a stored list comes back with its locations, a file
+  that changed under it is rejected, rubbish reads as no cache, and deleting a book deletes it - 42 on-device
+  tests in all.
 
 Install over 0.8.4 as usual - same signing key, data kept.

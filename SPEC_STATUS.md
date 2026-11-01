@@ -331,7 +331,7 @@ Tests live in `app/src/test` and run on the JVM (99): model round-trips, `Store`
 delete-not-overtaken, flush, unchanged guards), the restore/merge path, the reader's chapter-title map and
 save timing, and the save order in `ReaderProgress`.
 
-`app/src/androidTest` holds 38 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 42 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate
@@ -420,7 +420,8 @@ What changed, and where the sharp edges are:
   just counts) is what makes it worth it: the progress slider navigates with the restored `Locator` objects,
   via `Locator.toJSON()`/`Locator.fromJSON()`, which exist in 3.0.0. Written `.tmp`-then-rename so a kill
   mid-write cannot leave a half file. Settings' cache row counts search dumps and positions together, and
-  "Clear cache" drops both.
+  "Clear cache" drops both. Covered by `PositionsCacheDeviceTest`: the JSON round-trip keeps hrefs, titles and
+  progressions, a file that changed under the cache is rejected, rubbish reads as no cache, forget deletes.
 - **Daily sweep.** The MediaStore + storage walk now runs at most once every 24 h (`settings.lastSweep`);
   watched folders stay live and "Find books on this device" still forces it.
 - **Rough edges.** Release assembly fails without a keystore unless `-PallowUnsigned`; dead link taps say why;

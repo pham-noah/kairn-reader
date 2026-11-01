@@ -1,6 +1,7 @@
 0.8.5
 - Literata, Manrope and Libron are bundled, so the reading typefaces work with no download.
-- A Language row in Settings switches the app between six languages on the spot.
-- Add books and the grid/list toggle sit with the collection row; the header is title and search only.
-- Settings rows are one line each, and the Appearance card is as compact as the rest.
-- The accent on the light and sepia themes is dark enough to read against the page.
+- Switch the app between six languages from Settings.
+- Add books and the grid/list toggle moved down to the collection row.
+- Settings rows are one line each.
+- The accent on the light and sepia themes now reads against the page.
+- A book is measured once, so reopening it is much faster.
