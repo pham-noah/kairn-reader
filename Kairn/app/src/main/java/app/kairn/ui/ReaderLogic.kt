@@ -164,4 +164,11 @@ object ReaderLogic {
     /** True when any bookmark in [marks] sits in [href]. One bookmark per chapter is decided by this. */
     fun chapterHasBookmark(marks: List<Mark>, href: String, hrefOf: (Mark) -> String?): Boolean =
         marks.any { it.kind == "bookmark" && hrefOf(it) == href }
+
+    /**
+     * Last path segment with any fragment dropped. A TOC href is relative to its own entry ("ch03.xhtml")
+     * while a locator href is not ("OEBPS/ch03.xhtml"), so the two never compare equal as strings.
+     */
+    fun chapterKey(href: String?): String? =
+        href?.substringBefore('#')?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
 }

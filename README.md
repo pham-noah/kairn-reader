@@ -93,7 +93,7 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 86 JVM tests, no device needed
+    ./gradlew :app:testDebugUnitTest          # 89 JVM tests, no device needed
     ./gradlew :app:connectedDebugAndroidTest  # 36 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
@@ -109,12 +109,15 @@ and which spec item maps to what.
 
 ## What is next
 
-**Translations.** Vietnamese, Japanese, Simplified Chinese, Spanish and Finnish are written; Vietnamese still
-wants a native read before it is called finished. Every user-facing string is a resource and every count is a
-plural, so the next language is a `values-xx/strings.xml` away.
+**Translations.** Vietnamese, Japanese, Simplified Chinese, Spanish and Finnish are written, and each file was
+read against the English line by line. A native reader on Vietnamese would still be worth having. Every
+user-facing string is a resource and every count is a plural, so the next language is a `values-xx/strings.xml`
+away.
 
-Image zoom inside the page. F-Droid, once the project has the history its reviewers ask for. Vertical text and
-a typeface from your own font files depend on what the Readium API exposes, so neither is promised yet.
+**Next.** Image zoom inside the page: Readium has no zoom of its own, so this means scaling the page itself.
+Vertical text and a typeface from your own font files are both reachable in Readium 3.0.0 - a preference and a
+font-face declaration - so those are a matter of building the controls. F-Droid, once the project has the
+history its reviewers ask for.
 
 ## Credits and licence
 

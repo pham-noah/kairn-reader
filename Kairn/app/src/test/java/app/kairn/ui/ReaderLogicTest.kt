@@ -133,4 +133,24 @@ class ReaderLogicTest {
             text.substring(at).startsWith("Second"))
         assertEquals(0, ReaderLogic.ttsStartOffset("", 0.5f))
     }
+
+    /** The Contents marker has to survive a TOC href and a locator href naming the same file differently. */
+    @Test fun a_chapter_key_matches_a_toc_link_to_its_locator() {
+        assertEquals(ReaderLogic.chapterKey("OEBPS/ch03.xhtml"), ReaderLogic.chapterKey("ch03.xhtml"))
+        assertEquals(ReaderLogic.chapterKey("/OEBPS/text/ch03.xhtml#p12"), ReaderLogic.chapterKey("ch03.xhtml"))
+        assertEquals("ch03.xhtml", ReaderLogic.chapterKey("ch03.xhtml"))
+    }
+
+    /** A key must not collapse 11.xhtml onto 1.xhtml: an endsWith comparison would. */
+    @Test fun a_chapter_key_is_not_fooled_by_a_shared_suffix() {
+        assertFalse(ReaderLogic.chapterKey("OEBPS/ch11.xhtml") == ReaderLogic.chapterKey("ch1.xhtml"))
+        assertEquals("ch11.xhtml", ReaderLogic.chapterKey("ch11.xhtml#p2"))
+    }
+
+    @Test fun a_chapter_key_of_nothing_is_null() {
+        assertNull(ReaderLogic.chapterKey(null))
+        assertNull(ReaderLogic.chapterKey(""))
+        assertNull(ReaderLogic.chapterKey("   "))
+        assertEquals("ch1.xhtml", ReaderLogic.chapterKey("ch1.xhtml#"))
+    }
 }

@@ -326,7 +326,7 @@ internal fun ReaderScreen(
             when (ui.sheet) {
                 ReaderSheet.TTS -> TtsSheet(ui.prefs, ui.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts)
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
-                ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, act::goTo)
+                ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, ui.chapterHref, act::goTo)
                 ReaderSheet.SEARCH -> {
                     val here = ui.chapterHref
                     val shown = if (ui.searchChapterOnly && here != null) ui.searchResults.filter { it.href.toString() == here }

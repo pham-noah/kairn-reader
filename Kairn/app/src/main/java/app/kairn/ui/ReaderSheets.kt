@@ -12,6 +12,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -190,7 +191,7 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
 }
 
 @Composable
-internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
+internal fun ContentsSheet(pub: Publication?, current: String?, onGo: (Locator) -> Unit) {
     val flat = remember(pub) {
         val out = mutableListOf<Pair<Link, Int>>()
         fun walk(ls: List<Link>, d: Int) {
@@ -199,11 +200,20 @@ internal fun ContentsSheet(pub: Publication?, onGo: (Locator) -> Unit) {
         walk(pub?.tableOfContents.orEmpty(), 0)
         out
     }
-    KCard { LazyColumn(Modifier.heightIn(max = 520.dp)) {
+    // A TOC link and the reader's locator name the same chapter differently, so match on the key.
+    val here = current?.let(ReaderLogic::chapterKey)
+    val firstHere = remember(flat, here) { flat.indexOfFirst { ReaderLogic.chapterKey(it.first.href.toString()) == here } }
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = firstHere.coerceAtLeast(0))
+    KCard { LazyColumn(Modifier.heightIn(max = 520.dp), state = state) {
         items(flat.size) { i ->
             val (l, d) = flat[i]
+            val isHere = here != null && ReaderLogic.chapterKey(l.href.toString()) == here
             if (i > 0) HorizontalDivider(color = K.line)
-            Text(l.title ?: stringResource(R.string.s_untitled), style = KType.title, modifier = Modifier.fillMaxWidth().clickable { pub?.locatorFromLink(l)?.let(onGo) }.padding(start = (16 + d * 16).dp, end = 16.dp, top = 15.dp, bottom = 15.dp))
+            Text(
+                l.title ?: stringResource(R.string.s_untitled),
+                style = if (isHere) KType.title.copy(color = K.mint) else KType.title,
+                modifier = Modifier.fillMaxWidth().clickable { pub?.locatorFromLink(l)?.let(onGo) }.padding(start = (16 + d * 16).dp, end = 16.dp, top = 15.dp, bottom = 15.dp),
+            )
         }
     } }
 }

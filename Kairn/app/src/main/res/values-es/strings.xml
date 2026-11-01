@@ -33,11 +33,13 @@
     <plurals name="search_cache_size">
         <item quantity="one">%1$d libro · %2$s - toca para vaciar</item>
         <item quantity="other">%1$d libros · %2$s - toca para vaciar</item>
+        <item quantity="many">%1$d libros · %2$s - toca para vaciar</item>
     </plurals>
     <string name="s_off">Desactivado</string>
     <plurals name="s_every_days_in">
         <item quantity="one">Cada día en %2$s, guardando los %3$d más recientes</item>
         <item quantity="other">Cada %1$d días en %2$s, guardando los %3$d más recientes</item>
+        <item quantity="many">Cada %1$d días en %2$s, guardando los %3$d más recientes</item>
     </plurals>
     <string name="s_backup_and_restore">Copia y restauración</string>
     <string name="s_brightness_this_app_only">Brillo, solo en esta app</string>
@@ -158,10 +160,12 @@
     <plurals name="books_added">
         <item quantity="one">Se añadió %1$d libro</item>
         <item quantity="other">Se añadieron %1$d libros</item>
+        <item quantity="many">Se añadieron %1$d libros</item>
     </plurals>
     <plurals name="books_added_to">
         <item quantity="one">Se añadió %1$d libro a %2$s</item>
         <item quantity="other">Se añadieron %1$d libros a %2$s</item>
+        <item quantity="many">Se añadieron %1$d libros a %2$s</item>
     </plurals>
     <string name="s_edit_note">Editar nota</string>
     <string name="s_a_collection_groups_books_you_choose_lik">Una colección agrupa los libros que elijas, como un estante.</string>
@@ -230,18 +234,22 @@
     <plurals name="books_count">
         <item quantity="one">%1$d libro</item>
         <item quantity="other">%1$d libros</item>
+        <item quantity="many">%1$d libros</item>
     </plurals>
     <plurals name="books_picked">
         <item quantity="one">%1$d libro: toca una colección para ponerlo en ella.</item>
         <item quantity="other">%1$d libros: toca una colección para ponerlos en ella.</item>
+        <item quantity="many">%1$d libros: toca una colección para ponerlos en ella.</item>
     </plurals>
     <plurals name="books_removed_from">
         <item quantity="one">Se quita de %1$d libro. Los libros, sus notas y su posición se mantienen.</item>
         <item quantity="other">Se quita de %1$d libros. Los libros, sus notas y su posición se mantienen.</item>
+        <item quantity="many">Se quita de %1$d libros. Los libros, sus notas y su posición se mantienen.</item>
     </plurals>
     <plurals name="folders_count">
         <item quantity="one">%1$d carpeta, los libros nuevos aparecen solos</item>
         <item quantity="other">%1$d carpetas, los libros nuevos aparecen solos</item>
+        <item quantity="many">%1$d carpetas, los libros nuevos aparecen solos</item>
     </plurals>
     <string name="s_back_to_library">Volver a la biblioteca</string>
     <string name="s_bookmark_this_chapter">Marcar este capítulo</string>
@@ -315,10 +323,12 @@
     <plurals name="books_received">
         <item quantity="one">%1$d libro recibido.</item>
         <item quantity="other">%1$d libros recibidos.</item>
+        <item quantity="many">%1$d libros recibidos.</item>
     </plurals>
     <plurals name="selected_count">
         <item quantity="one">%1$d seleccionado</item>
         <item quantity="other">%1$d seleccionados</item>
+        <item quantity="many">%1$d seleccionados</item>
     </plurals>
     <string name="s_bad_file_damaged">Puede que el archivo esté dañado o sea demasiado grande. El resto de tus datos está a salvo.</string>
     <string name="s_backup_cannot_open">No se pudo abrir ese archivo para escribir.</string>
@@ -328,10 +338,12 @@
     <plurals name="files_saved">
         <item quantity="one">%1$d archivo guardado</item>
         <item quantity="other">%1$d archivos guardados</item>
+        <item quantity="many">%1$d archivos guardados</item>
     </plurals>
     <plurals name="matches_found">
         <item quantity="one">%1$d resultado</item>
         <item quantity="other">%1$d resultados</item>
+        <item quantity="many">%1$d resultados</item>
     </plurals>
     <string name="s_reverse_sort">Invertir el orden</string>
     <string name="s_remove">Quitar</string>
@@ -347,10 +359,12 @@
     <plurals name="books_marked_finished">
         <item quantity="one">%1$d libro marcado como terminado</item>
         <item quantity="other">%1$d libros marcados como terminados</item>
+        <item quantity="many">%1$d libros marcados como terminados</item>
     </plurals>
     <plurals name="books_removed">
         <item quantity="one">¿Quitar %1$d libro de la biblioteca? Su archivo no se toca.</item>
         <item quantity="other">¿Quitar %1$d libros de la biblioteca? Sus archivos no se tocan.</item>
+        <item quantity="many">¿Quitar %1$d libros de la biblioteca? Sus archivos no se tocan.</item>
     </plurals>
     <string name="s_reading_progress">Progreso de lectura</string>
     <string name="s_custom_colours">Colores propios</string>
@@ -385,7 +399,8 @@
     <string name="s_scroll_speed">Velocidad del desplazamiento</string>
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Buscando en tus libros (%1$d de %2$d)</string>
-    <plurals name="s_hits_in_books"><item quantity="one">%1$d coincidencia en tus libros</item><item quantity="other">%1$d coincidencias en tus libros</item></plurals>
+    <plurals name="s_hits_in_books"><item quantity="one">%1$d coincidencia en tus libros</item><item quantity="other">%1$d coincidencias en tus libros</item>
+        <item quantity="many">%1$d coincidencias en tus libros</item></plurals>
     <!-- 0.8.0: el menú de selección gana Compartir y Buscar -->
     <string name="s_menu_share">Compartir</string>
     <string name="s_menu_look_up">Consultar</string>
@@ -398,21 +413,24 @@
     <string name="s_minutes_short">%1$d min</string>
     <string name="s_end_of_chapter">Fin del capítulo</string>
     <string name="s_sleep_hint">La lectura se detiene sola y se conserva tu posición.</string>
-    <plurals name="reading_stops_in"><item quantity="one">La lectura se detiene en %1$d minuto</item><item quantity="other">La lectura se detiene en %1$d minutos</item></plurals>
+    <plurals name="reading_stops_in"><item quantity="one">La lectura se detiene en %1$d minuto</item><item quantity="other">La lectura se detiene en %1$d minutos</item>
+        <item quantity="many">La lectura se detiene en %1$d minutos</item></plurals>
     <string name="toast_sleep_chapter">La lectura se detiene al final de este capítulo</string>
     <string name="toast_sleep_done">Temporizador: lectura detenida</string>
 
     <!-- 0.8.0: el registro de lectura (DS-02) -->
     <string name="s_your_reading">Tu lectura</string>
     <string name="s_no_reading_yet">Nada registrado aún</string>
-    <plurals name="reading_today"><item quantity="one">Hoy %1$d min · racha de %2$d día</item><item quantity="other">Hoy %1$d min · racha de %2$d días</item></plurals>
+    <plurals name="reading_today"><item quantity="one">Hoy %1$d min · racha de %2$d día</item><item quantity="other">Hoy %1$d min · racha de %2$d días</item>
+        <item quantity="many">Hoy %1$d min · racha de %2$d días</item></plurals>
     <string name="s_today">Hoy</string>
     <string name="s_this_week">Esta semana</string>
     <string name="s_streak">Racha</string>
     <string name="s_days_value">%1$d d</string>
     <string name="s_minutes_value">%1$d min</string>
     <string name="s_hours_value">%1$d h %2$d min</string>
-    <plurals name="reading_total"><item quantity="one">En total: %1$d h %2$d min en %3$d libro terminado</item><item quantity="other">En total: %1$d h %2$d min en %3$d libros terminados</item></plurals>
+    <plurals name="reading_total"><item quantity="one">En total: %1$d h %2$d min en %3$d libro terminado</item><item quantity="other">En total: %1$d h %2$d min en %3$d libros terminados</item>
+        <item quantity="many">En total: %1$d h %2$d min en %3$d libros terminados</item></plurals>
     <string name="s_stats_local_note">Se guarda en stats.json en este teléfono. No se sube nada.</string>
 
     <!-- 0.8.0: actualizaciones (DS-04) -->
@@ -439,8 +457,10 @@
     <string name="s_group_from_another_reader">De otro lector</string>
     <string name="s_import_kindle_highlights">Importar subrayados de Kindle</string>
     <string name="s_import_kindle_hint">Desde My Clippings.txt en el Kindle</string>
-    <plurals name="importing_clippings"><item quantity="one">Buscando %1$d recorte en tus libros…</item><item quantity="other">Buscando %1$d recortes en tus libros…</item></plurals>
-    <plurals name="clippings_imported"><item quantity="one">%1$d subrayado importado · %2$d no encontrado · %3$d libro no está en la biblioteca</item><item quantity="other">%1$d subrayados importados · %2$d no encontrados · %3$d libros no están en la biblioteca</item></plurals>
+    <plurals name="importing_clippings"><item quantity="one">Buscando %1$d recorte en tus libros…</item><item quantity="other">Buscando %1$d recortes en tus libros…</item>
+        <item quantity="many">Buscando %1$d recortes en tus libros…</item></plurals>
+    <plurals name="clippings_imported"><item quantity="one">%1$d subrayado importado · %2$d no encontrado · %3$d libro no está en la biblioteca</item><item quantity="other">%1$d subrayados importados · %2$d no encontrados · %3$d libros no están en la biblioteca</item>
+        <item quantity="many">%1$d subrayados importados · %2$d no encontrados · %3$d libros no están en la biblioteca</item></plurals>
     <string name="toast_clippings_unreadable">No se pudo leer ese archivo</string>
     <string name="toast_clippings_none">No se encontraron subrayados en ese archivo</string>
     <string name="s_yesterday">Ayer</string>
