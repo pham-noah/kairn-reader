@@ -82,6 +82,38 @@ class PositionsCacheDeviceTest {
         cache.forget(b.id)
     }
 
+    @Test fun saving_leaves_nothing_but_the_stored_list() {
+        val b = book("positions-no-leftovers")
+        // Twice in a row stands in for two opens racing on the same book: the temp names must not collide,
+        // and neither write may leave a file behind for prune to find later.
+        repeat(2) { kotlinx.coroutines.runBlocking { cache.save(b, listOf(locator("ch1.xhtml", 0.0, "One"))) } }
+        val files = File(inst.targetContext.filesDir, "positions").list().orEmpty()
+        assertEquals(listOf("${b.id}.json.gz"), files.filter { it.startsWith(b.id) })
+        cache.forget(b.id)
+    }
+
+    @Test fun prune_takes_the_books_that_left_and_the_temp_files() {
+        val kept = book("positions-kept")
+        val gone = book("positions-gone")
+        kotlinx.coroutines.runBlocking {
+            cache.save(kept, listOf(locator("ch1.xhtml", 0.0, "One")))
+            cache.save(gone, listOf(locator("ch1.xhtml", 0.0, "One")))
+        }
+        // What a cancelled save leaves on disk: both the current shape and the older name that pruned to the
+        // book's own id, which is the one a suffix-stripping prune would keep forever.
+        val tmpDir = File(inst.targetContext.filesDir, "positions")
+        val leftCurrent = File(tmpDir, "${kept.id}.12345.tmp").apply { writeText("half") }
+        val leftLegacy = File(tmpDir, "${kept.id}.tmp").apply { writeText("half") }
+
+        cache.prune(setOf(kept.id))
+
+        assertEquals(false, leftCurrent.exists())
+        assertEquals(false, leftLegacy.exists())
+        assertEquals(false, File(inst.targetContext.filesDir, "positions/${gone.id}.json.gz").exists())
+        assertNotNull(cache.load(kept))
+        cache.forget(kept.id)
+    }
+
     @Test fun forgetting_a_book_takes_its_file() {
         val b = book("positions-forget")
         kotlinx.coroutines.runBlocking { cache.save(b, listOf(locator("ch1.xhtml", 0.0, "One"))) }

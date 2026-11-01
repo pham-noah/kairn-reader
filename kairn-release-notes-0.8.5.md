@@ -34,8 +34,8 @@ books the room instead of the buttons.
 **Under the hood**
 - Opening a book and saving your place are split into pieces with tests of their own: 99 JVM tests, up
   from 73. No behaviour change intended, and the place you left off was checked against a restart.
-- The kept measurement is covered by four device tests - a stored list comes back with its locations, a file
-  that changed under it is rejected, rubbish reads as no cache, and deleting a book deletes it - 42 on-device
-  tests in all.
+- The kept measurement is covered by six device tests - a stored list comes back with its locations, a file
+  that changed under it is rejected, rubbish reads as no cache, deleting a book deletes it, two saves leave one
+  file, and the tidy-up takes both departed books and half-written temp files - 44 on-device tests in all.
 
 Install over 0.8.4 as usual - same signing key, data kept.

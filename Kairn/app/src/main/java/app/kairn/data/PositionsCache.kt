@@ -65,8 +65,9 @@ class PositionsCache(private val ctx: Context) {
             val arr = JSONArray()
             positions.forEach { arr.put(it.toJSON()) }
             json.put("positions", arr)
-            // Write beside the target and rename, so a kill mid-write cannot leave a half file to load.
-            val tmp = File(dir, "${book.id}.tmp")
+            // Write beside the target and rename, so a kill mid-write cannot leave a half file to load. The
+            // name carries a counter because two opens of the same book can save at once and must not share it.
+            val tmp = File(dir, "${book.id}.${System.nanoTime()}.tmp")
             GZIPOutputStream(tmp.outputStream().buffered()).use { it.write(json.toString().toByteArray()) }
             if (!tmp.renameTo(fileFor(book.id))) tmp.delete()
         }
@@ -75,10 +76,11 @@ class PositionsCache(private val ctx: Context) {
     /** A book left the library: its list must not outlive it. */
     fun forget(id: String) { runCatching { fileFor(id).delete() } }
 
-    /** Drops lists for books no longer in the library. */
+    /** Drops lists for books no longer in the library, and any temp file a cancelled save left behind. */
     fun prune(known: Set<String>) {
         dir.listFiles().orEmpty().forEach { f ->
-            val id = f.name.removeSuffix(".json.gz").removeSuffix(".tmp")
+            if (f.name.endsWith(".tmp")) { runCatching { f.delete() }; return@forEach }
+            val id = f.name.removeSuffix(".json.gz")
             if (id !in known) runCatching { f.delete() }
         }
     }
@@ -99,7 +101,7 @@ class PositionsCache(private val ctx: Context) {
             .let { files -> files.size to files.sumOf { it.length() } }
 
     companion object {
-        /** Bump when a pagination change makes stored positions wrong rather than merely old. */
+        /** Bump when Readium's own way of counting positions changes, making stored lists wrong, not just old. */
         const val FORMAT = 1
     }
 }
