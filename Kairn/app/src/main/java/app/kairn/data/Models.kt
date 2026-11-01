@@ -50,6 +50,7 @@ data class ReaderPrefs(
     val margins: Double = 1.0,
     val justify: Boolean = false,
     val hyphens: Boolean = true,
+    val vertical: Boolean = false,             // R-15: CJK vertical writing, top to bottom
     val twoPage: Boolean = false,              // R-14: two-page spread on a wide screen
     val scroll: Boolean = false,               // R-03
     val warmth: Float = 0f,                    // R-06, 0..1, app-local overlay
@@ -62,7 +63,7 @@ data class ReaderPrefs(
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("fontScale", fontScale)
         .put("lineHeight", lineHeight).put("paragraphSpacing", paragraphSpacing)
-        .put("margins", margins).put("justify", justify).put("hyphens", hyphens).put("twoPage", twoPage)
+        .put("margins", margins).put("justify", justify).put("hyphens", hyphens).put("vertical", vertical).put("twoPage", twoPage)
         .put("scroll", scroll).put("warmth", warmth.toDouble()).put("brightness", brightness.toDouble())
         .put("pageColor", pageColor ?: JSONObject.NULL).put("inkColor", inkColor ?: JSONObject.NULL)
         .put("fontFamily", fontFamily ?: JSONObject.NULL).put("scrollSpeed", scrollSpeed.toDouble())
@@ -79,6 +80,7 @@ data class ReaderPrefs(
                 margins = o.optDouble("margins", base.margins),
                 justify = o.optBoolean("justify", base.justify),
                 hyphens = o.optBoolean("hyphens", base.hyphens),
+                vertical = o.optBoolean("vertical", base.vertical),
                 twoPage = o.optBoolean("twoPage", base.twoPage),
                 scroll = o.optBoolean("scroll", base.scroll),
                 warmth = o.optDouble("warmth", base.warmth.toDouble()).toFloat(),

@@ -62,6 +62,7 @@
     <string name="s_full_screen">全屏</string>
     <string name="s_hide_the_status_bar_with_the_bars">随系统栏一同隐藏状态栏</string>
     <string name="s_hyphenation">断字</string>
+    <string name="s_vertical_text">竖排文字</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">滚动模式下：向左为下一章，向右为上一章</string>
     <string name="s_justify_text">两端对齐</string>
     <string name="s_footer_tagline">没有账号，没有广告，不做追踪。只是一个阅读器，由一个人做成。</string>

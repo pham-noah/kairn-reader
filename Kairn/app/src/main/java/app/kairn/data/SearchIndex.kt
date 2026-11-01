@@ -1,5 +1,7 @@
 package app.kairn.data
 
+import androidx.core.net.toUri
+
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
@@ -36,10 +38,10 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
     private fun stamp(book: Book): Pair<Long, Long>? {
         // DocumentFile cannot stat a file:// book (it speaks DocumentsContract), so stat the copy directly.
         if (book.uri.startsWith("file:")) {
-            val f = Uri.parse(book.uri).path?.let(::File) ?: return null
+            val f = book.uri.toUri().path?.let(::File) ?: return null
             return if (f.exists()) f.length() to f.lastModified() else null
         }
-        val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(ctx, Uri.parse(book.uri)) ?: return null
+        val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(ctx, book.uri.toUri()) ?: return null
         if (!doc.exists()) return null
         return doc.length() to doc.lastModified()
     }
@@ -58,7 +60,7 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
         runCatching {
             if (!dir.exists()) dir.mkdirs()
             val (size, mtime) = stamp(book) ?: return@runCatching false
-            val pub = readium.open(Uri.parse(book.uri)) ?: return@runCatching false
+            val pub = readium.open(book.uri.toUri()) ?: return@runCatching false
             try {
                 val chapters = ArrayList<Chapter>()
                 var budget = MAX_CHARS

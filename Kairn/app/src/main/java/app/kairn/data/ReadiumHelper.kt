@@ -4,6 +4,7 @@ package app.kairn.data
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.graphics.scale
 import android.net.Uri
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.cover
@@ -60,7 +61,7 @@ fun writeThumb(bmp: Bitmap, target: java.io.File, width: Int = 320) {
     runCatching {
         val scale = width.toFloat() / maxOf(bmp.width, 1)
         val h = maxOf(1, (bmp.height * scale).toInt())
-        val scaled = Bitmap.createScaledBitmap(bmp, width, h, true)
+        val scaled = bmp.scale(width, h, true)
         java.io.FileOutputStream(target).use { scaled.compress(Bitmap.CompressFormat.JPEG, 82, it) }
         if (scaled !== bmp) scaled.recycle()
     }

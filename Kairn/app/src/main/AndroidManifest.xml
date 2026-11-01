@@ -36,6 +36,7 @@
 
     <application
         android:localeConfig="@xml/locales_config"
+        tools:targetApi="33"
         android:name=".KairnApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

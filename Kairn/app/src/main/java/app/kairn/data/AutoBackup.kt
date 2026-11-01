@@ -1,5 +1,7 @@
 package app.kairn.data
 
+import androidx.core.net.toUri
+
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
@@ -23,7 +25,7 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
         if (!autoBackupIsDue(s.lastAutoBackup, System.currentTimeMillis(), s.autoBackupDays)) return@withContext false
 
         runCatching {
-            val dir = DocumentFile.fromTreeUri(ctx, Uri.parse(tree)) ?: error("folder is gone")
+            val dir = DocumentFile.fromTreeUri(ctx, tree.toUri()) ?: error("folder is gone")
             if (!dir.canWrite()) error("folder is not writable")
             val name = PREFIX + SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date()) + ".zip"
             val doc = dir.createFile(ZIP, name) ?: error("cannot create $name")

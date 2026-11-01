@@ -1,5 +1,7 @@
 package app.kairn.ui.screens
 
+import androidx.core.net.toUri
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -223,7 +225,7 @@ internal fun ReadingDefaults(defaults: ReaderPrefs, onChange: (ReaderPrefs) -> U
 /** Opens a link; when no browser handles it, the tap says so instead of doing nothing. */
 private fun openRow(ctx: android.content.Context, url: String) {
     runCatching {
-        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri()))
     }.onFailure {
         android.widget.Toast.makeText(ctx, app.kairn.R.string.s_no_browser, android.widget.Toast.LENGTH_SHORT).show()
     }

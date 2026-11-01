@@ -1,5 +1,7 @@
 package app.kairn.data
 
+import androidx.core.net.toUri
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -127,7 +129,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         // orphan. Deleting only THIS book's previous file keeps a concurrent Wi-Fi upload safe.
         val previous = before[book.id]
         if (previous != null && previous != book.uri) {
-            val old = Uri.parse(previous).path?.let { File(it) }
+            val old = previous.toUri().path?.let { File(it) }
             if (old != null && old.parentFile == store.copiesDir) runCatching { old.delete() }
         }
         return@withContext book
@@ -144,7 +146,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         var changed = false
         for (b in store.books.value) {
             if (b.broken) continue
-            val u = Uri.parse(b.uri)
+            val u = b.uri.toUri()
             // Fast path first: our own copy, checked with one stat and no provider round trip.
             val ours = u.scheme == "file" && u.path?.let { File(it).parentFile == store.copiesDir } == true
             val alive = if (ours) File(u.path!!).exists()
@@ -198,7 +200,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
 
         // 1. Watched folders picked in settings (survive reboots).
         for (f in store.settings.value.folders.filter { it.enabled }) {
-            val root = DocumentFile.fromTreeUri(ctx, Uri.parse(f.uri)) ?: continue
+            val root = DocumentFile.fromTreeUri(ctx, f.uri.toUri()) ?: continue
             if (!root.canRead()) continue
             walk(root) { doc ->
                 val b = addBook(doc.uri, f.uri, doc.name?.removeSuffix(".epub"))
@@ -226,7 +228,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
                 val folderOn = store.settings.value.folders.any { it.uri == b.folder && it.enabled }
                 folderOn && b.id !in seen
             } else {
-                val u = Uri.parse(b.uri)
+                val u = b.uri.toUri()
                 // path is nullable: a bare "file:" uri must not take the whole scan down.
                 if (u.scheme == "file") u.path?.let { File(it).exists() } != true
                 else DocumentFile.fromSingleUri(ctx, u)?.exists() != true
@@ -297,7 +299,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         // books the new permission unlocks would not appear until 30 s later.
         lastScanEnd = -SCAN_MIN_INTERVAL_MS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) ctx.startActivity(
-            Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+            Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:${ctx.packageName}".toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     }

@@ -1,5 +1,7 @@
 package app.kairn.data
 
+import androidx.core.net.toUri
+
 import android.content.Context
 import android.net.Uri
 import org.readium.r2.shared.publication.services.search.SearchIterator
@@ -41,7 +43,7 @@ object BookSearch {
                 return@forEachIndexed
             }
             runCatching {
-                val pub = ReadiumHelper(ctx).open(Uri.parse(book.uri)) ?: return@runCatching
+                val pub = ReadiumHelper(ctx).open(book.uri.toUri()) ?: return@runCatching
                 try {
                     val iter = pub.search(q) ?: return@runCatching
                     try {

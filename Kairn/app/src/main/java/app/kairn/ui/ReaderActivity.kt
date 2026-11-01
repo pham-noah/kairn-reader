@@ -5,6 +5,8 @@
 
 package app.kairn.ui
 
+import androidx.core.net.toUri
+
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
@@ -184,7 +186,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private suspend fun openBook(book: Book) {
         val t0 = SystemClock.elapsedRealtime()
         // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
-        val p = withContext(Dispatchers.IO) { app.readium.open(android.net.Uri.parse(book.uri)) }
+        val p = withContext(Dispatchers.IO) { app.readium.open(book.uri.toUri()) }
         if (p == null) {                                    // N-04: message, never a crash
             writer.markBroken(); ui.error = "bad"; ui.loading = false; return
         }
@@ -468,6 +470,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             pageMargins = p.margins, publisherStyles = false, scroll = p.scroll,
             columnCount = if (p.twoPage && isTablet) ColumnCount.TWO else null,      // R-14: reflowable two-page, tablet only. `spread` is fixed-layout only; setting it here crashes.
             textAlign = if (p.justify) RTextAlign.JUSTIFY else RTextAlign.START, hyphens = p.hyphens,
+            verticalText = p.vertical,                            // R-15: writing-mode: vertical-rl
             fontFamily = p.fontFamily?.let { FontFamily(it) },   // a CSS family the WebView resolves
         )
     }

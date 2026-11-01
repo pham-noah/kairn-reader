@@ -65,6 +65,7 @@
     <string name="s_full_screen">Full screen</string>
     <string name="s_hide_the_status_bar_with_the_bars">Hide the status bar with the bars</string>
     <string name="s_hyphenation">Hyphenation</string>
+    <string name="s_vertical_text">Vertical text</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">In scroll mode: left for next, right for previous</string>
     <string name="s_justify_text">Justify text</string>
     <string name="s_footer_tagline">No account, no ads, nothing tracked. Just a reading app, made by one person.</string>

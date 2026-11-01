@@ -1,5 +1,7 @@
 package app.kairn.data
 
+import androidx.core.net.toUri
+
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,7 +54,7 @@ class ClippingImport(
 
         for ((bookId, list) in byBook) {
             val book = store.get(bookId) ?: continue
-            val pub = readium.open(Uri.parse(book.uri))
+            val pub = readium.open(book.uri.toUri())
             if (pub == null) {
                 notFound += list.size
                 done += list.size

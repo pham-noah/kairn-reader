@@ -1,5 +1,7 @@
 package app.kairn.ui.nav
 
+import androidx.core.net.toUri
+
 import app.kairn.ui.ReaderActivity
 
 import android.net.Uri
@@ -180,7 +182,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
 
     val launchPickBook = { pickBook.launch(arrayOf("application/epub+zip")) }
     // L-01: open the picker at the device storage root so "find books" sweeps everything at once.
-    val launchPickFolder = { pickFolder.launch(Uri.parse("content://com.android.externalstorage.documents/root/primary")) }
+    val launchPickFolder = { pickFolder.launch("content://com.android.externalstorage.documents/root/primary".toUri()) }
 
     BackHandler(overlay != null && overlay != Overlay.Onboarding) { overlay = null }
 
@@ -208,7 +210,7 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                             onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) },
                             autoFolderName = app.store.settings.collectAsStateWithLifecycle().value.autoBackupFolder
                                 .takeIf { it.isNotBlank() }
-                                ?.let { u -> DocumentFile.fromTreeUri(ctx, Uri.parse(u))?.name },
+                                ?.let { u -> DocumentFile.fromTreeUri(ctx, u.toUri())?.name },
                             onPickAutoFolder = { pickAutoFolder.launch(null) },
                             onAutoBackupOff = { app.store.saveSettings { it.copy(autoBackupFolder = "") } })
                         null -> when (tab) {

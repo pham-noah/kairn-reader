@@ -64,6 +64,7 @@
     <string name="s_full_screen">Koko näyttö</string>
     <string name="s_hide_the_status_bar_with_the_bars">Piilota tilapalkki palkkien mukana</string>
     <string name="s_hyphenation">Tavutus</string>
+    <string name="s_vertical_text">Pystysuora teksti</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">Vieritystilassa: vasen seuraavaan, oikea edelliseen</string>
     <string name="s_justify_text">Tasaa teksti</string>
     <string name="s_footer_tagline">Ei tiliä, ei mainoksia, ei seurantaa. Vain lukusovellus, yhden ihmisen tekemä.</string>

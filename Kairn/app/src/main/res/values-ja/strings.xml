@@ -62,6 +62,7 @@
     <string name="s_full_screen">全画面</string>
     <string name="s_hide_the_status_bar_with_the_bars">バーと一緒にステータスバーを隠す</string>
     <string name="s_hyphenation">ハイフネーション</string>
+    <string name="s_vertical_text">縦書き</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">スクロール表示：左で次へ、右で前へ</string>
     <string name="s_justify_text">両端揃え</string>
     <string name="s_footer_tagline">アカウントなし、広告なし、追跡なし。ひとりで作った、ただの読書アプリです。</string>

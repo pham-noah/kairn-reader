@@ -184,6 +184,7 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     KCard {
         KRow(stringResource(R.string.s_justify_text)) { KSwitch(prefs.justify, { onChange(prefs.copy(justify = it)) }) }
         KRow(stringResource(R.string.s_hyphenation), divider = true) { KSwitch(prefs.hyphens, { onChange(prefs.copy(hyphens = it)) }) }
+        KRow(stringResource(R.string.s_vertical_text), divider = true) { KSwitch(prefs.vertical, { onChange(prefs.copy(vertical = it)) }) }
     }
     Text(stringResource(R.string.s_these_settings_are_remembered_for_this_b), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 12.dp))
     // Every slider here is sticky, so a book that has been fiddled with needs a way back to the app defaults.

@@ -66,6 +66,7 @@
     <string name="s_full_screen">Pantalla completa</string>
     <string name="s_hide_the_status_bar_with_the_bars">Oculta la barra de estado con las barras</string>
     <string name="s_hyphenation">División de palabras</string>
+    <string name="s_vertical_text">Texto vertical</string>
     <string name="s_in_scroll_mode_left_for_next_right_for_p">En modo desplazamiento: izquierda para siguiente, derecha para anterior</string>
     <string name="s_justify_text">Justificar texto</string>
     <string name="s_footer_tagline">Sin cuenta, sin anuncios, nada rastreado. Solo una app de lectura, hecha por una persona.</string>
