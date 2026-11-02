@@ -1,6 +1,6 @@
 # Draft recipe for F-Droid (metadata/app.kairn.yml in fdroiddata). Not submitted: the earlier merge request
-# was closed against v0.3.0. Fields read from the build files: app.kairn, minSdk 26, targetSdk 35,
-# compileSdk 35, versionCode 10 / 0.8.0, subdir Kairn, Apache-2.0.
+# was closed against v0.3.0, so resubmitting is Noah's call. Fields read from the build files at 0.8.5:
+# app.kairn, minSdk 26, targetSdk 36, compileSdk 36, versionCode 15 / 0.8.5, subdir Kairn, Apache-2.0.
 
 Categories:
   - Reading
@@ -56,9 +56,10 @@ Description: |-
   A quiet record of the days you read, how long for, and how many books you have finished.
 
   Privacy
-  No analytics, no crash reporting, no accounts, no ads. Kairn opens no outgoing connection. The only network
-  code is the Wi-Fi transfer, and even that only listens: the browser on your computer makes the request, and
-  the server stops when you leave the screen.
+  No analytics, no crash reporting, no accounts, no ads. There is no update check in this build and no other
+  reason for Kairn to open an outgoing connection. The Wi-Fi transfer only listens: the browser on your
+  computer makes the request, the code in its address is required, and the server stops when you leave the
+  screen.
 
   Android 8.0 or newer. Apache-2.0. Built on the Readium Kotlin Toolkit and AndroidX.
 
@@ -66,9 +67,9 @@ RepoType: git
 Repo: https://github.com/pham-noah/kairn-reader
 
 Builds:
-  - versionName: 0.8.2
-    versionCode: 12
-    commit: v0.8.2
+  - versionName: 0.8.5
+    versionCode: 15
+    commit: v0.8.5
     subdir: Kairn
     gradle:
       - yes
@@ -81,5 +82,5 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.8.0
-CurrentVersionCode: 10
+CurrentVersion: 0.8.5
+CurrentVersionCode: 15
