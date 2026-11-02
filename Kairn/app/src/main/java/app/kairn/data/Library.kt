@@ -304,9 +304,11 @@ class Library(private val ctx: Context, private val store: Store, private val re
         )
     }
 
-    private suspend fun walk(dir: DocumentFile, onEpub: suspend (DocumentFile) -> Unit) {
+    // Capped like scanDir: a SAF tree can be deep, and a provider can hand back a loop.
+    private suspend fun walk(dir: DocumentFile, depth: Int = 0, onEpub: suspend (DocumentFile) -> Unit) {
+        if (depth > 5) return
         for (d in dir.listFiles()) {
-            if (d.isDirectory) walk(d, onEpub)
+            if (d.isDirectory) walk(d, depth + 1, onEpub)
             else if (d.name?.endsWith(".epub", ignoreCase = true) == true) onEpub(d)
         }
     }

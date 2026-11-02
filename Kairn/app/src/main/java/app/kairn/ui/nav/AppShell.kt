@@ -229,7 +229,11 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                     )
                                 })
                             Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
-                            Tab.Settings -> SettingsScreen(app.store, app.library, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, { scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) } },
+                            Tab.Settings -> SettingsScreen(app.store, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, {
+                                // Enabling detection is also the moment to ask for the grant it needs.
+                                scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) }
+                                if (app.library.needsAllFilesAccess()) app.library.requestAllFilesAccess()
+                            },
                                 searchCacheLabel = cacheLabel,
                                 onClearSearchCache = {
                                     app.searchIndex.clear()

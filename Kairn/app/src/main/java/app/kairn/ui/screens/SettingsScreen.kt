@@ -17,7 +17,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.kairn.R
 import app.kairn.data.Ambient
-import app.kairn.data.Library
 import app.kairn.data.ReaderPrefs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.data.Status
@@ -49,7 +48,7 @@ private val languageTags: List<String?> = listOf(null, "en", "es", "fi", "ja", "
 /** N-07: one place for appearance, library, data and about. */
 @Composable
 fun SettingsScreen(
-    store: Store, library: Library, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit,
+    store: Store, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit,
     onCheckUpdates: () -> Unit = {},
     showUpdates: Boolean = true,
     searchCacheLabel: String = "",
@@ -157,7 +156,7 @@ fun SettingsScreen(
                 KRow(stringResource(R.string.s_find_books_on_this_device)) {
                     KSwitch(s.autoDetect, { v ->
                         store.saveSettings { it.copy(autoDetect = v) }
-                        if (v) { onScan(); if (library.needsAllFilesAccess()) library.requestAllFilesAccess() }
+                        if (v) onScan()
                     })
                 }
                 KRow(stringResource(R.string.s_watched_folders), subtitle = pluralStringResource(R.plurals.folders_count, folders, folders), divider = true, onClick = onWatchedFolders) { KChevron() }
