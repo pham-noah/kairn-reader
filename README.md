@@ -99,8 +99,8 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 99 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 44 on-device tests, needs a phone or emulator
+    ./gradlew :app:testDebugUnitTest          # 116 JVM tests, no device needed
+    ./gradlew :app:connectedDebugAndroidTest  # 49 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
     python3 tools/check_translations.py       # key parity, format arguments, plural categories

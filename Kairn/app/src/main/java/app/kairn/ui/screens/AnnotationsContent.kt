@@ -67,7 +67,11 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
                 byPosition, { byPosition = !byPosition },
             )
         }
-        if (shown.isEmpty()) Text(stringResource(R.string.s_select_text_and_pick_a_colour_to_highlig), style = KType.body.copy(color = K.mut), modifier = Modifier.padding(vertical = 12.dp))
+        // Only a library with nothing in it gets the first-run copy; a filter that matched nothing says so.
+        if (shown.isEmpty()) Text(
+            stringResource(if (marks.isEmpty()) R.string.s_select_text_and_pick_a_colour_to_highlig else R.string.s_no_matches_notes),
+            style = KType.body.copy(color = K.mut), modifier = Modifier.padding(16.dp),
+        )
         else KCard(Modifier.weight(1f, fill = false)) {
             LazyColumn {
                 items(shown.size, key = { shown[it].id }) { i ->

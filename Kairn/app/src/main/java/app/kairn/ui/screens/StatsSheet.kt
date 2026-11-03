@@ -54,7 +54,7 @@ fun StatsSheet(stats: ReadingStats, finishedBooks: Int, onClose: () -> Unit) {
                     }
                     Text(
                         day.dayOfWeek.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                        style = KType.small.copy(color = if (mins > 0) K.mut else K.dim, fontSize = 12.sp),
+                        style = KType.small.copy(color = if (mins > 0) K.mut else K.dim),
                         modifier = Modifier.padding(top = 6.dp),
                         textAlign = TextAlign.Center,
                     )
@@ -79,7 +79,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = K.txt)
-        Text(label, style = KType.small.copy(color = K.dim, fontSize = 12.sp), modifier = Modifier.padding(top = 2.dp))
+        Text(label, style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 2.dp))
     }
 
 /** Under an hour reads as minutes; above it, hours and the leftover minutes. */

@@ -131,7 +131,8 @@ data class Book(
         .put("prefs", prefs?.toJson() ?: JSONObject.NULL)
 
     companion object {
-        private fun strings(a: JSONArray?) = List(a?.length() ?: 0) { a!!.getString(it) }
+        // optString, not getString: one null or a number in tags must not cost the whole record.
+        private fun strings(a: JSONArray?) = List(a?.length() ?: 0) { a!!.optString(it) }.filter { it.isNotBlank() }
 
         /**
          * Null only when the record is genuinely unusable (no id, or no uri). Every other field is read

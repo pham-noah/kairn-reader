@@ -16,7 +16,7 @@ internal class ReaderWriter(private val store: Store, private val bookId: String
     /** R-09. Reaching the end is what finishes a book; nothing else sets FINISHED. */
     fun savePosition(loc: Locator) {
         val atEnd = (loc.locations.totalProgression ?: 0.0) >= 0.99
-        store.update(bookId) {
+        store.savePosition(bookId) {
             it.copy(
                 locator = loc.toJSON().toString(),
                 progress = (loc.locations.totalProgression ?: 0.0).toFloat(),
@@ -33,6 +33,9 @@ internal class ReaderWriter(private val store: Store, private val bookId: String
 
     /** R-10: the reading settings are per book. */
     fun savePrefs(p: ReaderPrefs) = store.update(bookId) { it.copy(prefs = p) }
+
+    /** Reset: null means "follow the global defaults", so the book inherits again instead of freezing them. */
+    fun clearPrefs() = store.update(bookId) { it.copy(prefs = null) }
 
     fun addMark(m: Mark) = store.update(bookId) { it.copy(marks = it.marks + m) }
 

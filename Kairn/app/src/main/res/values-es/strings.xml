@@ -360,6 +360,10 @@
     <string name="s_custom_colours">Colores propios</string>
     <string name="s_custom_colours_hint">Cambia la página y la tinta solo en este libro.</string>
     <string name="s_theme_colours">Usar los colores del tema</string>
+    <string name="s_page_tone">Tono de página %1$d</string>
+    <string name="s_ink_tone">Color de la tinta %1$d</string>
+    <string name="s_no_contents">Este libro no tiene índice</string>
+    <string name="s_no_matches_notes">Nada coincide aquí</string>
     <string name="s_colour_violet">Violeta</string>
     <string name="s_colour_sand">Arena</string>
     <string name="s_reading_speed">Velocidad de lectura</string>

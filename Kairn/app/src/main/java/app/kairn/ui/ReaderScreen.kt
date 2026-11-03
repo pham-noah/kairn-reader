@@ -25,8 +25,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.graphics.Color as CColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -193,55 +195,8 @@ internal fun ReaderScreen(
             Column(Modifier.fillMaxWidth().background(colors.chrome).onGloballyPositioned { ui.chromeTopPx = it.positionInRoot().y }) {
                 HorizontalDivider(color = colors.line)
                 Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
-                    val ro = ui.pub?.readingOrder.orEmpty()
-                    var drag by remember { mutableStateOf<Float?>(null) }
                     var expanded by remember { mutableStateOf(false) }
-                    // Preload the chapter under the slider while dragging so releasing feels instant,
-                    val preloadJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
-                    val scope = rememberCoroutineScope()
-                    fun previewSeek(v: Float) {
-                        preloadJob[0]?.cancel()
-                        preloadJob[0] = scope.launch {
-                            delay(220)
-                            ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())?.let(act::preload)
-                        }
-                    }
-                    val preview = drag?.let { v ->
-                        val idx = (v * (ui.positions.size - 1)).toInt()
-                        val loc = ui.positions.getOrNull(idx)
-                        val title = loc?.let { ui.chapterTitles[it.href.toString()] ?: ui.chapterTitles[it.href.toString().substringAfterLast('/')] ?: it.title }
-                        title?.takeIf { it.isNotBlank() }
-                            ?: ro.getOrNull((v * (ro.size - 1)).toInt())?.title?.takeIf { it.isNotBlank() }
-                    }
-                    // Tap the label to switch between the whole book and the chapter you are in.
-                    var chapterTime by remember { mutableStateOf(false) }
-                    val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress, wpm)
-                        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress, wpm)
-                            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress, wpm)
-                    val timeHint = stringResource(if (chapterTime) R.string.s_time_in_chapter else R.string.s_time_in_book)
-                    val timeLeft = when {
-                        minsLeft == null -> ""
-                        minsLeft <= 0 -> stringResource(R.string.time_left_under_a_min)
-                        minsLeft < 60 -> stringResource(R.string.time_left_mins, minsLeft)
-                        else -> stringResource(R.string.time_left_hours, minsLeft / 60, minsLeft % 60)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(preview ?: ui.chapterTitle, color = if (preview != null) colors.accent else colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                        Text(
-                            timeLeft, color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                            modifier = Modifier.padding(start = 8.dp).clickable { chapterTime = !chapterTime }
-                                .semantics { contentDescription = timeHint },
-                        )
-                    }
-                    KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
-                        description = stringResource(R.string.s_reading_progress), stateText = timeLeft, onFinished = {   // R-07: seek by position
-                        drag?.let { v ->
-                            val l = ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())
-                            if (l != null) act.goTo(l)
-                            else ui.pub?.let { p -> ro.getOrNull((v * (ro.size - 1)).toInt())?.let { lk -> p.locatorFromLink(lk)?.let(act::goTo) } }
-                        }
-                        drag = null
-                    })
+                    SeekBar(ui, colors, act, wpm)
                     // The bar stays minimal: "More" holds the four sheets, and the two reading modes sit
                     // beside it as toggles with a visible state. They are not tools and they are not hidden -
                     // a mode that moves the page must be visible while it moves it.
@@ -376,4 +331,65 @@ private fun ModePill(
         if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
         Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
     }
+}
+
+/**
+ * The seek bar and the time left, in a leaf of their own: the reader writes bookProgress on every locator, and
+ * read in ReaderScreen's own scope that re-executed the whole chrome on every page turn.
+ */
+@Composable
+private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm: Int) {
+    val ro = ui.pub?.readingOrder.orEmpty()
+    var drag by remember { mutableStateOf<Float?>(null) }
+    // Preload the chapter under the slider while dragging, so releasing it feels instant.
+    val preloadJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
+    val scope = rememberCoroutineScope()
+    fun previewSeek(v: Float) {
+        preloadJob[0]?.cancel()
+        preloadJob[0] = scope.launch {
+            delay(220)
+            ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())?.let(act::preload)
+        }
+    }
+    val preview = drag?.let { v ->
+        val idx = (v * (ui.positions.size - 1)).toInt()
+        val loc = ui.positions.getOrNull(idx)
+        val title = loc?.let { ui.chapterTitles[it.href.toString()] ?: ui.chapterTitles[it.href.toString().substringAfterLast('/')] ?: it.title }
+        title?.takeIf { it.isNotBlank() }
+            ?: ro.getOrNull((v * (ro.size - 1)).toInt())?.title?.takeIf { it.isNotBlank() }
+    }
+    // Tap the label to switch between the whole book and the chapter you are in.
+    var chapterTime by remember { mutableStateOf(false) }
+    val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress, wpm)
+        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress, wpm)
+            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress, wpm)
+    val timeHint = stringResource(if (chapterTime) R.string.s_time_in_chapter else R.string.s_time_in_book)
+    val timeLeft = when {
+        minsLeft == null -> ""
+        minsLeft <= 0 -> stringResource(R.string.time_left_under_a_min)
+        minsLeft < 60 -> stringResource(R.string.time_left_mins, minsLeft)
+        else -> stringResource(R.string.time_left_hours, minsLeft / 60, minsLeft % 60)
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(preview ?: ui.chapterTitle, color = if (preview != null) colors.accent else colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
+        // 48dp of touch, and the value stays the spoken text: the mode is the state, not a replacement for it.
+        Row(
+            Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button) { chapterTime = !chapterTime }
+                .padding(start = 8.dp)
+                .semantics { stateDescription = timeHint },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(timeLeft, color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+    }
+    KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
+        description = stringResource(R.string.s_reading_progress), stateText = timeLeft, onFinished = {   // R-07: seek by position
+            drag?.let { v ->
+                val l = ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())
+                if (l != null) act.goTo(l)
+                else ui.pub?.let { p -> ro.getOrNull((v * (ro.size - 1)).toInt())?.let { lk -> p.locatorFromLink(lk)?.let(act::goTo) } }
+            }
+            drag = null
+        })
 }

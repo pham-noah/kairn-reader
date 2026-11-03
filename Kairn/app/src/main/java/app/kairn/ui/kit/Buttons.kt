@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +43,10 @@ fun KButton(
         KButtonStyle.Danger -> Triple(K.danger.copy(alpha = .10f), K.danger, K.danger.copy(alpha = .30f))
         KButtonStyle.Ghost -> Triple(Color.Transparent, K.mut, null)
     }
+    // The 40dp pill keeps its look; the touch area underneath it is the 48dp minimum.
     val base = modifier.then(if (small) Modifier else Modifier.fillMaxWidth())
         .heightIn(min = (if (small) Dim.btnSmall else if (style == KButtonStyle.Ghost) Dim.tap else Dim.btn).dp)
+        .then(if (small) Modifier.minimumInteractiveComponentSize() else Modifier)
     val surface =
         when {
             glass && style == KButtonStyle.Primary -> base.glassSurface(shape, fill = K.mint.copy(alpha = .92f), elevation = 10.dp, hairline = Color(0x59FFFFFF))

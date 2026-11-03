@@ -182,13 +182,21 @@ fun LibraryScreen(
         if (query.trim().length < 3) return@LaunchedEffect
         delay(500)                                  // typing is not a search yet
         scanBusy = true
+        val kairn = ctx.applicationContext as app.kairn.KairnApp
         withContext(Dispatchers.IO) {
+            // Hits are collected in a plain list and published in batches: one state write per hit re-ran the
+            // header (and copied the whole list) hundreds of times per search.
+            val found = ArrayList<BookSearch.Hit>()
             BookSearch.run(
-                ctx, books, query,
-                index = (ctx.applicationContext as app.kairn.KairnApp).searchIndex,
+                books, query, readium = kairn.readium,
+                index = kairn.searchIndex,
                 onProgress = { done, total -> scanned = done to total },
-                emit = { hit -> hits = hits + hit },
+                emit = { hit ->
+                    found += hit
+                    if (found.size % 12 == 0) hits = ArrayList(found)
+                },
             )
+            hits = ArrayList(found)
         }
         scanBusy = false
     }
@@ -249,6 +257,8 @@ fun LibraryScreen(
             })
         }
     }
+    // A filter can hide a book that is already ticked; a bulk delete must never reach what is off screen.
+    LaunchedEffect(status, currentShelf, query) { picked = picked.intersect(shown.map { it.id }.toSet()) }
     val statusCounts by remember { derivedStateOf { books.groupingBy { it.status }.eachCount() } }
     // The LibActions holder is created once, so a captured callback would be frozen at its first value.
     // rememberUpdatedState reads the current one while keeping the holder stable.
@@ -388,11 +398,12 @@ fun LibraryScreen(
 
         // Pinned over the books so the action is always reachable while picking.
         if (selecting) {
-            Row(
+            Column(
                 Modifier.align(Alignment.TopCenter).fillMaxWidth().background(K.surf).statusBarsPadding().padding(horizontal = Dim.screenPad.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 1, modifier = Modifier.weight(1f))
+                // The count gets its own line: beside five 48dp icons it had ~40dp and read as "3 s" before Delete.
+                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.body.copy(fontWeight = FontWeight.Bold), maxLines = 1)
+                Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Picking several books is only worth it if the bar can also finish or remove them.
                 KIconButton(Icons.Default.CheckCircle, stringResource(R.string.s_mark_as_finished), {
                     val n = picked.size
@@ -406,6 +417,7 @@ fun LibraryScreen(
                 KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
                 // An X, not a labelled Cancel: at 360dp the label left the count 16dp wide and it stacked vertically.
                 KIconButton(Icons.Default.Close, stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() })
+                }
             }
         }
     }
@@ -524,7 +536,7 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
                             "${(b.progress.coerceIn(0f, 1f) * 100).roundToInt()}%",
                             b.lastRead.takeIf { it > 0 }?.let { lastReadLabel(it) },
                         ).joinToString(" · "),
-                        style = KType.small.copy(fontSize = 11.sp, color = K.dim),
+                        style = KType.small.copy(color = K.dim),
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 4.dp),
                     )

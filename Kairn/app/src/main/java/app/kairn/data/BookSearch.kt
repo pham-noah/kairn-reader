@@ -2,8 +2,6 @@ package app.kairn.data
 
 import androidx.core.net.toUri
 
-import android.content.Context
-import android.net.Uri
 import org.readium.r2.shared.publication.services.search.SearchIterator
 import org.readium.r2.shared.publication.services.search.search
 
@@ -22,9 +20,9 @@ object BookSearch {
     data class Hit(val book: Book, val locator: org.readium.r2.shared.publication.Locator, val snippet: String)
 
     suspend fun run(
-        ctx: Context,
         books: List<Book>,
         query: String,
+        readium: ReadiumHelper,
         perBook: Int = 6,
         index: SearchIndex? = null,
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
@@ -36,14 +34,17 @@ object BookSearch {
         searchable.forEachIndexed { position, book ->
             // A book with a fresh text dump is grepped instead of parsed: the second search across the
             // library is disk-only, and each book is opened at most once in its life (plus once per change).
-            val cached = index?.takeIf { it.isFresh(book) }?.search(book, q, perBook).orEmpty()
-            if (cached.isNotEmpty() || index?.isFresh(book) == true) {
-                for (c in cached) index?.locator(c)?.let { emit(Hit(book, it, c.snippet)) }
+            // One read of the dump answers both "is it fresh" and "what does it hold".
+            val dump = index?.open(book)
+            if (index != null && dump != null) {
+                for (c in index.searchIn(dump, q, perBook)) index.locator(c)?.let { emit(Hit(book, it, c.snippet)) }
                 onProgress(position + 1, searchable.size)
                 return@forEachIndexed
             }
             runCatching {
-                val pub = ReadiumHelper(ctx).open(book.uri.toUri()) ?: return@runCatching
+                // The app's own helper: building one per book per query meant an OkHttp client and a parser
+                // graph per book, thrown away after a single open.
+                val pub = readium.open(book.uri.toUri()) ?: return@runCatching
                 try {
                     val iter = pub.search(q) ?: return@runCatching
                     try {
@@ -64,7 +65,7 @@ object BookSearch {
                 }
             }
             // Cache it on the way out, so this book never has to be parsed for a search again.
-            runCatching { index?.let { if (!it.isFresh(book)) it.build(book) } }
+            runCatching { index?.build(book) }
             onProgress(position + 1, searchable.size)
         }
     }

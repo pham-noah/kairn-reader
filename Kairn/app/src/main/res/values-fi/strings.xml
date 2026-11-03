@@ -346,6 +346,10 @@
     <string name="s_custom_colours">Mukautetut värit</string>
     <string name="s_custom_colours_hint">Ohittaa sivun ja tekstin värin vain tässä kirjassa.</string>
     <string name="s_theme_colours">Käytä teeman värejä</string>
+    <string name="s_page_tone">Sivun sävy %1$d</string>
+    <string name="s_ink_tone">Tekstin väri %1$d</string>
+    <string name="s_no_contents">Tässä kirjassa ei ole sisällysluetteloa</string>
+    <string name="s_no_matches_notes">Mikään ei vastaa tässä</string>
     <string name="s_colour_violet">Violetti</string>
     <string name="s_colour_sand">Hiekka</string>
     <string name="s_reading_speed">Lukunopeus</string>

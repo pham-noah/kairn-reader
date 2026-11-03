@@ -92,10 +92,13 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val ui = ReaderUiState()
     private val toast = ToastState()
 
+    private var prefsTouched = false     // did this session change this book's own settings
     private var rtl = false
     private var canScrollChapter = false
     private var loggedScroll = false
     private var positionsPerHref: Map<String, Int> = emptyMap()   // how many positions each chapter holds
+    private var positionsByHref: Map<String, List<Locator>> = emptyMap()
+    private val parsedMarkLocators = HashMap<String, Locator>()    // mark id -> locator, parsed once per session
     private val measuredChapters = HashSet<String>()              // each chapter feeds the pace once
     private var searchJob: Job? = null
     private val wordSplit = Regex("\\s+")
@@ -203,6 +206,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         val prepared = session.prepare(book, highlightCallback) { publication, computed, ms, fromCache ->
             ui.positions = computed
             positionsPerHref = computed.groupingBy { it.href.toString() }.eachCount()   // the whole-book time estimate needs this share
+            positionsByHref = computed.groupBy { it.href.toString() }                    // read-aloud follow, per 300 ms tick
             measurePending()                                                            // a chapter measured before this arrived
             Log.i("KairnPerf", "positions n=${computed.size} ${if (fromCache) "cached" else "${ms}ms"}")
             // Import already counted the words. A record imported before that existed is counted once here.
@@ -288,7 +292,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 // the book (progression is the position inside the current resource, not the book).
                 loc.locations.totalProgression?.let { ui.bookProgress = it.toFloat() }
                 loc.locations.progression?.let { ui.chapterProgress = it.toFloat() }
-                ui.chapterTitle = loc.title ?: ""
+                val title = loc.title ?: ""
+                if (title != ui.chapterTitle) ui.chapterTitle = title      // a page turn inside one chapter must not touch it
                 if (loc.href.toString() != ui.chapterHref) {
                     ui.chapterHref = loc.href.toString()
                     loadChapterWords(loc)
@@ -307,7 +312,12 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 m ?: return@collect
                 ui.marks = m
                 n.applyDecorations(m.filter { it.kind != "bookmark" }.mapNotNull { mk ->
-                    runCatching { Decoration(mk.id, Locator.fromJSON(JSONObject(mk.locator))!!, Decoration.Style.Highlight(tint = mk.color)) }.getOrNull()
+                    // Parsed once per mark: every add or delete re-parsed all of them on the main thread.
+                    val loc = parsedMarkLocators[mk.id]
+                        ?: runCatching { Locator.fromJSON(JSONObject(mk.locator)) }.getOrNull()
+                            ?.also { parsedMarkLocators[mk.id] = it }
+                        ?: return@mapNotNull null
+                    Decoration(mk.id, loc, Decoration.Style.Highlight(tint = mk.color))
                 }, "marks")
             }
         }
@@ -338,8 +348,9 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         if (!ui.ttsOn) { ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false }
         clearFollow()
         stopAutoScroll()
-        // The prefs write is debounced: a close inside that window would drop the last change.
-        writer.savePrefs(ui.prefs)
+        // The prefs write is debounced: a close inside that window would drop the last change. A book whose
+        // prefs were never touched keeps a null record, so it goes on following the global defaults.
+        if (prefsTouched) writer.savePrefs(ui.prefs)
         nav?.currentLocator?.value?.let(::savePosition)
         commitSession()
     }
@@ -407,50 +418,11 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     /** Tablet = the OS threshold (600dp shortest side). Two-page columns are a wide-screen idea. */
     private val isTablet: Boolean get() = resources.configuration.smallestScreenWidthDp >= 600
 
-    private fun effectiveTheme(p: ReaderPrefs, autoSwitch: Boolean): ThemeId {
-        if (!autoSwitch) return p.theme
-        val night = ui.night
-        // Exhaustive on purpose: an `else` arm would silently fold a future ThemeId into
-        // LIGHT/DARK instead of failing to compile.
-        return when (p.theme) {
-            ThemeId.BLACK -> if (night) ThemeId.BLACK else ThemeId.LIGHT
-            ThemeId.SEPIA -> if (night) ThemeId.DARK else ThemeId.SEPIA
-            ThemeId.DARK, ThemeId.LIGHT -> if (night) ThemeId.DARK else ThemeId.LIGHT
-            ThemeId.GRAY -> ThemeId.GRAY   // a neutral mid tone reads the same day or night: auto-switch leaves it alone
-        }
-    }
+    private fun effectiveTheme(p: ReaderPrefs, autoSwitch: Boolean) =
+        effectiveTheme(p, autoSwitch, ui.night)      // the mapping itself lives in ReaderPrefsMapping
 
-    private fun toEpub(p: ReaderPrefs): EpubPreferences {
-        val t = effectiveTheme(p, app.store.settings.value.autoSwitch)
-        // BLACK and GRAY are not Readium themes: they are explicit page/ink colours laid over a base theme.
-        // GRAY is charcoal (8.5:1 for body text), so it sits on the DARK base, like BLACK does.
-        // A custom page/ink pair from the Display sheet wins over both.
-        val bg = p.pageColor?.let { RColor(it) } ?: when (t) {
-            ThemeId.BLACK -> RColor(0xFF000000.toInt())
-            ThemeId.GRAY -> RColor(0xFF3A4045.toInt())
-            else -> null
-        }
-        val ink = p.inkColor?.let { RColor(it) } ?: when (t) {
-            ThemeId.BLACK -> RColor(0xFFDADDE0.toInt())
-            ThemeId.GRAY -> RColor(0xFFE4E8EB.toInt())
-            else -> null
-        }
-        return EpubPreferences(
-            theme = when (t) {   // exhaustive: BLACK/GRAY carry their colours explicitly below
-                ThemeId.LIGHT -> Theme.LIGHT
-                ThemeId.SEPIA -> Theme.SEPIA
-                ThemeId.DARK, ThemeId.BLACK, ThemeId.GRAY -> Theme.DARK
-            },
-            backgroundColor = bg,
-            textColor = ink,
-            fontSize = p.fontScale, lineHeight = p.lineHeight, paragraphSpacing = p.paragraphSpacing,
-            pageMargins = p.margins, publisherStyles = false, scroll = p.scroll,
-            columnCount = if (p.twoPage && isTablet) ColumnCount.TWO else null,      // R-14: reflowable two-page, tablet only. `spread` is fixed-layout only; setting it here crashes.
-            textAlign = if (p.justify) RTextAlign.JUSTIFY else RTextAlign.START, hyphens = p.hyphens,
-            verticalText = p.vertical,                            // R-15: writing-mode: vertical-rl
-            fontFamily = p.fontFamily?.let { FontFamily(it) },   // a CSS family the WebView resolves
-        )
-    }
+    private fun toEpub(p: ReaderPrefs) =
+        toEpubPreferences(p, app.store.settings.value.autoSwitch, ui.night, isTablet)
 
     // ---- auto scroll ----
     // One JS interval moves the page inside the WebView: a per-frame Kotlin round-trip would be a wake-up
@@ -519,6 +491,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
      * and the disk get the settled value ~120 ms later. onPause flushes it, so a quick close cannot lose it.
      */
     private fun updatePrefs(p: ReaderPrefs) {
+        prefsTouched = true            // only a change of the reader's own makes the record per-book
         ui.prefs = p
         applyJob?.cancel()
         applyJob = lifecycleScope.launch {
@@ -800,7 +773,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
         if (ui.prefs.scroll) return                     // a scroll view already shows the spoken place
         val href = spokenHref ?: ui.chapterHref ?: return
-        val chapter = ui.positions.filter { it.href.toString() == href }
+        val chapter = positionsByHref[href] ?: return
         if (chapter.size < 2) return
         val progress = at.toFloat() / spokenText.length.coerceAtLeast(1)
         val idx = chapter.indexOfLast { (it.locations.progression ?: 0.0) <= progress }.coerceAtLeast(0)
@@ -850,7 +823,13 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     override fun setPrefs(p: ReaderPrefs) = updatePrefs(p)
 
-    override fun resetPrefs() = updatePrefs(app.store.settings.value.defaults)
+    override fun resetPrefs() {
+        // Back to inheriting: a stored copy would freeze today's defaults into this book for good.
+        prefsTouched = false
+        ui.prefs = app.store.settings.value.defaults
+        applyPrefs()
+        writer.clearPrefs()
+    }
 
     override fun exportNotes() { exportNotesLauncher.launch("${ui.bookTitle.take(40)}-notes.md") }
 

@@ -8,7 +8,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.SystemClock
-import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
 import app.kairn.R
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +19,12 @@ import java.security.MessageDigest
 
 /** Import + folder watching (L-01, L-02, L-03, L-05, L-06). */
 class Library(private val ctx: Context, private val store: Store, private val readium: ReadiumHelper) {
+
+    // Discovery lives in its own class (§3.7): this one imports, identifies and watches folders.
+    private val sweeper = EpubSweeper(
+        ctx.contentResolver,
+        listOfNotNull(Environment.getExternalStorageDirectory(), ctx.getExternalFilesDir(null)),
+    )
 
     private fun legacyIdFor(uri: String) =
         MessageDigest.getInstance("SHA-1").digest(uri.toByteArray()).joinToString("") { "%02x".format(it) }.take(16)
@@ -79,7 +84,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         val pub = readium.open(uri)
         val book = if (pub == null) {
             Book(id, fallback, "", uri.toString(), folder, broken = true)
-        } else {
+        } else try {
             val b = Book(
                 id = id,
                 title = pub.metadata.title?.takeIf { it.isNotBlank() } ?: fallback,
@@ -88,9 +93,10 @@ class Library(private val ctx: Context, private val store: Store, private val re
             )
             readium.saveCover(pub, store, id)
             // The word count is a property of the file, measured once here so every open is instant.
-            val words = readium.countWords(pub)
-            pub.close()
-            b.copy(words = words)
+            b.copy(words = readium.countWords(pub))
+        } finally {
+            // A throw while counting must not leave the zip handle to the GC: a sweep retries this file.
+            runCatching { pub.close() }
         }
         store.put(book)
         book
@@ -110,7 +116,9 @@ class Library(private val ctx: Context, private val store: Store, private val re
     suspend fun importShared(uri: Uri): Book = withContext(Dispatchers.IO) {
         val name = (DocumentFile.fromSingleUri(ctx, uri)?.name ?: "book-${System.currentTimeMillis()}.epub")
             .substringAfterLast('/').substringAfterLast('\\')    // a display name must never escape copiesDir
-        val dest = File(store.copiesDir, name)
+        // A fresh name every time: writing into an existing copy would rewrite another book's file in
+        // place, and a failed copy would then delete it.
+        val dest = freeCopyName(store.copiesDir, name)
         // N-04: a provider that denies or fails mid-copy must not throw out of the caller's lifecycleScope.
         val copied = runCatching {
             ctx.contentResolver.openInputStream(uri)?.use { i -> dest.outputStream().use { i.copyTo(it) } } != null
@@ -136,13 +144,15 @@ class Library(private val ctx: Context, private val store: Store, private val re
     }
 
 
+
     /**
      * A book whose uri died but whose file is in our own folder is not missing: point the record at the copy.
      * This is what an update or a restore of records only needs - no scan, no dialog. Cheap: one exists() per
      * book, and only for records that do not already resolve.
      */
-    private fun relinkOwnedCopies() {
-        val copies = store.copiesDir.listFiles()?.associateBy { it.name } ?: return
+    private fun relinkOwnedCopies(): Set<String> {
+        val copies = store.copiesDir.listFiles()?.associateBy { it.name } ?: return emptySet()
+        val aliveIds = HashSet<String>()
         var changed = false
         for (b in store.books.value) {
             if (b.broken) continue
@@ -152,13 +162,14 @@ class Library(private val ctx: Context, private val store: Store, private val re
             val alive = if (ours) File(u.path!!).exists()
                         else if (u.scheme == "file") u.path?.let { File(it).exists() } == true
                         else DocumentFile.fromSingleUri(ctx, u)?.exists() == true
-            if (alive) continue
+            if (alive) { aliveIds += b.id; continue }
             val name = u.lastPathSegment ?: continue
             val copy = copies[name] ?: continue
             store.put(b.copy(uri = Uri.fromFile(copy).toString()))
             changed = true
         }
         if (changed) { store.flush(); store.reload() }
+        return aliveIds
     }
 
     fun addFolder(tree: Uri) {
@@ -196,13 +207,13 @@ class Library(private val ctx: Context, private val store: Store, private val re
 
     private suspend fun scanOnce(force: Boolean = false) = withContext(Dispatchers.IO) {
         val seen = mutableSetOf<String>()
-        relinkOwnedCopies()
+        val verified = relinkOwnedCopies()
 
         // 1. Watched folders picked in settings (survive reboots).
         for (f in store.settings.value.folders.filter { it.enabled }) {
             val root = DocumentFile.fromTreeUri(ctx, f.uri.toUri()) ?: continue
             if (!root.canRead()) continue
-            walk(root) { doc ->
+            sweeper.walkTree(root) { doc ->
                 val b = addBook(doc.uri, f.uri, doc.name?.removeSuffix(".epub"))
                 seen += b.id
             }
@@ -216,7 +227,7 @@ class Library(private val ctx: Context, private val store: Store, private val re
         // install the records are back but their files are not, and the sweep is what re-attaches them.
         val sweepDue = sweepIsDue(force, s0.lastSweep, store.books.value.any { it.missing }, System.currentTimeMillis())
         if (s0.autoDetect && sweepDue) {
-            sweep { found ->
+            sweeper.sweep { found ->
                 val b = addBook(found, null, found.lastPathSegment?.substringAfterLast('/')?.removeSuffix(".epub"))
                 seen += b.id
             }
@@ -224,14 +235,16 @@ class Library(private val ctx: Context, private val store: Store, private val re
         }
 
         for (b in store.books.value) {
-            val gone = if (b.folder != null) {
-                val folderOn = store.settings.value.folders.any { it.uri == b.folder && it.enabled }
-                folderOn && b.id !in seen
-            } else {
-                val u = b.uri.toUri()
-                // path is nullable: a bare "file:" uri must not take the whole scan down.
-                if (u.scheme == "file") u.path?.let { File(it).exists() } != true
-                else DocumentFile.fromSingleUri(ctx, u)?.exists() != true
+            val gone = when {
+                b.folder != null -> store.settings.value.folders.any { it.uri == b.folder && it.enabled } && b.id !in seen
+                // relinkOwnedCopies already asked the provider about this record on this pass.
+                b.id in verified -> false
+                else -> {
+                    val u = b.uri.toUri()
+                    // path is nullable: a bare "file:" uri must not take the whole scan down.
+                    if (u.scheme == "file") u.path?.let { File(it).exists() } != true
+                    else DocumentFile.fromSingleUri(ctx, u)?.exists() != true
+                }
             }
             if (gone != b.missing) store.put(b.copy(missing = gone))
         }
@@ -258,37 +271,6 @@ class Library(private val ctx: Context, private val store: Store, private val re
         }
     }
 
-    /** Finds EPUBs already on the device: MediaStore first, then a best-effort direct-storage walk. */
-    private suspend fun sweep(onFound: suspend (Uri) -> Unit) {
-        val found = mutableSetOf<String>()
-        runCatching {
-            val proj = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DATA)
-            val sel = "${MediaStore.Files.FileColumns.DATA} LIKE ?"
-            ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), proj, sel, arrayOf("%.epub"), null)?.use { c ->
-                val idCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-                while (c.moveToNext()) {
-                    val uri = Uri.withAppendedPath(MediaStore.Files.getContentUri("external"), c.getLong(idCol).toString())
-                    if (found.add(uri.toString())) onFound(uri)
-                }
-            }
-        }
-        val roots = listOfNotNull(Environment.getExternalStorageDirectory(), ctx.getExternalFilesDir(null))
-        for (root in roots) runCatching {
-            root.listFiles()?.forEach { scanDir(it, 0, found, onFound) }
-        }
-    }
-
-    private suspend fun scanDir(dir: File, depth: Int, found: MutableSet<String>, onFound: suspend (Uri) -> Unit) {
-        if (depth > 5 || dir.name.startsWith("Android")) return
-        dir.listFiles()?.forEach { f ->
-            if (f.isDirectory) scanDir(f, depth + 1, found, onFound)
-            else if (f.isFile && f.name.endsWith(".epub", ignoreCase = true)) {
-                val u = Uri.fromFile(f)
-                if (found.add(u.toString())) onFound(u)
-            }
-        }
-    }
-
     /** Android 11+ hides non-media files from MediaStore unless the app can see "all files". */
     fun needsAllFilesAccess(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()
@@ -304,14 +286,20 @@ class Library(private val ctx: Context, private val store: Store, private val re
         )
     }
 
-    // Capped like scanDir: a SAF tree can be deep, and a provider can hand back a loop.
-    private suspend fun walk(dir: DocumentFile, depth: Int = 0, onEpub: suspend (DocumentFile) -> Unit) {
-        if (depth > 5) return
-        for (d in dir.listFiles()) {
-            if (d.isDirectory) walk(d, depth + 1, onEpub)
-            else if (d.name?.endsWith(".epub", ignoreCase = true) == true) onEpub(d)
-        }
-    }
+}
+
+/**
+ * A name no other copy holds, so an import can never overwrite a book that is already here. Plain [File]
+ * logic so the rule is JVM-tested rather than assumed.
+ */
+internal fun freeCopyName(dir: File, name: String): File {
+    val dot = name.lastIndexOf('.')
+    val base = if (dot > 0) name.substring(0, dot) else name
+    val ext = if (dot > 0) name.substring(dot) else ""
+    var n = 1
+    var f = File(dir, name)
+    while (f.exists()) f = File(dir, "$base-$n$ext").also { n++ }
+    return f
 }
 
 /**

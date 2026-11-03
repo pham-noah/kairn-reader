@@ -346,6 +346,10 @@
     <string name="s_custom_colours">Custom colours</string>
     <string name="s_custom_colours_hint">Overrides the page and ink for this book only.</string>
     <string name="s_theme_colours">Use the theme colours</string>
+    <string name="s_page_tone">Page tone %1$d</string>
+    <string name="s_ink_tone">Ink colour %1$d</string>
+    <string name="s_no_contents">This book has no table of contents</string>
+    <string name="s_no_matches_notes">Nothing here matches</string>
     <string name="s_colour_violet">Violet</string>
     <string name="s_colour_sand">Sand</string>
     <string name="s_reading_speed">Reading speed</string>

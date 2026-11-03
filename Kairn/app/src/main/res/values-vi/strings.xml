@@ -332,6 +332,10 @@
     <string name="s_custom_colours">Màu tùy chỉnh</string>
     <string name="s_custom_colours_hint">Ghi đè màu trang và màu chữ, chỉ cho sách này.</string>
     <string name="s_theme_colours">Dùng màu của chủ đề</string>
+    <string name="s_page_tone">Tông trang %1$d</string>
+    <string name="s_ink_tone">Màu chữ %1$d</string>
+    <string name="s_no_contents">Sách này không có mục lục</string>
+    <string name="s_no_matches_notes">Không có gì khớp ở đây</string>
     <string name="s_colour_violet">Tím</string>
     <string name="s_colour_sand">Cát</string>
     <string name="s_reading_speed">Tốc độ đọc</string>

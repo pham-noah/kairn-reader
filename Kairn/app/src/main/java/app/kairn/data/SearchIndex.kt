@@ -47,12 +47,20 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
     }
 
     /** True when this book has a usable dump for the file it currently points at. */
-    fun isFresh(book: Book): Boolean {
+    fun isFresh(book: Book): Boolean = open(book) != null
+
+    /**
+     * The dump's chapters when it still describes the file the book points at, else null. One inflate and one
+     * parse: freshness and the scan used to read the same multi-MB file two or three times per query.
+     */
+    fun open(book: Book): JSONArray? {
         val f = fileFor(book.id)
-        if (!f.exists() || f.length() == 0L) return false
-        val (size, mtime) = stamp(book) ?: return false
-        val meta = runCatching { JSONObject(String(readDump(f))).optJSONObject("meta") }.getOrNull() ?: return false
-        return meta.optLong("size") == size && meta.optLong("mtime") == mtime
+        if (!f.exists() || f.length() == 0L) return null
+        val (size, mtime) = stamp(book) ?: return null
+        val root = runCatching { JSONObject(String(readDump(f))) }.getOrNull() ?: return null
+        val meta = root.optJSONObject("meta") ?: return null
+        if (meta.optLong("size") != size || meta.optLong("mtime") != mtime) return null
+        return root.optJSONArray("chapters")
     }
 
     /** Reads a book once and writes its dump. Returns false when the book could not be read at all. */
@@ -90,10 +98,11 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
 
     /** Case-insensitive substring search over one book's dump. */
     suspend fun search(book: Book, query: String, perBook: Int): List<Cached> = withContext(Dispatchers.IO) {
-        val f = fileFor(book.id)
-        if (!f.exists()) return@withContext emptyList()
-        val chars = runCatching { String(readDump(f)) }.getOrNull() ?: return@withContext emptyList()
-        val chapters = runCatching { JSONObject(chars).getJSONArray("chapters") }.getOrNull() ?: return@withContext emptyList()
+        searchIn(open(book) ?: return@withContext emptyList(), query, perBook)
+    }
+
+    /** The scan itself, over chapters that are already parsed. */
+    fun searchIn(chapters: JSONArray, query: String, perBook: Int): List<Cached> {
         val q = query.trim()
         val out = ArrayList<Cached>()
         for (i in 0 until chapters.length()) {
@@ -115,7 +124,7 @@ class SearchIndex(private val ctx: Context, private val store: Store, private va
                 at = text.indexOf(q, at + q.length, ignoreCase = true)
             }
         }
-        out
+        return out
     }
 
     /** Which books have a dump. Settings counts them together with the positions cache, without double-counting. */

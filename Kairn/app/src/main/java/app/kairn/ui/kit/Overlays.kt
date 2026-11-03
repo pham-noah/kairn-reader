@@ -93,10 +93,14 @@ class ToastState {
             ) {
                 Text(last[0], color = K.toastInk, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 actionLabel?.let { label ->
-                    Text(
-                        label, color = Color(0xFF0B6E55), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp,
-                        modifier = Modifier.padding(start = 14.dp).clickable(role = androidx.compose.ui.semantics.Role.Button) { fire() }.padding(vertical = 6.dp, horizontal = 4.dp),
-                    )
+                    // 48dp tall, not a strip of 15sp text: the toast's only action has a five-second life.
+                    Row(
+                        Modifier.heightIn(min = 48.dp).padding(start = 14.dp)
+                            .clickable(role = androidx.compose.ui.semantics.Role.Button) { fire() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(label, color = Color(0xFF0B6E55), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    }
                 }
             }
         }

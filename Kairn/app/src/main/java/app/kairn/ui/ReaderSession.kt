@@ -58,7 +58,9 @@ internal class ReaderSession(
         // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
         val p = withContext(Dispatchers.IO) { readium.open(book.uri.toUri()) } ?: return null
 
-        val cached = positionsCache.load(book)
+        // The cache is gzip + one Locator parse per position (plus a provider stat): the same reason the parse
+        // above is on IO, and this is the path every open after the first takes.
+        val cached = withContext(Dispatchers.IO) { positionsCache.load(book) }
         if (cached != null) {
             onPositions(p, cached, 0L, true)
         } else {

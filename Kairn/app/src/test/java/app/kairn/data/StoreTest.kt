@@ -21,6 +21,41 @@ class StoreTest {
      */
     private fun store() = Store.forTesting(tmp.root).also { runBlocking { it.load() } }
 
+    @Test fun `a position save writes only the sidecar, and a reload puts it back on the record`() {
+        val s = store()
+        s.put(Book(id = "a", title = "T", author = "", uri = "u", marks = listOf(Mark("m1", "highlight", 0, "q", "", "{}", 1L))))
+        s.flush()
+        val record = File(s.booksDir, "a.json").readText()
+        s.savePosition("a") { it.copy(locator = "{\"href\":\"c1\"}", progress = 0.5f, lastRead = 42L, status = Status.READING) }
+        s.flush()
+        assertEquals("the record must not be rewritten by a page turn", record, File(s.booksDir, "a.json").readText())
+        assertTrue("the sidecar holds the position", File(s.posDir, "a.json").exists())
+        assertEquals(0.5f, s.get("a")!!.progress)
+        s.reload()
+        assertEquals("a cold read restores the position", 0.5f, s.get("a")!!.progress)
+        assertEquals(Status.READING, s.get("a")!!.status)
+        assertEquals("the mark is still there", 1, s.get("a")!!.marks.size)
+    }
+
+    @Test fun `removing a book takes its sidecar with it`() {
+        val s = store()
+        s.put(Book(id = "a", title = "T", author = "", uri = "u"))
+        s.savePosition("a") { it.copy(progress = 0.3f) }
+        s.flush()
+        assertTrue(File(s.posDir, "a.json").exists())
+        s.remove("a")
+        s.flush()
+        assertTrue("no position may outlive its book", !File(s.posDir, "a.json").exists())
+    }
+
+    @Test fun `an atomic write replaces the record and leaves no temp file behind`() {
+        val f = File(tmp.root, "settings.json")
+        Store.writeAtomic(f, "one")
+        Store.writeAtomic(f, "two")
+        assertEquals("two", f.readText())
+        assertEquals("no .tmp may survive a successful write", 0, tmp.root.listFiles().orEmpty().count { it.name.endsWith(".tmp") })
+    }
+
     @Test fun `a queued write lands on disk, and flush waits for it`() {
         val s = store()
         s.put(Book(id = "a", title = "T", author = "", uri = "u"))

@@ -52,6 +52,8 @@ fun BackupScreen(
     onPickAutoFolder: () -> Unit,
     onAutoBackupOff: () -> Unit,
 ) {
+    // The phase outlives this screen; a card from last run must not be the whole page on the way back in.
+    LaunchedEffect(Unit) { if (ui.phase == BackupPhase.Done) ui.phase = BackupPhase.Idle }
     val s by store.settings.collectAsStateWithLifecycle()
     val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(s.lastBackup)) else null }
     val last = lastDate ?: stringResource(R.string.s_never)

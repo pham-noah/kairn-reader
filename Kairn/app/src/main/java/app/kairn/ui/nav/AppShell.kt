@@ -60,6 +60,9 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
     // of Settings on a large library.
     var cacheStats by remember { mutableStateOf(0 to 0L) }
     LaunchedEffect(Unit) {
+        // Before the first read finishes books.value is empty, and pruning against an empty set deletes every
+        // book's cache on every cold start.
+        app.store.awaitLoaded()
         cacheStats = withContext(Dispatchers.IO) {
             val known = app.store.books.value.map { it.id }.toSet()
             app.searchIndex.prune(known)

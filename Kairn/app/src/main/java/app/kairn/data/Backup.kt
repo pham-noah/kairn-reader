@@ -46,61 +46,91 @@ class Backup(private val ctx: Context, private val store: Store) {
         runCatching {
             store.flush()                           // the safety copy must include every queued write
 
-            // 1. Validate. Nothing destructive happens until we know this is a Kairn backup. A backup of
-            val names = ctx.contentResolver.openInputStream(src)?.use { zipEntryNames(it) }
-            require(isKairnBackup(names)) { ctx.getString(R.string.s_backup_not_kairn) }
-
-            // 2. Safety copy of everything we are about to overwrite.
-            val safety = File(ctx.filesDir, "safety-${System.currentTimeMillis()}.zip")
-            ZipOutputStream(safety.outputStream().buffered()).use { zip ->
-                store.root.walkTopDown().filter { it.isFile }.forEach { f ->
-                    zip.putNextEntry(ZipEntry("data/" + f.relativeTo(store.root).path))
-                    f.inputStream().use { it.copyTo(zip) }; zip.closeEntry()
-                }
-            }
-            // Keep only the two newest safety copies.
-            ctx.filesDir.listFiles { f -> f.name.startsWith("safety-") && f.name.endsWith(".zip") }
-                ?.sortedByDescending { it.lastModified() }?.drop(2)?.forEach { it.delete() }
-
-            // 3. Destructive from here on. If this part fails, the message must say so: the pre-restore
-            //    data now lives only in the safety copy.
+            // Validate BEFORE anything is deleted. The archive is copied to scratch and read whole: the
+            // central directory has to be there and every entry's bytes must match its own CRC, which a backup
+            // cut short by a full disk or a kill cannot do.
+            val scratch = File(ctx.cacheDir, "restore-check.zip")
             try {
-                if (replace) { store.booksDir.listFiles()?.forEach { it.delete() } }
-                ctx.contentResolver.openInputStream(src)?.use { raw ->
-                    ZipInputStream(raw.buffered()).use { zip ->
-                        var e = zip.nextEntry
-                        while (e != null) {
-                            val name = e.name
-                            if (!e.isDirectory && !name.contains("..")) {
-                                val bytes = zip.readBytes()
-                                when {
-                                    name.startsWith("data/books/") -> mergeBook(File(store.root, name.removePrefix("data/")), bytes, replace, store::writeFile)
-                                    // Merge keeps the settings on this phone; it only adopts the backup's when there
-                                    // are none (a fresh install restoring onto an empty app).
-                                    name == "data/settings.json" -> {
-                                        val target = File(store.root, "settings.json")
-                                        if (replace || !target.exists()) store.writeFile(target, String(bytes))
-                                    }
-                                    name.startsWith("data/covers/") -> File(store.root, name.removePrefix("data/")).takeIf { replace || !it.exists() }?.writeBytes(bytes)
-                                    name.startsWith("data/thumbs/") -> File(store.root, name.removePrefix("data/")).takeIf { replace || !it.exists() }?.writeBytes(bytes)
-                                    name.startsWith("imported/") -> File(store.copiesDir, name.removePrefix("imported/")).takeIf { !it.exists() }?.writeBytes(bytes)
-                                }
-                            }
-                            e = zip.nextEntry
-                        }
+                val names = runCatching {
+                    ctx.contentResolver.openInputStream(src)?.use { i -> scratch.outputStream().use { i.copyTo(it) } }
+                    zipContents(scratch).map { it.name }
+                }.getOrNull()
+                require(isKairnBackup(names)) { ctx.getString(R.string.s_backup_not_kairn) }
+                val archivedBooks = names.orEmpty().filter { it.startsWith("data/books/") }.toSet()
+
+                // Safety copy of everything a replace is about to overwrite.
+                val safety = File(ctx.filesDir, "safety-${System.currentTimeMillis()}.zip")
+                ZipOutputStream(safety.outputStream().buffered()).use { zip ->
+                    store.root.walkTopDown().filter { it.isFile }.forEach { f ->
+                        zip.putNextEntry(ZipEntry("data/" + f.relativeTo(store.root).path))
+                        f.inputStream().use { it.copyTo(zip) }; zip.closeEntry()
                     }
                 }
-                store.reload()
-                // lastSweep describes THIS device's storage, so it never comes out of an archive: a restored
-                // value could hold off the one sweep that re-attaches the books.
-                store.saveSettings { it.copy(lastSweep = 0) }
-                // A replace restore is a mirror of the archive: art whose book is gone is an orphan.
-                if (replace) pruneOrphanArt(store)
-            } catch (t: Throwable) {
-                throw IllegalStateException(ctx.getString(R.string.s_restore_failed_partway, safety.name), t)
+                // Keep only the two newest safety copies.
+                ctx.filesDir.listFiles { f -> f.name.startsWith("safety-") && f.name.endsWith(".zip") }
+                    ?.sortedByDescending { it.lastModified() }?.drop(2)?.forEach { it.delete() }
+
+                // Destructive from here on. If this part fails, the message must say so: the pre-restore data
+                // now lives only in the safety copy.
+                try {
+                    // No pre-delete: a replace removes the records the archive does not hold only after it has
+                    // been read whole, so a failure in the middle leaves the library untouched.
+                    java.util.zip.ZipFile(scratch).use { zip ->
+                        for (e in zip.entries()) {
+                            val name = e.name
+                            if (e.isDirectory || name.contains("..")) continue
+                            when {
+                                name.startsWith("data/books/") ->
+                                    mergeBook(File(store.root, name.removePrefix("data/")), zip.getInputStream(e).use { it.readBytes() }, replace, store::writeFile)
+                                // The reading position lives in its own file; it is restored as written.
+                                name.startsWith("data/pos/") ->
+                                    store.writeFile(File(store.root, name.removePrefix("data/")), String(zip.getInputStream(e).use { it.readBytes() }))
+                                // Merge keeps the settings on this phone; it only adopts the backup's when there
+                                // are none (a fresh install restoring onto an empty app).
+                                name == "data/settings.json" -> {
+                                    val target = File(store.root, "settings.json")
+                                    if (replace || !target.exists()) store.writeFile(target, zip.getInputStream(e).use { String(it.readBytes()) })
+                                }
+                                name.startsWith("data/covers/") || name.startsWith("data/thumbs/") -> {
+                                    val target = File(store.root, name.removePrefix("data/"))
+                                    if (replace || !target.exists()) unzipInto(zip, e, target)
+                                }
+                                // A book file is streamed to disk: a 200 MB entry must never be one ByteArray.
+                                name.startsWith("imported/") -> {
+                                    val target = File(store.copiesDir, name.removePrefix("imported/"))
+                                    if (!target.exists()) unzipInto(zip, e, target)
+                                }
+                            }
+                        }
+                    }
+                    if (replace) {
+                        store.flush()
+                        store.booksDir.listFiles()?.filterNot { "data/books/${it.name}" in archivedBooks }?.forEach { it.delete() }
+                        // A position for a book the archive does not hold would follow the next book to take that id.
+                        val kept = archivedBooks.map { it.removePrefix("data/books/").removeSuffix(".json") }.toSet()
+                        store.posDir.listFiles()?.filterNot { it.name.removeSuffix(".json") in kept }?.forEach { it.delete() }
+                    }
+                    store.reload()
+                    // lastSweep describes THIS device's storage, so it never comes out of an archive: a restored
+                    // value could hold off the one sweep that re-attaches the books.
+                    store.saveSettings { it.copy(lastSweep = 0) }
+                    // A replace restore is a mirror of the archive: art whose book is gone is an orphan.
+                    if (replace) pruneOrphanArt(store)
+                } catch (t: Throwable) {
+                    throw IllegalStateException(ctx.getString(R.string.s_restore_failed_partway, safety.name), t)
+                }
+                safety
+            } finally {
+                runCatching { scratch.delete() }
             }
-            safety
         }
+    }
+
+    /** One entry written atomically to [target], streamed so a book file is never held in memory. */
+    private fun unzipInto(zip: java.util.zip.ZipFile, e: ZipEntry, target: File) {
+        val tmp = File(target.parentFile, target.name + ".tmp")
+        zip.getInputStream(e).use { i -> tmp.outputStream().use { i.copyTo(it) } }
+        if (!tmp.renameTo(target)) { runCatching { target.delete() }; tmp.renameTo(target) }
     }
 
     /** Cover and thumbnail files with no book record left to show them. Only called after a replace. */
@@ -125,11 +155,12 @@ internal fun mergeBook(
     replace: Boolean,
     write: (File, String) -> Unit = { f, t -> Store.writeAtomic(f, t) },
 ) {
-    if (replace || !target.exists()) { target.writeBytes(bytes); return }
+    // Through the queued atomic writer even here: a truncated record is dropped by reload() without a word.
+    if (replace || !target.exists()) { write(target, String(bytes)); return }
     val mine = runCatching { Book.from(JSONObject(target.readText())) }.getOrNull()
     val theirs = runCatching { Book.from(JSONObject(String(bytes))) }.getOrNull()
     if (mine == null || theirs == null) {
-        if (mine == null && theirs != null) target.writeBytes(bytes)   // ours unusable: take theirs
+        if (mine == null && theirs != null) write(target, String(bytes))   // ours unusable: take theirs
         return                                                        // theirs unusable: keep ours
     }
     val newer = if (theirs.lastRead > mine.lastRead) theirs else mine
@@ -161,6 +192,26 @@ internal fun zipEntryNames(input: InputStream, limit: Int = 5000): List<String>?
     }
     names
 }.getOrNull()
+
+/**
+ * Every entry of a whole archive: the central directory has to be present and each entry's bytes must match
+ * the size and CRC recorded for it. A killed or full-disk backup fails this, which is what makes a replace
+ * restore safe to start.
+ */
+internal fun zipContents(file: File, limit: Int = 5000): List<ZipEntry> = java.util.zip.ZipFile(file).use { zip ->
+    val out = ArrayList<ZipEntry>()
+    val buf = ByteArray(8192)
+    for (e in zip.entries()) {
+        if (out.size >= limit) break
+        out += e
+        if (e.isDirectory) continue
+        val crc = java.util.zip.CRC32()
+        var total = 0L
+        zip.getInputStream(e).use { s -> while (true) { val n = s.read(buf); if (n < 0) break; crc.update(buf, 0, n); total += n } }
+        if (total != e.size || crc.value != e.crc) throw java.util.zip.ZipException("${e.name} is incomplete")
+    }
+    out
+}
 
 /** A-03: annotations as Markdown. */
 fun Book.annotationsMarkdown(): String = buildString {

@@ -332,6 +332,10 @@
     <string name="s_custom_colours">自定义颜色</string>
     <string name="s_custom_colours_hint">仅覆盖本书的页面和文字颜色。</string>
     <string name="s_theme_colours">使用主题颜色</string>
+    <string name="s_page_tone">页面色调 %1$d</string>
+    <string name="s_ink_tone">文字颜色 %1$d</string>
+    <string name="s_no_contents">这本书没有目录</string>
+    <string name="s_no_matches_notes">这里没有匹配的内容</string>
     <string name="s_colour_violet">紫罗兰</string>
     <string name="s_colour_sand">沙色</string>
     <string name="s_reading_speed">阅读速度</string>

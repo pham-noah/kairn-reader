@@ -1,0 +1,5 @@
+A page turn no longer rewrites every note in the book: the reading position lives in its own file.
+The import that shares a file name with a book already on the phone gets its own copy instead of replacing it.
+Restore checks a whole backup before it touches anything, so a half-written one cannot delete records.
+Highlights load faster in a book with many notes, search reads each book once, and the page-turn bar stops redrawing the screen.
+Page tones and small buttons are easier to reach and named for screen readers.

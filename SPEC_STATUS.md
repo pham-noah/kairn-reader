@@ -334,7 +334,7 @@ Tests live in `app/src/test` and run on the JVM (99): model round-trips, `Store`
 delete-not-overtaken, flush, unchanged guards), the restore/merge path, the reader's chapter-title map and
 save timing, and the save order in `ReaderProgress`.
 
-`app/src/androidTest` holds 44 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
+`app/src/androidTest` holds 49 on-device tests, run with `:app:connectedDebugAndroidTest` on a phone or an
 emulator (and, more reliably, `adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner`
 - see the verification note below): the store writing a record to a real filesystem and reading it back cold, a delete taking the
 file and cover off the disk, the Wi-Fi server accepting an upload over a real socket, the code gate

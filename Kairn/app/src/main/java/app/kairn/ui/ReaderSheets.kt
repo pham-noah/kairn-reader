@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
@@ -62,9 +63,10 @@ private val pageTones = listOf(0xFFF6F5F1, 0xFFEDE7DC, 0xFFD8D2C6, 0xFFBFC4C0, 0
 private val inkTones = listOf(0xFF14171A, 0xFF3B4147, 0xFF6A7178, 0xFFD8DEE3, 0xFFF4F6F8).map(Long::toInt)
 
 @Composable
-private fun ColourDot(argb: Int, selected: Boolean, onClick: () -> Unit) = Box(
-    Modifier.heightIn(min = 48.dp).width(30.dp).clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick)
-        .semantics { this.selected = selected },
+private fun ColourDot(argb: Int, selected: Boolean, label: String, onClick: () -> Unit) = Box(
+    // 48dp square of touch around a 28dp circle: 30dp wide was under the minimum and unnamed for TalkBack.
+    Modifier.size(48.dp).clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick)
+        .semantics { this.selected = selected; contentDescription = label },
     contentAlignment = Alignment.Center,
 ) {
     Box(
@@ -145,11 +147,18 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     // Sits on top of the theme: the swatch row still decides the chrome, these two decide the page.
     Text(stringResource(R.string.s_custom_colours), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 14.dp, bottom = 2.dp))
     Text(stringResource(R.string.s_custom_colours_hint), style = KType.small.copy(color = K.dim))
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        pageTones.forEach { c -> ColourDot(c, prefs.pageColor == c, { onChange(prefs.copy(pageColor = if (prefs.pageColor == c) null else c)) }) }
+    // Scrollable: ten 48dp dots do not fit a 360dp sheet, and the last tone has to be reachable.
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        pageTones.forEachIndexed { i, c ->
+            ColourDot(c, prefs.pageColor == c, stringResource(R.string.s_page_tone, i + 1),
+                { onChange(prefs.copy(pageColor = if (prefs.pageColor == c) null else c)) })
+        }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        inkTones.forEach { c -> ColourDot(c, prefs.inkColor == c, { onChange(prefs.copy(inkColor = if (prefs.inkColor == c) null else c)) }) }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        inkTones.forEachIndexed { i, c ->
+            ColourDot(c, prefs.inkColor == c, stringResource(R.string.s_ink_tone, i + 1),
+                { onChange(prefs.copy(inkColor = if (prefs.inkColor == c) null else c)) })
+        }
     }
     if (prefs.pageColor != null || prefs.inkColor != null) {
         KButton(stringResource(R.string.s_theme_colours), { onChange(prefs.copy(pageColor = null, inkColor = null)) },
@@ -211,6 +220,11 @@ internal fun ContentsSheet(pub: Publication?, current: String?, onGo: (Locator) 
     val here = current?.let(ReaderLogic::chapterKey)
     val firstHere = remember(flat, here) { flat.indexOfFirst { ReaderLogic.chapterKey(it.first.href.toString()) == here } }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = firstHere.coerceAtLeast(0))
+    // An EPUB with no nav document opened a titled sheet with nothing in it.
+    if (flat.isEmpty()) {
+        Text(stringResource(R.string.s_no_contents), style = KType.small.copy(color = K.dim))
+        return
+    }
     KCard { LazyColumn(Modifier.heightIn(max = 520.dp), state = state) {
         items(flat.size) { i ->
             val (l, d) = flat[i]

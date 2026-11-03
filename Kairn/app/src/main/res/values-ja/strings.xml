@@ -332,6 +332,10 @@
     <string name="s_custom_colours">カスタムカラー</string>
     <string name="s_custom_colours_hint">この本だけ本文と背景の色を上書きします。</string>
     <string name="s_theme_colours">テーマの色を使う</string>
+    <string name="s_page_tone">ページの色調 %1$d</string>
+    <string name="s_ink_tone">文字色 %1$d</string>
+    <string name="s_no_contents">この本には目次がありません</string>
+    <string name="s_no_matches_notes">一致するものはありません</string>
     <string name="s_colour_violet">バイオレット</string>
     <string name="s_colour_sand">サンド</string>
     <string name="s_reading_speed">読書速度</string>

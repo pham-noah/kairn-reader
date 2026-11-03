@@ -23,6 +23,7 @@ class Store private constructor(val root: File, val copiesDir: File) {
     val booksDir = File(root, "books").apply { mkdirs() }
     val coversDir = File(root, "covers").apply { mkdirs() }
     val thumbsDir = File(root, "thumbs").apply { mkdirs() }     // small pre-decoded cover thumbnails
+    val posDir = File(root, "pos").apply { mkdirs() }           // the reading position, apart from the marks
     private val settingsFile = File(root, "settings.json")
     private val statsFile = File(root, "stats.json")
 
@@ -108,9 +109,13 @@ class Store private constructor(val root: File, val copiesDir: File) {
     @Synchronized
     fun reload() {
         flush()
-        books.value = booksDir.listFiles { f -> f.extension == "json" }.orEmpty().mapNotNull { f ->
-            runCatching { Book.from(JSONObject(f.readText())) }.getOrNull()
-        }
+        // Parsed in parallel: a large library is hundreds of small JSON files, and this is the cold start.
+        books.value = booksDir.listFiles { f -> f.extension == "json" }.orEmpty().toList()
+            .parallelStream()
+            .map { f -> runCatching { Book.from(JSONObject(f.readText())) }.getOrNull() }
+            .filter { it != null }
+            .map { withPosition(it!!) }
+            .collect(java.util.stream.Collectors.toList())
         // A settings file that will not parse must not cost the reader their theme, folders and onboarding
         // state: keep the previous values, keep a copy of the broken file, and salvage what can be salvaged.
         readSettings()?.let { settings.value = it }
@@ -160,6 +165,43 @@ class Store private constructor(val root: File, val copiesDir: File) {
     /** Small pre-scaled cover used by the Library grid. Decoding this is cheap; the full cover is not. */
     fun thumbFile(id: String) = File(thumbsDir, "$id.jpg")
 
+    /** Where this book's position lives: a few hundred bytes, so a page turn does not rewrite its marks. */
+    fun posFile(id: String) = File(posDir, "$id.json")
+
+    /**
+     * R-09. The position, progress, last read and status move to the sidecar and the record keeps everything
+     * else, so saving a page does not serialise every mark in the book. Memory is the same Book as before;
+     * only the disk write is smaller.
+     */
+    @Synchronized
+    fun savePosition(id: String, f: (Book) -> Book) {
+        val old = get(id) ?: return
+        val b = f(old)
+        if (b == old) return
+        val json = JSONObject()
+            .put("locator", b.locator ?: JSONObject.NULL)
+            .put("progress", b.progress.toDouble())
+            .put("lastRead", b.lastRead)
+            .put("status", b.status.name)
+        val file = posFile(id)
+        enqueue(file) { writeAtomic(file, json.toString()) }
+        // Order is kept: a page turn must not move a book to the end of the library.
+        books.update { list -> list.map { if (it.id == id) b else it } }
+    }
+
+    /** The sidecar laid over its record. A missing or unreadable one leaves the record as it is. */
+    private fun withPosition(b: Book): Book {
+        val file = posFile(b.id)
+        if (!file.exists()) return b
+        val o = runCatching { JSONObject(file.readText()) }.getOrNull() ?: return b
+        return b.copy(
+            locator = o.optString("locator").takeIf { it.isNotEmpty() && it != "null" } ?: b.locator,
+            progress = o.optDouble("progress", b.progress.toDouble()).toFloat(),
+            lastRead = o.optLong("lastRead", b.lastRead),
+            status = runCatching { Status.valueOf(o.getString("status")) }.getOrDefault(b.status),
+        )
+    }
+
     @Synchronized
     fun put(b: Book) {
         if (get(b.id) == b) return                               // identical record: nothing to write or emit
@@ -183,7 +225,7 @@ class Store private constructor(val root: File, val copiesDir: File) {
         onRemove?.invoke(id)
         books.update { l -> l.filterNot { it.id == id } }
         // Queued like writes, so a pending older write for the same file cannot bring it back.
-        for (f in listOf(File(booksDir, "$id.json"), coverFile(id), thumbFile(id))) enqueue(f) { f.delete() }
+        for (f in listOf(File(booksDir, "$id.json"), posFile(id), coverFile(id), thumbFile(id))) enqueue(f) { f.delete() }
     }
 
     @Synchronized
@@ -213,12 +255,17 @@ class Store private constructor(val root: File, val copiesDir: File) {
         fun writeAtomic(target: File, text: String) {
             val tmp = File(target.parentFile, target.name + ".tmp")
             tmp.writeText(text)
-            if (tmp.renameTo(target)) return
-            // Copying back rather than deleting `target` and retrying the rename: a second rename failure
-            // (ENOSPC, EACCES, a SAF-backed path) would otherwise lose the previous good file.
-            runCatching { target.outputStream().use { out -> tmp.inputStream().use { it.copyTo(out) } } }
-                .onSuccess { tmp.delete() }
-                .onFailure { Log.w("KairnStore", "could not replace ${target.name}; the previous file is intact", it) }
+            // ATOMIC_MOVE replaces the target in one step, so the old record is never truncated before the
+            // new one is complete. The copy fallback that used to sit here did truncate it, which is the one
+            // thing this function promises not to do - a write that cannot land leaves the previous file be.
+            val moved = runCatching {
+                java.nio.file.Files.move(
+                    tmp.toPath(), target.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                )
+            }.isSuccess || tmp.renameTo(target)
+            if (!moved) Log.w("KairnStore", "could not replace ${target.name}; the previous file is intact")
         }
     }
 }

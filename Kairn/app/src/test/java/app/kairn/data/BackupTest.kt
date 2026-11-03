@@ -77,6 +77,26 @@ class BackupTest {
         assertEquals(mine, target.readText())
     }
 
+    @Test fun `a truncated archive does not validate, so a replace cannot delete for it`() {
+        val whole = zipOf("data/settings.json", "data/books/abc.json")
+        val f = File(tmp.root, "backup.zip")
+        f.writeBytes(whole)
+        assertTrue("a whole archive reads entry by entry", zipContents(f).any { it.name == "data/books/abc.json" })
+        // A killed backup: the tail, and with it the central directory, never made it to disk.
+        f.writeBytes(whole.copyOf(whole.size / 2))
+        assertTrue("a half-written backup must not validate", runCatching { zipContents(f) }.isFailure)
+    }
+
+    @Test fun `a restored record goes through the writer, not straight to the file`() {
+        val target = File(tmp.root, "abc.json")
+        target.writeText("untouched")
+        val calls = mutableListOf<String>()
+        mergeBook(target, book("abc", "Theirs", 1L, "m9").toJson().toString().toByteArray(),
+            replace = true, write = { f, t -> calls += t; Store.writeAtomic(f, t) })
+        assertEquals("the queued writer owns the write", 1, calls.size)
+        assertEquals("Theirs", Book.from(org.json.JSONObject(target.readText()))!!.title)
+    }
+
     @Test fun `replace mode overwrites unconditionally`() {
         val target = File(tmp.root, "abc.json")
         target.writeText(book("abc", "Mine", 100L, "m1").toJson().toString())
