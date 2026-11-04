@@ -1,0 +1,2 @@
+The update sheet now reads its own notes: headings, bullets and the version table are laid out instead of arriving as raw Markdown.
+Tapping Download no longer shrinks the sheet, so its buttons stay under your thumb.
