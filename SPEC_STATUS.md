@@ -490,6 +490,27 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.1 and 0.9.2 — released 2026-11-04
+
+Two hotfixes in one evening, both from the update sheet and the reader bar.
+
+**0.9.1** (versionCode 18, asset `Kairn-0.9.1.apk` 6,306,092 bytes, md5 `571312a7…`). The update sheet drew the
+release body - Markdown from the release page - in one `Text`, so readers saw `##`, `- ` and pipe tables:
+`ui/UpdateNotes.kt` parses it into headings, bullets, tables and paragraphs now, and the body scrolls in a
+bounded area instead of being cut at 500 characters. The sheet also shrank when a download began, because the
+action row was content-sized; it is one slot with a 68dp floor, so its top edge does not move (a device test
+holds that within 1dp).
+
+**0.9.2** (versionCode 19, asset `Kairn-0.9.2.apk` 6,307,888 bytes, md5 `8d2c032c…`). **Settings → Reader bar**
+switches off any of the six things the reader's bottom bar can show: read aloud, auto scroll, contents, search,
+notes, display. Stored as `AppSettings.barHidden` - what is hidden, not what is shown - so a bar item added
+later still appears for anyone who never opened the screen, and an unknown name is skipped rather than failing
+the settings file. Hiding read aloud or auto scroll while it runs stops it.
+
+Both carry the same CN=Kairn signature and install in place. Verified: 135 JVM tests, 57 on device, lint 0
+errors, translations checked across all five locales (392 keys each), and each published asset downloaded back
+and matched by md5.
+
 ## 0.9.0 — released 2026-11-04
 
 Version 17, `versionName` 0.9.0, signed with CN=Kairn (cert SHA-256 `69086f40…`) so it installs over 0.8.6 in
@@ -512,8 +533,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.0**, published 2026-11-04, asset `Kairn-0.9.0.apk`,
-6,306,088 bytes (v0.8.6 was 6,289,704 before it). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.2**, published 2026-11-04, asset `Kairn-0.9.2.apk`,
+6,307,888 bytes (0.9.1 fixed the update sheet at 6,306,092, 0.9.0 was 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**
