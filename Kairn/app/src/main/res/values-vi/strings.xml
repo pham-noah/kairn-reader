@@ -247,6 +247,8 @@
     <string name="s_colour_blue">Xanh dương</string>
     <string name="s_group_appearance">Giao diện</string>
     <string name="s_group_reading">Đọc</string>
+    <string name="s_group_reader_bar">Thanh trình đọc</string>
+    <string name="s_reader_bar_hint">Những gì thanh ở cuối trang hiển thị. Ẩn một mục sẽ bỏ mục đó khỏi thanh; không có gì khác thay đổi.</string>
     <string name="s_group_library">Thư viện</string>
     <string name="s_group_your_data">Dữ liệu của bạn</string>
     <string name="s_group_about">Giới thiệu</string>

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.R
+import app.kairn.data.BarItem
 import app.kairn.data.Mark
 import app.kairn.data.ReaderPrefs
 import app.kairn.data.ThemeId
@@ -159,6 +160,8 @@ internal fun ReaderScreen(
     toast: ToastState,
     act: ReaderActions,
     wpm: Int = ReaderLogic.WPM,
+    /** What the reader switched off in Settings; an empty set is the bar this app has always drawn. */
+    hidden: Set<BarItem> = emptySet(),
 ) {
     Box(Modifier.fillMaxSize()) {
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
@@ -216,8 +219,15 @@ internal fun ReaderScreen(
                     // beside it as toggles with a visible state. They are not tools and they are not hidden -
                     // a mode that moves the page must be visible while it moves it.
                     val twoUp = !ui.speech.on && !ui.prefs.scroll     // nothing between them: share the row evenly
+                    // Settings can take any of them out; an empty bar still has the seek bar above it.
+                    val tools = listOf(
+                        Triple(BarItem.CONTENTS, Icons.AutoMirrored.Filled.List, R.string.s_tool_contents),
+                        Triple(BarItem.SEARCH, Icons.Default.Search, R.string.s_tool_search),
+                        Triple(BarItem.NOTES, Icons.Default.StickyNote2, R.string.s_tool_notes),
+                        Triple(BarItem.DISPLAY, Icons.Default.TextFormat, R.string.s_tool_display),
+                    ).filter { it.first !in hidden }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
+                        if (tools.isNotEmpty()) Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
                             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                             Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
                             Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
@@ -227,7 +237,7 @@ internal fun ReaderScreen(
                         if (ui.speech.on) {
                             ModePill(null, stringResource(R.string.s_speech_rate_value, ui.prefs.speechRate), false, colors) { ui.sheet = ReaderSheet.TTS }
                             Spacer(Modifier.width(6.dp))
-                        } else if (ui.prefs.scroll) {
+                        } else if (ui.prefs.scroll && BarItem.AUTO_SCROLL !in hidden) {
                             // Auto scroll exists only in scroll mode, so outside it the toggle is not shown at all.
                             ModePill(
                                 if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
@@ -236,30 +246,38 @@ internal fun ReaderScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                         }
-                        ModePill(
-                            when {
-                                ui.speech.on && ui.speech.paused -> Icons.Default.PlayArrow
-                                ui.speech.on -> Icons.Default.Pause
-                                else -> Icons.Default.VolumeUp
-                            },
-                            stringResource(
+                        if (BarItem.READ_ALOUD !in hidden) {
+                            ModePill(
                                 when {
-                                    ui.speech.starting -> R.string.s_tts_starting
-                                    ui.speech.on && ui.speech.paused -> R.string.s_resume
-                                    ui.speech.on -> R.string.s_pause
-                                    else -> R.string.s_read_aloud
+                                    ui.speech.on && ui.speech.paused -> Icons.Default.PlayArrow
+                                    ui.speech.on -> Icons.Default.Pause
+                                    else -> Icons.Default.VolumeUp
                                 },
-                            ),
-                            ui.speech.on, colors,
-                            modifier = if (twoUp) Modifier.weight(1f) else Modifier,
-                        ) { act.toggleTts() }
+                                stringResource(
+                                    when {
+                                        ui.speech.starting -> R.string.s_tts_starting
+                                        ui.speech.on && ui.speech.paused -> R.string.s_resume
+                                        ui.speech.on -> R.string.s_pause
+                                        else -> R.string.s_read_aloud
+                                    },
+                                ),
+                                ui.speech.on, colors,
+                                modifier = if (twoUp) Modifier.weight(1f) else Modifier,
+                            ) { act.toggleTts() }
+                        }
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
-                            ReaderTool(Icons.AutoMirrored.Filled.List, stringResource(R.string.s_tool_contents), colors) { ui.sheet = ReaderSheet.CONTENTS }
-                            ReaderTool(Icons.Default.Search, stringResource(R.string.s_tool_search), colors) { ui.sheet = ReaderSheet.SEARCH }
-                            ReaderTool(Icons.Default.StickyNote2, stringResource(R.string.s_tool_notes), colors) { ui.sheet = ReaderSheet.NOTES }
-                            ReaderTool(Icons.Default.TextFormat, stringResource(R.string.s_tool_display), colors) { ui.sheet = ReaderSheet.DISPLAY }
+                            tools.forEach { (item, icon, label) ->
+                                ReaderTool(icon, stringResource(label), colors) {
+                                    ui.sheet = when (item) {
+                                        BarItem.CONTENTS -> ReaderSheet.CONTENTS
+                                        BarItem.SEARCH -> ReaderSheet.SEARCH
+                                        BarItem.NOTES -> ReaderSheet.NOTES
+                                        else -> ReaderSheet.DISPLAY
+                                    }
+                                }
+                            }
                         }
                     }
                 }

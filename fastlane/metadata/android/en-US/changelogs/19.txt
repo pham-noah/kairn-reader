@@ -1,0 +1,2 @@
+Settings now has a Reader bar section: switch off read aloud, auto scroll, or any of the four tools - contents, search, notes and display - and the reader's bar leaves them out. Nothing else changes: the bar just has fewer things on it.
+Hiding read aloud or auto scroll while it is running stops it, so nothing keeps going with no control on screen.

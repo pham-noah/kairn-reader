@@ -247,6 +247,8 @@
     <string name="s_colour_blue">ブルー</string>
     <string name="s_group_appearance">外観</string>
     <string name="s_group_reading">読書</string>
+    <string name="s_group_reader_bar">リーダーバー</string>
+    <string name="s_reader_bar_hint">ページ下部のバーに表示する項目です。非表示にするとバーから外れるだけで、ほかの動作は変わりません。</string>
     <string name="s_group_library">ライブラリ</string>
     <string name="s_group_your_data">データ</string>
     <string name="s_group_about">このアプリについて</string>

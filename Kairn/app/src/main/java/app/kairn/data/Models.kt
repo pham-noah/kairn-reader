@@ -171,6 +171,7 @@ data class AppSettings(
     val volumeKeys: Boolean = true,           // R-07
     val swipeChapters: Boolean = true,        // R-07: swipe left/right to change chapter in scroll mode
     val swipeThreshold: Int = 40,             // R-07: how far (dp) a horizontal drag must go to count
+    val barHidden: Set<BarItem> = emptySet(), // what the reader's bottom bar leaves out; empty = all
     val autoDetect: Boolean = true,           // L-01: find EPUBs already on the device on open
     val folders: List<WatchedFolder> = emptyList(),
     val defaults: ReaderPrefs = ReaderPrefs(),
@@ -196,6 +197,7 @@ data class AppSettings(
         .put("lastBackup", lastBackup).put("lastBackupName", lastBackupName).put("lastNudge", lastNudge).put("readingWpm", readingWpm)
         .put("keepScreenOn", keepScreenOn).put("fullscreen", fullscreen).put("volumeKeys", volumeKeys)
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
+        .put("barHidden", JSONArray(barHidden.map { it.name }))
         .put("autoDetect", autoDetect)
         .put("checkUpdates", checkUpdates).put("lastUpdateCheck", lastUpdateCheck)
         .put("shareSelection", shareSelection).put("lookupSelection", lookupSelection)
@@ -219,6 +221,12 @@ data class AppSettings(
                 volumeKeys = o.optBoolean("volumeKeys", d.volumeKeys),
                 swipeChapters = o.optBoolean("swipeChapters", d.swipeChapters),
                 swipeThreshold = o.optInt("swipeThreshold", d.swipeThreshold),
+                // mapNotNull: a bar item written by a newer version is ignored, not a reason to lose the file.
+                barHidden = o.optJSONArray("barHidden")?.let { a ->
+                    (0 until a.length()).mapNotNull { i ->
+                        if (a.isNull(i)) null else runCatching { BarItem.valueOf(a.getString(i)) }.getOrNull()
+                    }.toSet()
+                } ?: emptySet(),
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
                 shareSelection = o.optBoolean("shareSelection", d.shareSelection),
                 lookupSelection = o.optBoolean("lookupSelection", d.lookupSelection),

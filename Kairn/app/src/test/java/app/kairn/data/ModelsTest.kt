@@ -149,4 +149,21 @@ class ModelsTest {
         val explicitNone = p.toJson().put("fontFamily", org.json.JSONObject.NULL)
         assertNull(ReaderPrefs.from(explicitNone).fontFamily)
     }
+
+    /** The reader's bar: what is hidden survives a save, and a bar item this version does not know is ignored. */
+    @Test fun `the hidden bar items survive a round-trip`() {
+        val before = AppSettings(barHidden = setOf(BarItem.READ_ALOUD, BarItem.NOTES))
+        val after = AppSettings.from(JSONObject(before.toJson().toString()))
+        assertEquals(setOf(BarItem.READ_ALOUD, BarItem.NOTES), after.barHidden)
+    }
+
+    @Test fun `an unknown bar item in the file is skipped, not fatal`() {
+        val raw = JSONObject().put("barHidden", org.json.JSONArray(listOf("SEARCH", "TELEPATHY")))
+        val s = AppSettings.from(raw)
+        assertEquals(setOf(BarItem.SEARCH), s.barHidden)
+    }
+
+    @Test fun `no bar setting at all means every item is visible`() {
+        assertEquals(emptySet<BarItem>(), AppSettings.from(JSONObject()).barHidden)
+    }
 }

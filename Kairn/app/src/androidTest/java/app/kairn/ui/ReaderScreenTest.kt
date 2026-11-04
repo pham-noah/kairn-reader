@@ -1,8 +1,13 @@
 package app.kairn.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import app.kairn.data.BarItem
 import app.kairn.data.Mark
 import app.kairn.data.ReaderPrefs
 import app.kairn.data.ThemeId
@@ -53,9 +58,9 @@ class ReaderScreenTest {
         override fun toggleAutoScroll() { calls += "toggleAutoScroll" }
     }
 
-    private fun compose(ui: ReaderUiState, fake: ReaderActions) = rule.setContent {
+    private fun compose(ui: ReaderUiState, fake: ReaderActions, hidden: Set<BarItem> = emptySet()) = rule.setContent {
         KairnTheme(glass = false) {
-            ReaderScreen(ui, readerUi(ThemeId.DARK), isTablet = false, toast = ToastState(), act = fake)
+            ReaderScreen(ui, readerUi(ThemeId.DARK), isTablet = false, toast = ToastState(), act = fake, hidden = hidden)
         }
     }
 
@@ -96,5 +101,35 @@ class ReaderScreenTest {
         rule.onNodeWithContentDescription("Back to library").performClick()
 
         assertTrue(fake.closed)
+    }
+
+    @Test fun a_hidden_read_aloud_pill_is_not_on_the_bar() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        compose(ui, FakeReader(), hidden = setOf(BarItem.READ_ALOUD))
+
+        rule.onAllNodesWithContentDescription("Read aloud").assertCountEquals(0)
+    }
+
+    @Test fun hiding_every_tool_takes_the_more_row_with_it() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        compose(
+            ui, FakeReader(),
+            hidden = setOf(BarItem.CONTENTS, BarItem.SEARCH, BarItem.NOTES, BarItem.DISPLAY),
+        )
+
+        rule.onAllNodesWithText("More").assertCountEquals(0)
+        // The bar itself is still there, because the seek bar and the modes live in it.
+        rule.onNodeWithContentDescription("Bookmark this chapter").assertExists()
+    }
+
+    @Test fun the_tools_that_are_left_are_the_ones_that_were_not_hidden() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        compose(ui, FakeReader(), hidden = setOf(BarItem.SEARCH, BarItem.NOTES))
+
+        rule.onNodeWithText("More").performClick()
+        rule.onAllNodesWithContentDescription("Search").assertCountEquals(0)
+        rule.onAllNodesWithContentDescription("Notes").assertCountEquals(0)
+        rule.onAllNodesWithContentDescription("Contents").assertCountEquals(1)
+        rule.onAllNodesWithContentDescription("Display").assertCountEquals(1)
     }
 }

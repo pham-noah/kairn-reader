@@ -20,6 +20,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
@@ -129,11 +130,18 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             setContent {
                 // collectAsState, not .value: a StateFlow read in composition is not observed.
                 val s by app.store.settings.collectAsState()
+                // Hiding a mode while it runs would leave it running with no control on screen, so switching
+                // read aloud or auto scroll off in Settings stops them here.
+                LaunchedEffect(s.barHidden) {
+                    if (BarItem.READ_ALOUD in s.barHidden && ui.speech.on) stopTts()
+                    if (BarItem.AUTO_SCROLL in s.barHidden) autoScroll.stop()
+                }
                 KairnTheme(glass = s.glass, ambient = s.ambient) {
                     ReaderScreen(
                         ui = ui,
                         colors = readerUi(prefsApplier.theme(ui.prefs), ui.prefs.pageColor, ui.prefs.inkColor),
                         isTablet = isTablet, toast = toast, act = this@ReaderActivity, wpm = s.readingWpm,
+                        hidden = s.barHidden,
                     )
                 }
             }

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.kairn.R
 import app.kairn.data.Ambient
+import app.kairn.data.BarItem
 import app.kairn.data.ReaderPrefs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.data.Status
@@ -46,6 +47,16 @@ private val languageTags: List<String?> = listOf(null, "en", "es", "fi", "ja", "
 }
 
 /** N-07: one place for appearance, library, data and about. */
+/** The six things the reader's bottom bar can show, in the order the bar draws them. */
+private val barItems = listOf(
+    BarItem.READ_ALOUD to R.string.s_read_aloud,
+    BarItem.AUTO_SCROLL to R.string.s_auto_scroll,
+    BarItem.CONTENTS to R.string.s_tool_contents,
+    BarItem.SEARCH to R.string.s_tool_search,
+    BarItem.NOTES to R.string.s_tool_notes,
+    BarItem.DISPLAY to R.string.s_tool_display,
+)
+
 @Composable
 fun SettingsScreen(
     store: Store, onWatchedFolders: () -> Unit, onBackup: () -> Unit, onScan: () -> Unit,
@@ -151,6 +162,25 @@ fun SettingsScreen(
                 KRow(stringResource(R.string.s_reading_defaults), divider = true, onClick = { defaultsOpen = true }) { KChevron() }
             }
         }
+        // What the reader's bar shows. Stored as what is HIDDEN, so a bar item added later still appears
+        // for anyone who never touched this.
+        KGroup(stringResource(R.string.s_group_reader_bar)) {
+            Text(
+                stringResource(R.string.s_reader_bar_hint),
+                style = KType.small.copy(color = K.dim),
+                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+            )
+            KCard {
+                barItems.forEachIndexed { i, (item, label) ->
+                    KRow(stringResource(label), divider = i > 0) {
+                        KSwitch(item !in s.barHidden, onChange = { on ->
+                            store.saveSettings { it.copy(barHidden = if (on) it.barHidden - item else it.barHidden + item) }
+                        })
+                    }
+                }
+            }
+        }
+
         KGroup(stringResource(R.string.s_group_library)) {
             KCard {
                 KRow(stringResource(R.string.s_find_books_on_this_device)) {
