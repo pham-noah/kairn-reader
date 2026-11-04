@@ -10,7 +10,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import kotlinx.coroutines.isActive
-import org.readium.r2.navigator.preferences.FontFamily
 import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
@@ -38,7 +37,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import app.kairn.KairnApp
 import app.kairn.R
 import app.kairn.data.*
-import app.kairn.data.ThemeId
 import app.kairn.ui.kit.ToastState
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.readerUi
@@ -55,7 +53,6 @@ import org.json.JSONObject
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.HyperlinkNavigator
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
-import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.navigator.preferences.ColumnCount
@@ -105,22 +102,6 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     // Every write to this book's record goes through one place; see ReaderWriter.
     private val writer by lazy { ReaderWriter(app.store, bookId) }
     private val session by lazy { ReaderSession(this, app.readium, lifecycleScope, app.positionsCache) }
-    /**
-     * Reads the chapter aloud. Tapping play speaks from the reader's own position; when a chapter runs out
-     * the page turns and the next one starts, which is also what happens if the reader turns it themselves.
-     */
-    private val tts by lazy {
-        ReaderTts(
-            this,
-            onStarted = { ui.ttsStarting = false },
-            onEnded = { ui.ttsStarting = false; advanceWithTts() },
-            onFailed = {
-                ui.ttsOn = false; ui.ttsStarting = false
-                Toast.makeText(this, getString(R.string.s_tts_unavailable), Toast.LENGTH_LONG).show()
-            },
-            onWord = ::followVoice,
-        )
-    }
 
     private val exportNotesLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
@@ -151,7 +132,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 KairnTheme(glass = s.glass, ambient = s.ambient) {
                     ReaderScreen(
                         ui = ui,
-                        colors = readerUi(effectiveTheme(ui.prefs, s.autoSwitch), ui.prefs.pageColor, ui.prefs.inkColor),
+                        colors = readerUi(prefsApplier.theme(ui.prefs), ui.prefs.pageColor, ui.prefs.inkColor),
                         isTablet = isTablet, toast = toast, act = this@ReaderActivity, wpm = s.readingWpm,
                     )
                 }
@@ -172,7 +153,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         }
         // Bind text-to-speech while the book is already open: the engine's cold bind is seconds long, and
         // paying for it inside the tap is what made "Read aloud" read as a dead button.
-        lifecycleScope.launch { delay(1200); tts.warm() }
+        lifecycleScope.launch { delay(1200); speech.warm() }
     }
 
     /** The parts of the reader that come straight from the stored record. */
@@ -231,7 +212,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
         supportFragmentManager.fragmentFactory = factory.createFragmentFactory(
             initialLocator = (startLocator ?: book.locator)?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() },
-            initialPreferences = toEpub(ui.prefs),
+            initialPreferences = prefsApplier.epub(ui.prefs),
             listener = object : EpubNavigatorFragment.Listener {
                 override fun shouldFollowInternalLink(link: Link, context: HyperlinkNavigator.LinkContext?): Boolean {
                     if (context is HyperlinkNavigator.FootnoteContext) {   // R-08: footnote pop-up
@@ -297,7 +278,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 if (loc.href.toString() != ui.chapterHref) {
                     ui.chapterHref = loc.href.toString()
                     loadChapterWords(loc)
-                    if (ui.ttsOn && !ui.ttsStarting) speakChapter(loc)   // follow the reader into the next chapter
+                    if (ui.speech.on && !ui.speech.starting) speech.speakFrom(loc)   // follow the reader into the next chapter
                 }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null
                 delay(progress.delayFor())
@@ -344,10 +325,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun onPause() {
         super.onPause()
         // Reading aloud continues in the background behind a foreground service; everything else stops here.
-        if (ui.ttsOn && !ui.ttsPaused) SpeechService.start(this) else SpeechService.stop(this)
-        if (!ui.ttsOn) { ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false }
-        clearFollow()
-        stopAutoScroll()
+        if (ui.speech.on && !ui.speech.paused) SpeechService.start(this) else SpeechService.stop(this)
+        if (!ui.speech.on) { ui.speech.on = false; ui.speech.starting = false; ui.speech.paused = false }
+        speech.clearFollow()
+        autoScroll.stop()
         // The prefs write is debounced: a close inside that window would drop the last change. A book whose
         // prefs were never touched keeps a null record, so it goes on following the global defaults.
         if (prefsTouched) writer.savePrefs(ui.prefs)
@@ -355,7 +336,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         commitSession()
     }
     override fun onDestroy() {
-        closeSearch(); tts.shutdown(); pub?.close()
+        closeSearch(); speech.shutdown(); pub?.close()
         SpeechService.onStop = null
         SpeechService.stop(this)
         super.onDestroy()
@@ -385,7 +366,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun setSleepTimer(minutes: Int) {
         sleepJob?.cancel()
         sleepJob = null
-        ui.sleepChoice = minutes
+        ui.speech.sleepChoice = minutes
         when {
             minutes == 0 -> return
             minutes < 0 -> toast.show(getString(R.string.toast_sleep_chapter))
@@ -403,12 +384,12 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private fun endSleep() {
         sleepJob?.cancel()
         sleepJob = null
-        val wasReading = ui.ttsOn
-        ui.sleepChoice = 0
+        val wasReading = ui.speech.on
+        ui.speech.sleepChoice = 0
         if (wasReading) {
-            tts.stop()
-            ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
-            clearFollow()
+            speech.stopVoice()
+            ui.speech.on = false; ui.speech.starting = false; ui.speech.paused = false
+            speech.clearFollow()
         }
         toast.show(getString(R.string.toast_sleep_done))
     }
@@ -418,94 +399,53 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     /** Tablet = the OS threshold (600dp shortest side). Two-page columns are a wide-screen idea. */
     private val isTablet: Boolean get() = resources.configuration.smallestScreenWidthDp >= 600
 
-    private fun effectiveTheme(p: ReaderPrefs, autoSwitch: Boolean) =
-        effectiveTheme(p, autoSwitch, ui.night)      // the mapping itself lives in ReaderPrefsMapping
-
-    private fun toEpub(p: ReaderPrefs) =
-        toEpubPreferences(p, app.store.settings.value.autoSwitch, ui.night, isTablet)
+    /**
+     * R-03/R-05/R-06/R-10: the prefs policy lives in [ReaderPrefsApplier] - it owns the settle delay, the
+     * engine submission and the book's own record. The mapping itself stays in ReaderPrefsMapping, where it
+     * is tested without an Activity.
+     */
+    private val prefsApplier by lazy {
+        ReaderPrefsApplier(
+            window = window,
+            navigator = { nav },
+            autoSwitch = { app.store.settings.value.autoSwitch },
+            night = { ui.night },
+            isTablet = { isTablet },
+            persist = { writer.savePrefs(it) },
+            onLeavingScrollMode = { autoScroll.stop() },
+            scope = lifecycleScope,
+        )
+    }
 
     // ---- auto scroll ----
-    // One JS interval moves the page inside the WebView: a per-frame Kotlin round-trip would be a wake-up
-    // and a hop across the bridge every 16 ms. The loop below only watches for the end of the chapter.
-    private var autoJob: Job? = null
-    private var autoHold: Job? = null
-    private var autoHeld = false                 // a finger is on the page: no drift, and no page turn
-
-    private fun autoStep() = (ui.prefs.scrollSpeed * resources.displayMetrics.density / 50f).coerceAtLeast(0.5f)
-    private fun autoJs(step: Float) = "window.__kairnAuto && clearInterval(window.__kairnAuto);" +
-        "window.__kairnAuto = setInterval(function(){ window.scrollBy(0, $step) }, 20)"
+    // R-07: the loop, the hold and the JS interval live in ReaderAutoScroll; the Activity decides when.
+    private val autoScroll by lazy {
+        ReaderAutoScroll(
+            navigator = { nav },
+            scrollSpeed = { ui.prefs.scrollSpeed },
+            density = { resources.displayMetrics.density },
+            scrolling = { ui.autoScrolling = it },
+            scope = lifecycleScope,
+        )
+    }
 
     override fun toggleAutoScroll() {
-        if (autoJob != null) { stopAutoScroll(); return }
+        if (autoScroll.isRunning) { autoScroll.stop(); return }
         if (!ui.prefs.scroll) return                 // the toggle is only shown in scroll mode
-        ui.autoScrolling = true
-        autoJob = lifecycleScope.launch {
-            val n = nav ?: return@launch
-            n.evaluateJavascript(autoJs(autoStep()))
-            var last = -1f
-            var still = 0
-            while (isActive) {
-                delay(1500)
-                if (autoHeld) { last = -1f; still = 0; continue }   // held still by a finger, not by the bottom
-                val y = n.evaluateJavascript("window.scrollY")?.toFloatOrNull() ?: -1f
-                still = if (y == last) still + 1 else 0
-                last = y
-                if (still >= 2) { still = 0; n.goForward(true) }     // the bottom: turn and keep going
-            }
-        }
+        autoScroll.start()
     }
-
-    /** A finger on the page stops the drift so the reader can look at something. */
-    private fun holdAutoScroll() {
-        if (autoJob == null || autoHeld) return
-        autoHeld = true
-        lifecycleScope.launch { nav?.evaluateJavascript("clearInterval(window.__kairnAuto)") }
-    }
-
-    /** It comes back a moment after the finger leaves, so a tap does not restart it under the next tap. */
-    private fun releaseAutoScroll() {
-        if (autoJob == null || !autoHeld) return
-        autoHold?.cancel()
-        autoHold = lifecycleScope.launch {
-            delay(700)
-            autoHeld = false
-            nav?.evaluateJavascript(autoJs(autoStep()))
-        }
-    }
-
-    private fun stopAutoScroll() {
-        autoJob?.cancel()
-        autoJob = null
-        autoHold?.cancel()
-        autoHold = null
-        autoHeld = false
-        ui.autoScrolling = false
-        lifecycleScope.launch { nav?.evaluateJavascript("clearInterval(window.__kairnAuto)") }
-    }
-
-    private var applyJob: Job? = null
 
     /**
-     * A slider emits on every drag tick, so submitting preferences (a Readium pref apply) and writing the
-     * book JSON at that rate makes the Display sheet heavy. The UI state follows immediately; the engine
-     * and the disk get the settled value ~120 ms later. onPause flushes it, so a quick close cannot lose it.
+     * The UI state follows the drag immediately; [ReaderPrefsApplier] settles the value before the engine and
+     * the disk see it, and onPause flushes it, so a quick close cannot lose the last change.
      */
     private fun updatePrefs(p: ReaderPrefs) {
         prefsTouched = true            // only a change of the reader's own makes the record per-book
         ui.prefs = p
-        applyJob?.cancel()
-        applyJob = lifecycleScope.launch {
-            delay(120)
-            writer.savePrefs(p)     // R-10: per book
-            applyPrefs()
-        }
+        prefsApplier.schedule(p)
     }
 
-    private fun applyPrefs() {
-        if (!ui.prefs.scroll) stopAutoScroll()       // auto scroll only exists in scroll mode
-        nav?.submitPreferences(toEpub(ui.prefs))
-        window.attributes = window.attributes.also { it.screenBrightness = if (ui.prefs.brightness < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else ui.prefs.brightness }
-    }
+    private fun applyPrefs() = prefsApplier.apply(ui.prefs)
 
     // ---- window (R-11) ----
 
@@ -536,9 +476,9 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         // Before the scroll-mode gate: holding the page must stop the drift in any mode it can run in.
-        if (autoJob != null) when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> holdAutoScroll()
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseAutoScroll()
+        if (autoScroll.isRunning) when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> autoScroll.hold()
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> autoScroll.release()
         }
         if (!ui.prefs.scroll || ui.sheet != ReaderSheet.NONE) return super.dispatchTouchEvent(ev)
 
@@ -696,125 +636,34 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     }
 
     /** Play / pause / resume the chapter being read aloud (or read from the current position). */
-    override fun toggleTts() {
-        when {
-            ui.ttsOn && ui.ttsPaused -> { ui.ttsPaused = false; ui.ttsStarting = false; tts.resume() }
-            ui.ttsOn -> { ui.ttsPaused = true; tts.pause() }
-            else -> {
-                val loc = nav?.currentLocator?.value ?: return
-                // Show the stop state on the tap, not when the engine finally speaks: a cold bind is seconds
-                // long and an unchanged button reads as a dead tap.
-                ui.ttsOn = true; ui.ttsStarting = true; ui.ttsPaused = false
-                speakChapter(loc)
-            }
-        }
+    // ---- read aloud (R-14) ----
+    // The policy lives in ReaderSpeech. What stays here is what needs this Activity: the sleep timer's toasts
+    // and delay, and the foreground service that keeps the process alive while the screen is off.
+    private val speech by lazy {
+        ReaderSpeech(
+            context = this,
+            ui = ui,
+            navigator = { nav },
+            publication = { pub },
+            positionsByHref = { positionsByHref },
+            scope = lifecycleScope,
+            toast = { res -> Toast.makeText(this, getString(res), Toast.LENGTH_LONG).show() },
+            endOfChapterTimer = { if (ui.speech.sleepChoice < 0) { endSleep(); true } else false },
+            cancelSleepTimer = { sleepJob?.cancel(); sleepJob = null; ui.speech.sleepChoice = 0 },
+        )
     }
 
-    override fun stopTts() {
-        tts.stop()
-        SpeechService.stop(this)
-        ui.ttsOn = false; ui.ttsStarting = false; ui.ttsPaused = false
-        ui.sheet = ReaderSheet.NONE
-        clearFollow()
-        // The timer belongs to the voice: a manual stop ends the timer too, instead of leaving a chip that
-        // promises to stop something that is already stopped.
-        sleepJob?.cancel(); sleepJob = null
-        ui.sleepChoice = 0
-    }
+    override fun toggleTts() = speech.toggle()
 
-    /** Drop the painted sentence and the page the voice had reached. */
-    private fun clearFollow() {
-        lastSentence = -1
-        followedPage = -1
-        lifecycleScope.launch { nav?.evaluateJavascript(ReaderFollow.clear()) }
-    }
+    override fun stopTts() = speech.stop()
 
     override fun setSpeechRate(rate: Float) {
         updatePrefs(ui.prefs.copy(speechRate = rate.coerceIn(0.6f, 2f)))
-        tts.setRate(ui.prefs.speechRate)
+        speech.setRate(ui.prefs.speechRate)
     }
 
-    private fun speakChapter(loc: Locator) = lifecycleScope.launch {
-        val p = pub ?: return@launch
-        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
-        if (text.isNullOrBlank()) {
-            ui.ttsOn = false; ui.ttsStarting = false
-            Toast.makeText(this@ReaderActivity, getString(R.string.s_tts_chapter_failed), Toast.LENGTH_LONG).show()
-            return@launch
-        }
-        val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
-        spokenText = text
-        spokenHref = loc.href.toString()
-        lastSentence = -1
-        followedPage = -1
-        tts.speak(text.substring(from), ui.prefs.speechRate, from)
-    }
-
-    // ---- follow the voice ----
-    private var spokenText = ""
-    private var spokenHref: String? = null
-    private var lastSentence = -1
-    private var followedPage = -1
-    private var followAt = 0L
-
-    /**
-     * The voice reports each word's place in the chapter. Paint the sentence it is in, and in page mode turn
-     * the page when it moves on: a page cannot scroll to follow a voice the way a scroll view can.
-     */
-    private fun followVoice(at: Int) {
-        if (!ui.ttsOn || ui.ttsPaused || spokenText.isEmpty()) return
-        val now = SystemClock.elapsedRealtime()
-        if (now - followAt < 300) return
-        followAt = now
-        val (s, e) = ReaderLogic.sentenceAt(spokenText, at)
-        if (s != lastSentence) {
-            lastSentence = s
-            lifecycleScope.launch { nav?.evaluateJavascript(ReaderFollow.highlight(s, e)) }
-        }
-        if (ui.prefs.scroll) return                     // a scroll view already shows the spoken place
-        val href = spokenHref ?: ui.chapterHref ?: return
-        val chapter = positionsByHref[href] ?: return
-        if (chapter.size < 2) return
-        val progress = at.toFloat() / spokenText.length.coerceAtLeast(1)
-        val idx = chapter.indexOfLast { (it.locations.progression ?: 0.0) <= progress }.coerceAtLeast(0)
-        if (idx == followedPage) return
-        followedPage = idx
-        Log.i("KairnPerf", "tts follow page $idx of ${chapter.size} at ${(progress * 100).toInt()}%")
-        lifecycleScope.launch { nav?.go(chapter[idx], animated = false) }
-    }
-
-    /**
-     * Drives the exact path the TTS callback drives, from a test: takes the current chapter's text, pretends
-     * the voice reached [ratio] of it, and lets [followVoice] turn the page. Used to prove the reader still
-     * turns pages while the activity is stopped, i.e. behind a locked screen.
-     */
     @androidx.annotation.VisibleForTesting
-    internal fun followVoiceForTest(ratio: Float) = lifecycleScope.launch {
-        val p = pub ?: return@launch
-        val loc = nav?.currentLocator?.value ?: return@launch
-        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
-        if (text.isNullOrEmpty()) return@launch
-        spokenText = text
-        spokenHref = loc.href.toString()
-        lastSentence = -1
-        followedPage = -1
-        followAt = 0L
-        ui.ttsOn = true
-        ui.ttsPaused = false
-        ui.prefs = ui.prefs.copy(scroll = false)     // page mode: the case that has to navigate
-        followVoice((text.length * ratio).coerceIn(0f, text.length - 1f).toInt())
-    }
-
-    /** The chapter ended by itself: turn the page and keep reading, unless this was the last one. */
-    private fun advanceWithTts() {
-        // A timer set to "end of chapter" is fulfilled here, before the next chapter can start.
-        if (ui.sleepChoice < 0) { endSleep(); return }
-        val n = nav ?: run { ui.ttsOn = false; return }
-        val here = n.currentLocator.value?.href?.toString()
-        val last = pub?.readingOrder?.lastOrNull()?.href?.toString()
-        if (here == null || here == last) { ui.ttsOn = false; return }
-        lifecycleScope.launch { n.goForward(true) }
-    }
+    internal fun followVoiceForTest(ratio: Float) = speech.followForTest(ratio)
 
     override fun goTo(l: Locator) { nav?.go(l, true); ui.sheet = ReaderSheet.NONE }
 
@@ -915,14 +764,14 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun search(q: String) {
         searchJob?.cancel()
         closeSearch()
-        ui.lastQuery = q
-        ui.searchResults = emptyList()
-        ui.searchMoreAvailable = false
-        if (q.length < 3) { ui.searchBusy = false; return }
+        ui.search.query = q
+        ui.search.results = emptyList()
+        ui.search.moreAvailable = false
+        if (q.length < 3) { ui.search.busy = false; return }
         searchJob = lifecycleScope.launch {
             delay(250)
             val p = pub ?: return@launch
-            ui.searchBusy = true
+            ui.search.busy = true
             // Publication.search() walks the whole book: on the main dispatcher it freezes the reader
             // for as long as the scan takes. The iterator is created and pulled off the UI thread.
             val page = withContext(Dispatchers.IO) {
@@ -932,24 +781,24 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                     else { searchIter = iter; pull(iter, PAGE_SIZE) }
                 }.getOrNull()
             }
-            ui.searchBusy = false
+            ui.search.busy = false
             if (page == null) return@launch
-            ui.searchResults = page.first
-            ui.searchMoreAvailable = page.second
+            ui.search.results = page.first
+            ui.search.moreAvailable = page.second
         }
     }
 
     /** "Show more": the next page from the SAME iterator, not a fresh scan of the whole book. */
     override fun searchMore() {
         val iter = searchIter ?: return
-        if (ui.searchBusy || ui.lastQuery.length < 3) return
+        if (ui.search.busy || ui.search.query.length < 3) return
         searchJob = lifecycleScope.launch {
-            ui.searchBusy = true
+            ui.search.busy = true
             val page = withContext(Dispatchers.IO) { runCatching { pull(iter, PAGE_SIZE) }.getOrNull() }
-            ui.searchBusy = false
+            ui.search.busy = false
             if (page == null) return@launch
-            ui.searchResults = ui.searchResults + page.first
-            ui.searchMoreAvailable = page.second
+            ui.search.results = ui.search.results + page.first
+            ui.search.moreAvailable = page.second
         }
     }
 

@@ -76,10 +76,7 @@ internal class ReaderUiState {
     var chapterTitle by mutableStateOf("")
     var bookTitle by mutableStateOf("")
     var marks by mutableStateOf<List<Mark>>(emptyList())
-    var searchResults by mutableStateOf<List<Locator>>(emptyList())
-    var searchBusy by mutableStateOf(false)
-    var searchMoreAvailable by mutableStateOf(false)         // the last page came back full, so more may exist
-    var lastQuery by mutableStateOf("")
+    val search = ReaderSearchState()
     // Snapshot state on purpose: positions() finishes AFTER the first locator and the bottom bar reads
     // these, so as plain fields the seek scale and "min left" would stay blank until an unrelated repaint.
     var positions by mutableStateOf<List<Locator>>(emptyList())
@@ -87,11 +84,7 @@ internal class ReaderUiState {
     var chapterHref by mutableStateOf<String?>(null)
     var chapterProgress by mutableFloatStateOf(0f)          // how far into THIS chapter
     var chapterWords by mutableIntStateOf(0)                // this chapter's word count, once measured
-    var searchChapterOnly by mutableStateOf(false)          // S-01: search only the chapter on screen
-    var ttsOn by mutableStateOf(false)                      // reading aloud is on (the engine may still be starting)
-    var sleepChoice by mutableIntStateOf(0)                // R-15: 0 = no timer, >0 minutes, -1 = end of chapter
-    var ttsStarting by mutableStateOf(false)                // tapped, but the engine has not produced audio yet
-    var ttsPaused by mutableStateOf(false)                  // reading aloud, held at the word it reached
+    val speech = ReaderSpeechState()
     var autoScrolling by mutableStateOf(false)              // the page is scrolling by itself
     var bookProgress by mutableFloatStateOf(0f)             // WHOLE-BOOK progression
     /** The book's own word count, counted once after open. 0 until it lands. */
@@ -100,6 +93,28 @@ internal class ReaderUiState {
     // Top edge of the reader's bottom bar in window coordinates. A scroll-mode swipe may only start above
     // it: the bar's slider is Compose content in this same window, and intercepting its drag paged a chapter.
     var chromeTopPx by mutableFloatStateOf(Float.MAX_VALUE)
+}
+
+/**
+ * S-01: the in-book search - the query, its hits, and whether the last page came back full. Its own object
+ * because it changes for a different reason than the page does, and because a sheet test can drive it alone.
+ */
+internal class ReaderSearchState {
+    var results by mutableStateOf<List<Locator>>(emptyList())
+    var busy by mutableStateOf(false)
+    var moreAvailable by mutableStateOf(false)
+    var query by mutableStateOf("")
+    var chapterOnly by mutableStateOf(false)     // search only the chapter on screen
+}
+
+/**
+ * R-15: reading aloud as the chrome needs it, and the sleep timer that belongs to the voice.
+ */
+internal class ReaderSpeechState {
+    var on by mutableStateOf(false)              // reading aloud is on (the engine may still be starting)
+    var starting by mutableStateOf(false)        // tapped, but the engine has not produced audio yet
+    var paused by mutableStateOf(false)          // held at the word it reached
+    var sleepChoice by mutableIntStateOf(0)      // 0 = no timer, >0 minutes, -1 = end of chapter
 }
 
 /**
@@ -200,7 +215,7 @@ internal fun ReaderScreen(
                     // The bar stays minimal: "More" holds the four sheets, and the two reading modes sit
                     // beside it as toggles with a visible state. They are not tools and they are not hidden -
                     // a mode that moves the page must be visible while it moves it.
-                    val twoUp = !ui.ttsOn && !ui.prefs.scroll     // nothing between them: share the row evenly
+                    val twoUp = !ui.speech.on && !ui.prefs.scroll     // nothing between them: share the row evenly
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
                             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -209,7 +224,7 @@ internal fun ReaderScreen(
                         }
                         // While it is reading, the speed takes the auto scroll slot - the two never make sense
                         // together - so the row never grows past what fits on a phone.
-                        if (ui.ttsOn) {
+                        if (ui.speech.on) {
                             ModePill(null, stringResource(R.string.s_speech_rate_value, ui.prefs.speechRate), false, colors) { ui.sheet = ReaderSheet.TTS }
                             Spacer(Modifier.width(6.dp))
                         } else if (ui.prefs.scroll) {
@@ -223,19 +238,19 @@ internal fun ReaderScreen(
                         }
                         ModePill(
                             when {
-                                ui.ttsOn && ui.ttsPaused -> Icons.Default.PlayArrow
-                                ui.ttsOn -> Icons.Default.Pause
+                                ui.speech.on && ui.speech.paused -> Icons.Default.PlayArrow
+                                ui.speech.on -> Icons.Default.Pause
                                 else -> Icons.Default.VolumeUp
                             },
                             stringResource(
                                 when {
-                                    ui.ttsStarting -> R.string.s_tts_starting
-                                    ui.ttsOn && ui.ttsPaused -> R.string.s_resume
-                                    ui.ttsOn -> R.string.s_pause
+                                    ui.speech.starting -> R.string.s_tts_starting
+                                    ui.speech.on && ui.speech.paused -> R.string.s_resume
+                                    ui.speech.on -> R.string.s_pause
                                     else -> R.string.s_read_aloud
                                 },
                             ),
-                            ui.ttsOn, colors,
+                            ui.speech.on, colors,
                             modifier = if (twoUp) Modifier.weight(1f) else Modifier,
                         ) { act.toggleTts() }
                     }
@@ -270,7 +285,7 @@ internal fun ReaderScreen(
         }
         // Leaving the search sheet drops its hits: reopening it with an empty field must not show
         // the previous query's results.
-        LaunchedEffect(ui.sheet) { if (ui.sheet != ReaderSheet.SEARCH) { ui.searchResults = emptyList(); ui.searchBusy = false; ui.searchMoreAvailable = false } }
+        LaunchedEffect(ui.sheet) { if (ui.sheet != ReaderSheet.SEARCH) { ui.search.results = emptyList(); ui.search.busy = false; ui.search.moreAvailable = false } }
         if (ui.sheet != ReaderSheet.NONE) KSheet({ ui.sheet = ReaderSheet.NONE }, when (ui.sheet) {
             ReaderSheet.DISPLAY -> stringResource(R.string.s_display)
             ReaderSheet.CONTENTS -> stringResource(R.string.s_contents)
@@ -279,18 +294,18 @@ internal fun ReaderScreen(
             else -> stringResource(R.string.s_notes_and_highlights)
         }) {
             when (ui.sheet) {
-                ReaderSheet.TTS -> TtsSheet(ui.prefs, ui.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts)
+                ReaderSheet.TTS -> TtsSheet(ui.prefs, ui.speech.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts)
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, ui.chapterHref, act::goTo)
                 ReaderSheet.SEARCH -> {
                     val here = ui.chapterHref
-                    val shown = if (ui.searchChapterOnly && here != null) ui.searchResults.filter { it.href.toString() == here }
-                                else ui.searchResults
+                    val shown = if (ui.search.chapterOnly && here != null) ui.search.results.filter { it.href.toString() == here }
+                                else ui.search.results
                     SearchSheet(
-                        shown, ui.searchBusy, ui.searchMoreAvailable && ui.lastQuery.length >= 3,
+                        shown, ui.search.busy, ui.search.moreAvailable && ui.search.query.length >= 3,
                         act::search, act::searchMore, act::goTo, ui.chapterTitles,
-                        chapterOnly = ui.searchChapterOnly,
-                        onChapterOnly = { ui.searchChapterOnly = it },
+                        chapterOnly = ui.search.chapterOnly,
+                        onChapterOnly = { ui.search.chapterOnly = it },
                         showChapterFilter = here != null,
                     )
                 }

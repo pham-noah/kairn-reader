@@ -28,13 +28,15 @@ class WifiTransferTest {
     }
 
     /**
-     * One request, one response; returns status and body. Retried once on a socket error: the server answers
-     * and closes, so on a loaded machine the client can lose the race between writing and reading the reply.
-     * Nothing about the response changes, so a retry cannot hide a wrong answer.
+     * One request, one response; returns status and body. Retried on a socket error: the server answers and
+     * closes, so on a loaded machine the client can lose the race between writing and reading the reply.
+     * Four attempts with a growing pause, not two: two were not enough on 2026-11-04 with a Gradle build and
+     * an emulator running on the same machine, and the failure took down an otherwise green suite. Nothing
+     * about the response changes between attempts, so a retry cannot hide a wrong answer.
      */
     private fun request(port: Int, head: String, body: ByteArray = ByteArray(0)): Pair<Int, String> {
         var last: Exception? = null
-        repeat(2) {
+        repeat(4) { attempt ->
             try {
                 return Socket("127.0.0.1", port).use { s ->
                     s.soTimeout = 5_000
@@ -45,7 +47,7 @@ class WifiTransferTest {
                 }
             } catch (e: java.net.SocketException) {
                 last = e
-                Thread.sleep(50)
+                Thread.sleep(50L * (attempt + 1))
             }
         }
         throw last!!

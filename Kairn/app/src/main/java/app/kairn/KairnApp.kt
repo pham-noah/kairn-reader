@@ -1,10 +1,12 @@
 package app.kairn
 
 import android.app.Application
+import androidx.core.net.toUri
 import app.kairn.data.AutoBackup
 import app.kairn.data.Backup
 import app.kairn.data.Library
 import app.kairn.data.ReadiumHelper
+import app.kairn.data.SafBackupFolder
 import app.kairn.data.PositionsCache
 import app.kairn.data.SearchIndex
 import app.kairn.data.Store
@@ -31,10 +33,16 @@ class KairnApp : Application() {
         readium = ReadiumHelper(this)
         library = Library(this, store, readium)
         backup = Backup(this, store)
-        autoBackup = AutoBackup(this, store, backup)
+        autoBackup = AutoBackup(
+            store = store,
+            openFolder = { tree -> SafBackupFolder(this, tree) },
+            write = { doc -> backup.write(doc.value.toUri(), includeBookFiles = false) },
+        )
         searchIndex = SearchIndex(this, store, readium)
         positionsCache = PositionsCache(this)
-        store.onRemove = { id -> searchIndex.forget(id); positionsCache.forget(id) }
+        // A removed book takes its cached files with it: each cache registers itself, so the wiring is
+        // additive and there is no single slot to leave unset.
+        store.onBookRemoved { id -> searchIndex.forget(id); positionsCache.forget(id) }
         // Reading + parsing every book file belongs on IO, not in Application.onCreate on the main thread.
         scope.launch { store.load() }
     }

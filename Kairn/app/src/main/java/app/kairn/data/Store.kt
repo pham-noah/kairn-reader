@@ -217,12 +217,29 @@ class Store private constructor(val root: File, val copiesDir: File) {
     @Synchronized
     fun update(id: String, f: (Book) -> Book) { get(id)?.let { put(f(it)) } }
 
-    /** Called when a book leaves the library, so its search dump is not left on disk. */
-    var onRemove: ((String) -> Unit)? = null
+    /**
+     * Something that keeps per-book files of its own and has to drop them when the book leaves the library -
+     * the search dump and the positions cache, today.
+     */
+    fun interface RemovalListener {
+        fun onRemoved(bookId: String)
+    }
+
+    private val removalListeners = mutableListOf<RemovalListener>()
+
+    /**
+     * Registers a listener that must be told when a book leaves the library. A list rather than one nullable
+     * field, because a single slot that was assigned once from KairnApp could be left unwired - and then a
+     * removed book's dump stayed on disk with nothing to say so.
+     */
+    fun onBookRemoved(listener: RemovalListener) {
+        synchronized(removalListeners) { removalListeners += listener }
+    }
 
     @Synchronized
     fun remove(id: String) {
-        onRemove?.invoke(id)
+        // Before the records go: a listener that needs the old record can still read it.
+        synchronized(removalListeners) { removalListeners.toList() }.forEach { it.onRemoved(id) }
         books.update { l -> l.filterNot { it.id == id } }
         // Queued like writes, so a pending older write for the same file cannot bring it back.
         for (f in listOf(File(booksDir, "$id.json"), posFile(id), coverFile(id), thumbFile(id))) enqueue(f) { f.delete() }

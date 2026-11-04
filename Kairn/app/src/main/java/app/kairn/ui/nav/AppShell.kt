@@ -16,8 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.documentfile.provider.DocumentFile
-import app.kairn.KairnApp
 import app.kairn.R
 import app.kairn.data.Book
 import app.kairn.data.ClippingImport
@@ -32,9 +30,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /** Full-screen screens that sit above the tabs. */
 enum class Overlay { Onboarding, Add, Backup }
@@ -44,47 +39,30 @@ enum class Overlay { Onboarding, Add, Backup }
  * Screens never talk to Android APIs themselves; they get callbacks from here.
  */
 @Composable
-fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
+internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val toast = remember { ToastState() }
-    val settings by app.store.settings.collectAsState()
+    val settings by deps.store.settings.collectAsState()
 
     var tab by remember { mutableStateOf(Tab.Library) }
     // Decided after the store's first read, never from settings.value here: on a cold start that read has
     // not finished yet, so it still holds the defaults and every returning reader would get onboarding.
     var overlay by remember { mutableStateOf<Overlay?>(null) }
     var shelf by remember { mutableStateOf<String?>(null) }
-    val backupUi = remember { BackupUi() }
-    // Measured off the main thread: listing the dump directory on the composition thread janks the first paint
-    // of Settings on a large library.
-    var cacheStats by remember { mutableStateOf(0 to 0L) }
-    LaunchedEffect(Unit) {
-        // Before the first read finishes books.value is empty, and pruning against an empty set deletes every
-        // book's cache on every cold start.
-        app.store.awaitLoaded()
-        cacheStats = withContext(Dispatchers.IO) {
-            val known = app.store.books.value.map { it.id }.toSet()
-            app.searchIndex.prune(known)
-            app.positionsCache.prune(known)
-            val (_, indexBytes) = app.searchIndex.stats()
-            val (_, measuredBytes) = app.positionsCache.stats()
-            // One book can hold both a dump and a measurement, so count the union rather than the sum.
-            (app.searchIndex.ids() + app.positionsCache.ids()).size to indexBytes + measuredBytes
-        }
-    }
-    val cacheLabel = remember(cacheStats) {
-        val (n, bytes) = cacheStats
+    val cacheStats = rememberCacheStats(deps.store, deps.searchIndex, deps.positionsCache)
+    val cacheLabel = remember(cacheStats.value) {
+        val (n, bytes) = cacheStats.value
         if (n == 0) "" else ctx.resources.getQuantityString(R.plurals.search_cache_size, n, n, android.text.format.Formatter.formatShortFileSize(ctx, bytes))
     }
-    var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    val backupFlow = rememberBackupFlow(deps.store, deps.library, deps.backup, deps.autoBackup, toast, scope)
     val updateUi = remember { UpdateUi() }
     val versionName = remember {
         runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull().orEmpty()
     }
     // DS-04: a store build (F-Droid) cannot update itself, so the whole check disappears there.
     val selfUpdate = remember { ctx.resources.getBoolean(R.bool.self_update) }
-    val clipper = remember { ClippingImport(ctx, app.store, app.readium) }
+    val clipper = remember { ClippingImport(ctx, deps.store, deps.readium) }
     var importingClippings by remember { mutableStateOf(false) }
 
     /**
@@ -115,14 +93,14 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                     updateUi.message = ctx.getString(R.string.s_update_check_failed)
                 }
             }
-            app.store.saveSettings { it.copy(lastUpdateCheck = System.currentTimeMillis()) }
+            deps.store.saveSettings { it.copy(lastUpdateCheck = System.currentTimeMillis()) }
         }
     }
 
     LaunchedEffect(Unit) {
-        app.store.awaitLoaded()
-        if (!app.store.settings.value.onboarded) overlay = Overlay.Onboarding
-        val s = app.store.settings.value
+        deps.store.awaitLoaded()
+        if (!deps.store.settings.value.onboarded) overlay = Overlay.Onboarding
+        val s = deps.store.settings.value
         // After the library is up and a moment later still: the check must never delay the first paint.
         if (selfUpdate && s.checkUpdates && System.currentTimeMillis() - s.lastUpdateCheck > 24L * 60 * 60 * 1000) {
             delay(2500)
@@ -130,36 +108,11 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
         }
     }
     val pickBook = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) scope.launch { uris.forEach { app.library.importPicked(it) }; toast.show(ctx.resources.getQuantityString(R.plurals.books_added, uris.size, uris.size)) }
+        if (uris.isNotEmpty()) scope.launch { uris.forEach { deps.library.importPicked(it) }; toast.show(ctx.resources.getQuantityString(R.plurals.books_added, uris.size, uris.size)) }
     }
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
-        if (u != null) { app.library.addFolder(u); scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_watching_folder)) } }
+        if (u != null) { deps.library.addFolder(u); scope.launch { deps.library.scan(); toast.show(ctx.getString(R.string.toast_watching_folder)) } }
     }
-    val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { u ->
-        if (u != null) scope.launch {
-            backupUi.phase = BackupPhase.Running; backupUi.progress = 0f
-            app.backup.write(u, backupUi.includeFiles) { backupUi.progress = it }.fold(
-                { n ->
-                    val name = DocumentFile.fromSingleUri(ctx, u)?.name ?: "kairn-backup.zip"
-                    app.store.saveSettings { it.copy(lastBackup = System.currentTimeMillis(), lastBackupName = name) }
-                    backupUi.fileName = name
-                    backupUi.detail = ctx.resources.getQuantityString(R.plurals.files_saved, n, n)
-                    backupUi.phase = BackupPhase.Done
-                },
-                { e -> backupUi.detail = e.message ?: ctx.getString(R.string.toast_something_wrong); backupUi.phase = BackupPhase.Failed },
-            )
-        }
-    }
-    // The automatic-backup folder: granted once here, persisted, and written by data/AutoBackup with no
-    // further prompts. Turning the switch off only forgets the folder - the zips already written stay.
-    val pickAutoFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { u ->
-        if (u != null) {
-            runCatching { ctx.contentResolver.takePersistableUriPermission(u, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
-            app.store.saveSettings { it.copy(autoBackupFolder = u.toString()) }
-            scope.launch { if (app.autoBackup.runIfDue()) toast.show(ctx.getString(R.string.s_backup_saved)) }
-        }
-    }
-    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u -> if (u != null) restoreUri = u }
     // DS-03: "My Clippings.txt" from a Kindle. text/plain in practice, but some file providers report
     // octet-stream for a .txt on removable storage, so both are accepted.
     val pickClippings = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
@@ -199,30 +152,25 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) {
                     when (overlay) {
-                        Overlay.Onboarding -> OnboardingScreen(app.store) { goAdd ->
-                            app.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
+                        Overlay.Onboarding -> OnboardingScreen(deps.store) { goAdd ->
+                            deps.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
                         }
-                        Overlay.Add -> AddBooksScreen(app.store, { overlay = null }, launchPickFolder, launchPickBook,
+                        Overlay.Add -> AddBooksScreen(deps.store, { overlay = null }, launchPickFolder, launchPickBook,
                             onImportClippings = { pickClippings.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) },
                             onImportFile = { file, name ->
                                 scope.launch {
-                                    val b = app.library.addBook(Uri.fromFile(file), null, name.removeSuffix(".epub"))
+                                    val b = deps.library.addBook(Uri.fromFile(file), null, name.removeSuffix(".epub"))
                                     toast.show(if (b.broken) ctx.getString(R.string.toast_could_not_read, name) else ctx.getString(R.string.toast_added, b.title))
                                 }
                             })
-                        Overlay.Backup -> BackupScreen(backupUi, app.store, { overlay = null },
-                            onBackupNow = {
-                                val stamp = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                createBackup.launch("kairn-backup-$stamp.zip")
-                            },
-                            onRestoreFromFile = { openBackup.launch(arrayOf("application/zip", "application/octet-stream")) },
-                            autoFolderName = app.store.settings.collectAsStateWithLifecycle().value.autoBackupFolder
-                                .takeIf { it.isNotBlank() }
-                                ?.let { u -> DocumentFile.fromTreeUri(ctx, u.toUri())?.name },
-                            onPickAutoFolder = { pickAutoFolder.launch(null) },
-                            onAutoBackupOff = { app.store.saveSettings { it.copy(autoBackupFolder = "") } })
+                        Overlay.Backup -> BackupScreen(backupFlow.ui, deps.store, { overlay = null },
+                            onBackupNow = { backupFlow.backUpNow() },
+                            onRestoreFromFile = { backupFlow.restoreFromFile() },
+                            autoFolderName = backupFlow.autoFolderName(),
+                            onPickAutoFolder = { backupFlow.pickAutoFolder() },
+                            onAutoBackupOff = { deps.store.saveSettings { it.copy(autoBackupFolder = "") } })
                         null -> when (tab) {
-                            Tab.Library -> LibraryScreen(app.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
+                            Tab.Library -> LibraryScreen(deps.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
                                 onBackup = { overlay = Overlay.Backup },
                                 onOpenAt = { b, locator ->
                                     ctx.startActivity(
@@ -231,17 +179,17 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                                             .putExtra(ReaderActivity.EXTRA_LOCATOR, locator)
                                     )
                                 })
-                            Tab.Collections -> CollectionsScreen(app.store) { shelf = it; tab = Tab.Library }
-                            Tab.Settings -> SettingsScreen(app.store, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, {
+                            Tab.Collections -> CollectionsScreen(deps.store) { shelf = it; tab = Tab.Library }
+                            Tab.Settings -> SettingsScreen(deps.store, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, {
                                 // Enabling detection is also the moment to ask for the grant it needs.
-                                scope.launch { app.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) }
-                                if (app.library.needsAllFilesAccess()) app.library.requestAllFilesAccess()
+                                scope.launch { deps.library.scan(); toast.show(ctx.getString(R.string.toast_looking_for_books)) }
+                                if (deps.library.needsAllFilesAccess()) deps.library.requestAllFilesAccess()
                             },
                                 searchCacheLabel = cacheLabel,
                                 onClearSearchCache = {
-                                    app.searchIndex.clear()
-                                    app.positionsCache.clear()
-                                    cacheStats = 0 to 0L
+                                    deps.searchIndex.clear()
+                                    deps.positionsCache.clear()
+                                    cacheStats.value = 0 to 0L
                                     toast.show(ctx.getString(R.string.s_search_cache_cleared))
                                 },
                                 onCheckUpdates = { checkUpdates(openSheet = true) },
@@ -276,24 +224,21 @@ fun AppShell(app: KairnApp, openBook: (Book) -> Unit) {
                 onClose = { updateUi.open = false },
             )
 
-            restoreUri?.let { u ->
-                RestoreSheet(DocumentFile.fromSingleUri(ctx, u)?.name ?: "backup.zip", { restoreUri = null }) { replace ->
-                    restoreUri = null
-                    scope.launch {
-                        app.backup.restore(u, replace).fold(
-                            {
-                                toast.show(ctx.getString(if (replace) R.string.toast_restored else R.string.toast_merged))
-                                // The records are back but their files may not be (a backup without book
-                                // files): scan straight away so the reader is not left with missing books.
-                                scope.launch { app.library.scan(force = true) }
-                            },
-                            // The exception message matters: "nothing was changed" and "restored part-way" are
-                            // different outcomes that need different messages.
-                            { e -> toast.show(e.message ?: ctx.getString(R.string.toast_restore_failed)) },
-                        )
-                    }
-                }
-            }
+            backupFlow.RestoreConfirmation()
         }
     }
 }
+
+/**
+ * What the shell needs, named one by one rather than handed the Application: the highest-level composable in
+ * the app should depend on the seven collaborators it uses, and on nothing else.
+ */
+internal class ShellDeps(
+    val store: app.kairn.data.Store,
+    val library: app.kairn.data.Library,
+    val backup: app.kairn.data.Backup,
+    val autoBackup: app.kairn.data.AutoBackup,
+    val searchIndex: app.kairn.data.SearchIndex,
+    val positionsCache: app.kairn.data.PositionsCache,
+    val readium: app.kairn.data.ReadiumHelper,
+)

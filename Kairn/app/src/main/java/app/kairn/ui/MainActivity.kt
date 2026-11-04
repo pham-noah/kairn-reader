@@ -13,7 +13,9 @@ import androidx.compose.runtime.getValue   // required by `by` delegation; never
 import androidx.lifecycle.lifecycleScope
 import app.kairn.KairnApp
 import app.kairn.data.Book
+import androidx.compose.runtime.remember
 import app.kairn.ui.nav.AppShell
+import app.kairn.ui.nav.ShellDeps
 import app.kairn.ui.theme.KairnTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,7 +34,15 @@ class MainActivity : AppCompatActivity() {
         handleViewIntent(intent)
         setContent {
             val s by app.store.settings.collectAsState()
-            KairnTheme(glass = s.glass, ambient = s.ambient) { AppShell(app, ::openBook) }
+            // Built once: the shell must not see a new dependency object on every recomposition.
+            val deps = remember(app) {
+                ShellDeps(
+                    store = app.store, library = app.library, backup = app.backup,
+                    autoBackup = app.autoBackup, searchIndex = app.searchIndex,
+                    positionsCache = app.positionsCache, readium = app.readium,
+                )
+            }
+            KairnTheme(glass = s.glass, ambient = s.ambient) { AppShell(deps, ::openBook) }
         }
     }
 

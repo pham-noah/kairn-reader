@@ -174,12 +174,39 @@ reverted rather than shipped:
   `OK (6 tests)` in 17 s. Installing both APKs once (`adb install -r app-debug.apk` then
   `app-debug-androidTest.apk`) and re-running Gradle then gives 6/6 too. So the Compose test route was never
   proven broken. Retried with the prerequisites above: `SearchSheetTest` passes and the chapter-labelled search
-  results are SHIPPED, guarded by that test. The suite is 8 device tests.
+  results are SHIPPED, guarded by that test. The suite was 8 device tests at that point.
+
+## Test counts, and the two hops that were unproven (measured 2026-11-04)
+
+116 JVM tests in 14 classes (`./gradlew :app:testDebugUnitTest`), 49 on-device tests on the `neotube` AVD
+(`adb shell am instrument -w app.kairn.test/androidx.test.runner.AndroidJUnitRunner` answered
+`OK (49 tests)` in 162 s), lint 0 errors and 11 warnings. Every other count in this file belongs to the
+release it sits under - 86 JVM / 36 device at 0.8.4, 27 device tests at 0.8.0, 8 before that - and is
+history, not today's number.
+
+**Auto-backup is proven end to end now.** It was the one thing compiled and reviewed but never observed
+writing, because a SAF tree cannot be granted from adb. It can be granted from the UI, so it was:
+`Download/KairnBackups` created in the picker, "Use this folder" accepted, permission allowed. Then:
+
+- the grant wrote a zip on the spot - `kairn-auto-20261104-1451.zip`, 3 420 bytes - and stored
+  `autoBackupFolder` as `content://com.android.externalstorage.documents/tree/primary%3ADownload%2FKairnBackups`;
+- the zip is a real backup: nine entries, four book records and three positions, `settings.json` and its
+  `.bak`, and no book files - which is what `includeBookFiles = false` means for an automatic one;
+- the scheduled path runs by itself: with `lastAutoBackup` forced to 0, the next launch logged
+  `KairnPerf: auto backup written` and wrote a second zip, `kairn-auto-20261104-1452.zip`;
+- **prune works against a real provider.** Five dummy `kairn-auto-*` files and one real zip were in the
+  folder; after the run wrote its zip, exactly three remained - the new one, the earlier real one and the
+  newest dummy - so the four oldest were deleted through SAF. Every file there carried the prefix, so the
+  "only ours" half of prune is still proven at unit level (`staleBackups`) rather than on a device;
+- `lastAutoBackup`, `lastBackup` and `lastBackupName` all moved with it.
+
+Not covered: a vendor SAF provider (the emulator's ExternalStorageProvider is the same code path, not the same
+implementation), and a tree whose grant was revoked or whose folder was moved underneath it.
 
 ## The device suite has been mutation-checked
 
 All 18 device tests passed on their first run, which is exactly when to distrust them. (That was the count at
-the time; the suite is 27 now and the same rule applies.) Three behaviours were
+the time; it is 49 now and the same rule applies.) Three behaviours were
 broken on purpose, in one build, and the suite was run (mutation testing):
 
 | broken on purpose | test that caught it |
@@ -410,8 +437,8 @@ What changed, and where the sharp edges are:
   running, and stopping the voice ends it.
 - **Automatic backup.** [AutoBackup](Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
   `autoBackupDays` into the SAF tree chosen in Settings, pruning its own `PREFIX` files to `autoBackupKeep`.
-  Silent on failure by design. **Not exercised end to end on a device** - a SAF tree cannot be granted from
-  adb - so it is code-reviewed and compiled, not observed writing a zip.
+  Silent on failure by design. It was not exercised end to end at release time (a SAF tree cannot be granted
+  from adb); it has been since - see "Test counts, and the two hops that were unproven".
 - **Search cache.** [SearchIndex](Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
   per book under `filesDir/search/`, keyed by the book file's size and mtime. Two traps it hit: `DocumentFile`
   cannot stat a `file://` book (stat the copy directly), and `Link.href` is an `Href` wrapper while `Locator`
@@ -453,9 +480,9 @@ Seven items from the audit, each with a test:
 - `relinkOwnedCopies` takes a stat-only fast path for our own copies (`RelinkDeviceTest`).
 - `SearchIndex.forget` via `Store.onRemove`, `prune(known)` for orphans (`SearchPruneDeviceTest`); cache stats
   measured on IO, not in composition.
-- Auto-backup decisions extracted as `autoBackupIsDue`/`staleBackups` (6 unit cases). The SAF round trip stays
-  unproven: a test `DocumentsProvider` is impossible ("Provider must be protected by MANAGE_DOCUMENTS"), so
-  that hop needs a phone.
+- Auto-backup decisions extracted as `autoBackupIsDue`/`staleBackups` (6 unit cases). The SAF round trip stayed unproven then: a test `DocumentsProvider` is impossible ("Provider must be
+  protected by MANAGE_DOCUMENTS"). It is proven by hand on a device now - see "Test counts, and the two hops
+  that were unproven".
 - `TtsFollowBehindLockTest` proves a page turns while the activity is STOPPED, with a resumed control: first run
   failed at progress 0.0 because the hook fired before page positions existed - a test bug, not a product one.
 - `WifiTransferTest` retried once on a socket error (flaky under a loaded machine, not a server bug).
@@ -463,29 +490,50 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
-## Distribution state (checked 2026-10-30)
+## Distribution state (checked 2026-11-04)
 
-GitHub Releases is live and is where the updater points: `pham-noah/kairn-reader`, tag `v0.8.0`, asset
-`Kairn-release.apk`, signed with the debug key. That is the whole channel today.
+GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
+signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
+needed an uninstall and a rescan). Latest: **v0.8.6**, published 2026-11-03, asset `Kairn-0.8.6.apk`,
+6,289,704 bytes. `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+0.8.6 - a string compare would put 0.10.0 first.
+
+**Two repositories, and they are not interchangeable.**
+
+- `pham-noah/kairn` is the development repo. It needs credentials even to read, and the release keystore
+  lives beside it in `../../Kairn-keys/`.
+- `pham-noah/kairn-reader` is the public mirror - what the updater and F-Droid point at, and where the store
+  screenshot URLs resolve. Its history is a replay: 99 commits against the development repo's 177, the
+  shared work under the same messages, and the tip commit renamed to `Kairn <version>`. **The two histories
+  share no SHAs**, so no merge or fast-forward can check the mirror; the trees are compared directly instead.
+
+Asset naming has drifted: `Kairn-release.apk` (0.8.0-0.8.3), `Kairn-release-084.apk` (0.8.4), then
+`Kairn-<version>.apk` (0.8.5, 0.8.6). The updater picks its asset by pattern rather than by this convention,
+so an old name still updates - it is the person reading the release page who is misled. `RELEASING.md` now
+fixes the name going forward.
+
+Tags: the mirror has carried `v0.1.0`-`v0.8.6`, one per release. The development repo carried only `v0.1.0`
+and `v0.8.5` until 2026-11-04, when `v0.8.6` was cut on `a9401c2` and pushed; `v0.2.0`-`v0.8.4` still exist
+only in the mirror.
+
+The keystore moved and its properties file did not: `Kairn-keys/keystore.properties` pointed `storeFile` at
+`C:\Users\Noah\Documents\Kairn-keys\kairn-release.jks`, which no longer exists - the key now sits in
+`F:\App Projects\Kairn-related\Kairn-keys\`. The path is fixed as of 2026-11-04. A stale `storeFile` is
+not a build error until the release build reaches signing, after the whole compile has already run. Verified after the fix: a release build on 2026-11-04 signs as CN=Kairn, certificate SHA-256
+`69086f40...`, the same digest 0.8.2 introduced.
 
 F-Droid: merge request **!52993** ("New app: Kairn (app.kairn)") was **closed by a maintainer on
-2026-10-19**, and it was submitted against **v0.3.0** — five releases stale. Two consequences worth knowing
-before anyone reopens it:
+2026-10-19**, and it was submitted against **v0.3.0** - the repo has since published eleven releases,
+v0.6.0 through v0.8.6. Two consequences:
 
-- **The store metadata is already written and current.** `fastlane/metadata/android/en-US/` holds the title,
-  a 69-character short description, the full description and changelogs `1.txt` to `10.txt`, plus phone
-  screenshots — all in the repo and in both histories, updated with 0.8.0. What is missing is only the
-  `fdroid.yml` recipe itself, which lives in the fdroiddata merge request and nowhere in this repo.
-- **The store build must ship with `self_update=false`.** `res/values/bools.xml` carries the gate, but the
-  recipe needs to set it for the F-Droid build (a resource override or a small source patch) or the store
-  build will offer in-app updates, which F-Droid policy forbids.
+- **The store metadata is written and current.** `fastlane/metadata/android/en-US/` holds the title, a
+  69-character short description, the full description and changelogs up to `16.txt`, plus phone
+  screenshots. What is missing is only the recipe, which lives in `fdroid/app.kairn.yml` as a draft.
+- **The store build must ship with `self_update=false`.** `res/values/bools.xml` carries the gate; the
+  recipe sets it for the F-Droid build, or the store build offers in-app updates, which F-Droid forbids.
 
-- **A draft recipe now exists in the repo:** `fdroid/app.kairn.yml`, brought up to 0.8.0 (versionCode 10,
-  commit `v0.8.0`, subdir `Kairn`), written from the build files rather than guessed. It parses as YAML, its
-  summary is 68 characters and the description 574, and both of its `prebuild` sed lines were exercised on a
-  real build rather than assumed. Proven in a scratch copy of the repo: the two edits applied, `assembleRelease`
-  succeeded in 49s, the AAPT2 resource dump inside the APK reads `bool/self_update () false`, and the APK has
-  no `META-INF` signature pair (F-Droid signs it with its own key). One style question remains: overriding the
-  flag by editing source is cruder than a gradle property, and that change belongs to Noah.
+The draft recipe pins **0.8.5 / versionCode 15** and is therefore one release behind: versionCode, version
+and commit get bumped together before resubmitting. Overriding the flag still happens by editing source in a
+`prebuild` sed, which is cruder than a gradle property - that change is Noah's call.
 
-Do not rediscover this as news: the submission is closed and stale, not pending.
+Do not rediscover this as news: the F-Droid submission is closed and stale, not pending.

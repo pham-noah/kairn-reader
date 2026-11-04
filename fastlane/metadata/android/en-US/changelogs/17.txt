@@ -1,0 +1,3 @@
+Kairn 0.9.0 reads exactly like 0.8.6. Nothing on screen moved: this release is the same reader, rebuilt so the next ones are cheaper to change.
+
+Reading aloud, auto scroll, automatic backups and the library all behave as they did. Your books, places, highlights, notes and settings are untouched, and the update installs over 0.8.6 in place.

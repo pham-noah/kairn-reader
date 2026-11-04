@@ -1,10 +1,5 @@
 package app.kairn.data
 
-import androidx.core.net.toUri
-
-import android.content.Context
-import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -15,8 +10,16 @@ import java.util.Locale
  * Writes a backup every [AppSettings.autoBackupDays] days into a SAF folder picked once, pruning our own zips to
  * [AppSettings.autoBackupKeep]. Only [PREFIX] files are touched, and failure is silent: a scheduled backup must
  * never interrupt reading with a dialog.
+ *
+ * The folder and the writer arrive as functions instead of a Context and a Backup, and both speak [DocHandle]
+ * rather than `Uri` (a stub in JVM tests), so the whole path - create, write, prune, record - runs in
+ * [AutoBackupTest] without a device. Production passes [SafBackupFolder] and `Backup::write`.
  */
-class AutoBackup(private val ctx: Context, private val store: Store, private val backup: Backup) {
+class AutoBackup(
+    private val store: Store,
+    private val openFolder: (String) -> BackupFolder?,
+    private val write: suspend (DocHandle) -> Result<Int>,
+) {
 
     /** Runs one if it is due; returns true when a zip was written. Cheap when off. */
     suspend fun runIfDue(): Boolean = withContext(Dispatchers.IO) {
@@ -25,11 +28,11 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
         if (!autoBackupIsDue(s.lastAutoBackup, System.currentTimeMillis(), s.autoBackupDays)) return@withContext false
 
         runCatching {
-            val dir = DocumentFile.fromTreeUri(ctx, tree.toUri()) ?: error("folder is gone")
+            val dir = openFolder(tree) ?: error("folder is gone")
             if (!dir.canWrite()) error("folder is not writable")
             val name = PREFIX + SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date()) + ".zip"
-            val doc = dir.createFile(ZIP, name) ?: error("cannot create $name")
-            backup.write(doc.uri, includeBookFiles = false).getOrThrow()
+            val doc = dir.create(name, ZIP) ?: error("cannot create $name")
+            write(doc.handle).getOrThrow()
             prune(dir, s.autoBackupKeep)
             store.saveSettings { it.copy(lastAutoBackup = System.currentTimeMillis(), lastBackup = System.currentTimeMillis(), lastBackupName = name) }
             true
@@ -37,10 +40,10 @@ class AutoBackup(private val ctx: Context, private val store: Store, private val
     }
 
     /** Keeps the newest [keep] of our own zips. Names sort by date. */
-    private fun prune(dir: DocumentFile, keep: Int) {
-        val files = dir.listFiles()
-        val stale = staleBackups(files.filter { it.isFile }.mapNotNull { it.name }, keep).toSet()
-        files.filter { it.name in stale }.forEach { runCatching { it.delete() } }
+    private fun prune(dir: BackupFolder, keep: Int) {
+        val files = dir.list().filter { it.isFile }
+        val stale = staleBackups(files.mapNotNull { it.name }, keep).toSet()
+        files.filter { it.name in stale }.forEach { dir.delete(it.handle) }
     }
 
     companion object {

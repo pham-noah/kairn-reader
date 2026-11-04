@@ -118,4 +118,37 @@ class StoreTest {
         runBlocking { s.load() }
         assertTrue("loaded after the first read", s.loaded.value)
     }
+
+    /**
+     * A book that leaves the library takes its cached files with it. This used to be one nullable field
+     * assigned from KairnApp: if that assignment were ever lost, a removed book's search dump and positions
+     * stayed on disk with nothing to say so. Now every cache registers, and this holds the contract.
+     */
+    @Test fun `removing a book tells every registered listener, before the record goes`() {
+        val s = store()
+        val seen = mutableListOf<String>()
+        var recordWasStillReadable = false
+        s.onBookRemoved { id ->
+            seen += "search:$id"
+            recordWasStillReadable = s.get(id) != null
+        }
+        s.onBookRemoved { id -> seen += "positions:$id" }
+        s.put(Book(id = "x", title = "T", author = "", uri = "u"))
+
+        s.remove("x")
+
+        assertEquals(listOf("search:x", "positions:x"), seen)
+        assertTrue("a listener may still need the record", recordWasStillReadable)
+        assertTrue("and the record is gone afterwards", s.get("x") == null)
+    }
+
+    /** Nothing registered, nothing to tell: a removal must not depend on anyone listening. */
+    @Test fun `removing a book with no listeners is quiet`() {
+        val s = store()
+        s.put(Book(id = "y", title = "T", author = "", uri = "u"))
+
+        s.remove("y")
+
+        assertTrue(s.get("y") == null)
+    }
 }
