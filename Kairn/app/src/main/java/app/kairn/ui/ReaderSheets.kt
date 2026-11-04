@@ -53,12 +53,14 @@ import org.readium.r2.shared.publication.Publication
  */
 
 @Composable
-internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi, onClick: () -> Unit) {
+internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi, live: Boolean = false, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     Column(Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp))
         .pressFeedback(interaction)
         .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
-        Icon(icon, label, tint = ui.chromeText, modifier = Modifier.size(22.dp)); Text(label, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        // A live toggle behind "More" keeps the mint it has in the bar, so a running mode is not lost in there.
+        val ink = if (live) K.mint else ui.chromeText
+        Icon(icon, label, tint = ink, modifier = Modifier.size(22.dp)); Text(label, color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
 

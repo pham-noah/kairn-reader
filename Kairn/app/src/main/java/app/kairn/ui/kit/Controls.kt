@@ -16,6 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,9 +52,11 @@ fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modif
         if (glass && selected) Modifier.glassSurface(shape, fill = Color(0xEBF0F4F6), elevation = 5.dp, hairline = Color(0x40FFFFFF))
         else if (glass) Modifier.glassSurface(shape, fill = Glass.fill, elevation = 4.dp)
         else Modifier.background(if (selected) K.txt else K.surf).border(1.dp, if (selected) K.txt else K.line, shape)
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier.heightIn(min = 48.dp).then(surface)
-            .clickable(role = Role.Button, onClick = onClick).semantics { this.selected = selected }
+        modifier.heightIn(min = 48.dp).then(surface).pressFeedback(interaction, pressedScale = 0.95f)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick)
+            .semantics { this.selected = selected }
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
@@ -69,8 +74,10 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
     Row(track, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         options.forEachIndexed { i, o ->
             val on = i == selected
+            val segInteraction = remember { MutableInteractionSource() }
             Box(
                 Modifier.weight(1f).heightIn(min = Dim.tap.dp).clip(shape)
+                    .pressFeedback(segInteraction, pressedScale = 0.97f)
                     .then(if (on) Modifier.background(if (glass) Color(0x33FFFFFF) else K.mint) else Modifier)
                     .clickable(role = Role.RadioButton) { onSelect(i) }.semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
@@ -114,7 +121,10 @@ fun KRadioRow(title: String, subtitle: String, selected: Boolean, onClick: () ->
 @Composable
 fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val ui = readerUi(theme)
-    Column(modifier.heightIn(min = 48.dp).clickable(role = Role.RadioButton, onClick = onClick).semantics { this.selected = selected }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val dotInteraction = remember { MutableInteractionSource() }
+    Column(modifier.heightIn(min = 48.dp).pressFeedback(dotInteraction, pressedScale = 0.93f)
+        .clickable(interactionSource = dotInteraction, indication = LocalIndication.current, role = Role.RadioButton, onClick = onClick)
+        .semantics { this.selected = selected }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(
             Modifier.size(52.dp).clip(CircleShape).background(ui.page)
                 // A near-black page on a near-black sheet has no edge of its own: the unselected ring has to

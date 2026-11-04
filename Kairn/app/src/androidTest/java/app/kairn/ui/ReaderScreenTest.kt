@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import app.kairn.ui.ReaderSheet
 import app.kairn.data.BarItem
 import app.kairn.data.Mark
 import app.kairn.data.ReaderPrefs
@@ -140,14 +141,19 @@ class ReaderScreenTest {
     }
 
     @Test fun the_tools_are_drawn_in_the_order_the_reader_arranged() {
-        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        // Auto scroll only exists in scroll mode, so it has to be on for the two modes to hold the bar; with it
+        // off the second slot falls to the next item, which is the point of the arrangement.
+        val ui = ReaderUiState().apply {
+            loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml"
+            prefs = prefs.copy(scroll = true)
+        }
+        // The two modes hold the bar, so the tools are all behind "More", in the arranged order.
         compose(
             ui, FakeReader(),
-            order = listOf(BarItem.DISPLAY, BarItem.READ_ALOUD, BarItem.NOTES, BarItem.CONTENTS, BarItem.AUTO_SCROLL, BarItem.SEARCH),
+            order = listOf(BarItem.READ_ALOUD, BarItem.AUTO_SCROLL, BarItem.DISPLAY, BarItem.NOTES, BarItem.CONTENTS, BarItem.SEARCH),
         )
         rule.onNodeWithText("More").performClick()
 
-        // Display now sits left of Notes, and Notes left of Contents - the default would be the reverse.
         val display = rule.onNodeWithContentDescription("Display").getUnclippedBoundsInRoot().left
         val notes = rule.onNodeWithContentDescription("Notes").getUnclippedBoundsInRoot().left
         val contents = rule.onNodeWithContentDescription("Contents").getUnclippedBoundsInRoot().left
@@ -155,22 +161,38 @@ class ReaderScreenTest {
         assertTrue("Notes must come before Contents", notes.value < contents.value)
     }
 
-    @Test fun a_mode_can_sit_either_side_of_more_and_the_row_still_fits() {
-        val ui = ReaderUiState().apply {
-            loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml"
-            prefs = prefs.copy(scroll = true)         // auto scroll is on the bar in scroll mode
-        }
-        // Tools first, then the modes: "More" must move to where the tools begin, and the pills after it.
+    @Test fun a_tool_in_the_first_slot_becomes_a_pill_in_the_bar() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        val fake = FakeReader()
+        // Contents first, Search second: neither is a mode, and both must still hold the two bar slots.
         compose(
-            ui, FakeReader(),
-            order = listOf(BarItem.CONTENTS, BarItem.SEARCH, BarItem.AUTO_SCROLL, BarItem.NOTES, BarItem.READ_ALOUD, BarItem.DISPLAY),
+            ui, fake,
+            order = listOf(BarItem.CONTENTS, BarItem.SEARCH, BarItem.READ_ALOUD, BarItem.AUTO_SCROLL, BarItem.NOTES, BarItem.DISPLAY),
         )
 
-        val more = rule.onNodeWithText("More").getUnclippedBoundsInRoot()
-        val autoScroll = rule.onNodeWithContentDescription("Auto scroll").getUnclippedBoundsInRoot()
-        val readAloud = rule.onNodeWithContentDescription("Read aloud").getUnclippedBoundsInRoot()
+        // Drawn as pills in the bar, not behind "More"...
+        rule.onNodeWithContentDescription("Contents").performClick()
+        assertEquals(ReaderSheet.CONTENTS, ui.sheet)
 
-        assertTrue("More comes first when the tools come first", more.left.value < autoScroll.left.value)
-        assertTrue("the modes keep their arranged order after it", autoScroll.left.value < readAloud.left.value)
+        val contents = rule.onNodeWithContentDescription("Contents").getUnclippedBoundsInRoot().left
+        val search = rule.onNodeWithContentDescription("Search").getUnclippedBoundsInRoot().left
+        val more = rule.onNodeWithText("More").getUnclippedBoundsInRoot().left
+        assertTrue("Contents holds the left slot", contents.value < search.value)
+        assertTrue("Search still sits before More", search.value < more.value)
+    }
+
+    @Test fun a_mode_pushed_past_the_second_slot_still_toggles_behind_more() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        val fake = FakeReader()
+        compose(
+            ui, fake,
+            order = listOf(BarItem.CONTENTS, BarItem.NOTES, BarItem.READ_ALOUD, BarItem.AUTO_SCROLL, BarItem.SEARCH, BarItem.DISPLAY),
+        )
+
+        // Read aloud is the third item, so it is behind "More" - and it is still the toggle, not a sheet.
+        assertTrue(rule.onAllNodesWithContentDescription("Read aloud").fetchSemanticsNodes().isEmpty())
+        rule.onNodeWithText("More").performClick()
+        rule.onNodeWithContentDescription("Read aloud").performClick()
+        assertTrue("Read aloud must have toggled", "toggleTts" in fake.calls)
     }
 }

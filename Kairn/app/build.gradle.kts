@@ -36,8 +36,8 @@ android {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
         targetSdk = 36
-        versionCode = 21
-        versionName = "0.9.4"
+        versionCode = 22
+        versionName = "0.9.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

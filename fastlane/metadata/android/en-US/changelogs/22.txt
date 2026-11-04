@@ -1,0 +1,3 @@
+Any of the six bar items can take the two places in the bar now, tools included - put Contents there and it sits beside More as a pill.
+The rest wait behind More, and a mode pushed back there still toggles.
+Tab changes are twice as fast, and chips, covers, switches' dots and the nav tabs answer your finger.

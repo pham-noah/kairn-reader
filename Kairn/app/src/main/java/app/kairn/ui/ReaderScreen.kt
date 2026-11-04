@@ -220,21 +220,20 @@ internal fun ReaderScreen(
                 Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
                     var expanded by remember { mutableStateOf(false) }
                     SeekBar(ui, colors, act, wpm)
-                    // One row, laid out in the order Settings holds. "More" is a slot like any other - it
-                    // sits where the first tool is - and it is the flexible one, so the mode pills can be
-                    // arranged on either side of it and the row still fits what is left.
+                    // The order is the arrangement, and the first two of it are the bar itself - whatever
+                    // they are. A tool placed there becomes a pill like read aloud; a mode pushed past the
+                    // second slot waits behind "More" and stays a toggle there.
                     val visible = order.filter { it !in hidden }
                         // Auto scroll exists only in scroll mode, and the speed pill takes its place while
                         // the voice is on: a mode that moves the page must be visible while it moves it.
                         .filter { it != BarItem.AUTO_SCROLL || (ui.prefs.scroll && !ui.speech.on) }
-                    val tools = visible.filter { !it.isMode }
-                    val hasTools = tools.isNotEmpty()
-                    // With no tools the pills share the row between them; with tools they are fixed and
-                    // "More" takes the slack.
-                    val pillWidth = if (hasTools) Modifier else Modifier.weight(1f)
-                    var moreDrawn = false
+                    val main = visible.take(BarItem.MAIN_SLOTS)
+                    val overflow = visible.drop(BarItem.MAIN_SLOTS)
+                    // With nothing behind "More" the slots share the row; with an overflow, "More" takes the
+                    // slack so the pills never push it off the edge.
+                    val pillWidth = if (overflow.isEmpty()) Modifier.weight(1f) else Modifier
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        visible.forEachIndexed { index, item ->
+                        main.forEachIndexed { index, item ->
                             if (index > 0) Spacer(Modifier.width(6.dp))
                             when (item) {
                                 BarItem.READ_ALOUD -> {
@@ -269,23 +268,40 @@ internal fun ReaderScreen(
                                     onClick = act::toggleAutoScroll,
                                 )
 
-                                else -> if (!moreDrawn) {
-                                    moreDrawn = true
-                                    Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
-                                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
-                                        Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
-                                    }
-                                }
+                                // A tool in one of the two slots: same shape as a pill, it just opens its sheet.
+                                else -> ModePill(
+                                    toolIcon(item), stringResource(toolLabel(item)), false, colors,
+                                    modifier = pillWidth,
+                                ) { ui.sheet = toolSheet(item) }
+                            }
+                        }
+                        if (overflow.isNotEmpty()) {
+                            Spacer(Modifier.width(6.dp))
+                            val moreInteraction = remember { MutableInteractionSource() }
+                            Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+                                .pressFeedback(moreInteraction, pressedScale = 0.97f)
+                                .clickable(interactionSource = moreInteraction, indication = LocalIndication.current) { expanded = !expanded },
+                                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
+                                Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
                             }
                         }
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
-                            // In the order Settings holds, which is the order the reader arranged.
-                            tools.forEach { item ->
-                                ReaderTool(toolIcon(item), stringResource(toolLabel(item)), colors) {
-                                    ui.sheet = toolSheet(item)
+                            // Everything past the second slot, in the arranged order - modes still toggle.
+                            overflow.forEach { item ->
+                                val live = when (item) {
+                                    BarItem.READ_ALOUD -> ui.speech.on
+                                    BarItem.AUTO_SCROLL -> ui.autoScrolling
+                                    else -> false
+                                }
+                                ReaderTool(toolIcon(item, live), stringResource(toolLabel(item)), colors, live = live) {
+                                    when (item) {
+                                        BarItem.READ_ALOUD -> act.toggleTts()
+                                        BarItem.AUTO_SCROLL -> act.toggleAutoScroll()
+                                        else -> ui.sheet = toolSheet(item)
+                                    }
                                 }
                             }
                         }
@@ -354,7 +370,9 @@ internal fun ReaderScreen(
  */
 @Composable
 /** The tool's glyph, label and sheet. One place, so the bar and the setting cannot disagree. */
-private fun toolIcon(item: BarItem): ImageVector = when (item) {
+private fun toolIcon(item: BarItem, live: Boolean = false): ImageVector = when (item) {
+    BarItem.READ_ALOUD -> if (live) Icons.Default.Pause else Icons.Default.VolumeUp
+    BarItem.AUTO_SCROLL -> if (live) Icons.Default.Pause else Icons.Default.ArrowDownward
     BarItem.CONTENTS -> Icons.AutoMirrored.Filled.List
     BarItem.SEARCH -> Icons.Default.Search
     BarItem.NOTES -> Icons.Default.StickyNote2
@@ -362,6 +380,8 @@ private fun toolIcon(item: BarItem): ImageVector = when (item) {
 }
 
 private fun toolLabel(item: BarItem): Int = when (item) {
+    BarItem.READ_ALOUD -> R.string.s_read_aloud
+    BarItem.AUTO_SCROLL -> R.string.s_auto_scroll
     BarItem.CONTENTS -> R.string.s_tool_contents
     BarItem.SEARCH -> R.string.s_tool_search
     BarItem.NOTES -> R.string.s_tool_notes
@@ -369,6 +389,8 @@ private fun toolLabel(item: BarItem): Int = when (item) {
 }
 
 private fun toolSheet(item: BarItem): ReaderSheet = when (item) {
+    BarItem.READ_ALOUD -> ReaderSheet.TTS
+    BarItem.AUTO_SCROLL -> ReaderSheet.DISPLAY      // never reached: the bar toggles it instead
     BarItem.CONTENTS -> ReaderSheet.CONTENTS
     BarItem.SEARCH -> ReaderSheet.SEARCH
     BarItem.NOTES -> ReaderSheet.NOTES

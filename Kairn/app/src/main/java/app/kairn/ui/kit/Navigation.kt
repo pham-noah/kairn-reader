@@ -13,6 +13,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -53,13 +56,18 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
                     val on = t == selected
                     // 160 ms on the selection: the pill and the tint travel together, so a tab change reads as
                     // one movement rather than a colour swap and a jump.
+                    // 80 ms, not 160: the pill has to arrive with the screen, and the screen now takes 85.
                     val pill by animateColorAsState(
                         if (on) (if (glass) Color(0x26FFFFFF) else K.mint.copy(alpha = .14f)) else Color.Transparent,
-                        tween(160), label = "pill",
+                        tween(80), label = "pill",
                     )
-                    val ink by animateColorAsState(if (on) K.mint else K.mut, tween(160), label = "ink")
+                    val ink by animateColorAsState(if (on) K.mint else K.mut, tween(80), label = "ink")
+                    // The tab is a small target that only ever changes a screen, so it sinks like a button.
+                    val interaction = remember { MutableInteractionSource() }
                     Column(
-                        Modifier.weight(1f).heightIn(min = 56.dp).clip(RoundedCornerShape(18.dp)).selectable(selected = on, role = Role.Tab) { onSelect(t) },
+                        Modifier.weight(1f).heightIn(min = 56.dp).clip(RoundedCornerShape(18.dp))
+                            .pressFeedback(interaction, pressedScale = 0.93f)
+                            .selectable(interactionSource = interaction, indication = LocalIndication.current, selected = on, role = Role.Tab) { onSelect(t) },
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
                     ) {
                         Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(999.dp)).background(pill), contentAlignment = Alignment.Center) {

@@ -256,7 +256,7 @@
     <string name="s_group_appearance">Ulkoasu</string>
     <string name="s_group_reading">Lukeminen</string>
     <string name="s_group_reader_bar">Lukijan palkki</string>
-    <string name="s_reader_bar_hint">Mitä sivun alareunan palkki näyttää. Piilottaminen poistaa kohteen palkista; muuta ei muutu.</string>
+    <string name="s_reader_bar_hint">Kaksi ensimmäistä ovat itse palkissa; loput odottavat Lisää-painikkeen takana. Piilottaminen poistaa kohteen palkista kokonaan.</string>
     <string name="s_move_up">Siirrä ylös</string>
     <string name="s_move_down">Siirrä alas</string>
     <string name="s_group_library">Kirjasto</string>

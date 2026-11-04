@@ -248,7 +248,7 @@
     <string name="s_group_appearance">Giao diện</string>
     <string name="s_group_reading">Đọc</string>
     <string name="s_group_reader_bar">Thanh trình đọc</string>
-    <string name="s_reader_bar_hint">Các mục hiển thị trên thanh ở cuối trang. Ẩn một mục sẽ bỏ mục đó khỏi thanh; không có gì khác thay đổi.</string>
+    <string name="s_reader_bar_hint">Hai mục đầu tiên nằm ngay trên thanh; phần còn lại nằm sau Thêm nữa. Ẩn một mục sẽ bỏ hẳn mục đó khỏi thanh.</string>
     <string name="s_move_up">Di chuyển lên</string>
     <string name="s_move_down">Di chuyển xuống</string>
     <string name="s_group_library">Thư viện</string>

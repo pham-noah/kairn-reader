@@ -18,6 +18,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import app.kairn.ui.kit.pressFeedback
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -117,7 +120,11 @@ private class LibActions(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: Boolean) {
-    Column(Modifier.combinedClickable(onClick = { actions.open(b) }, onLongClick = { actions.longPress(b) })) {
+    val cellInteraction = remember { MutableInteractionSource() }
+    Column(
+        Modifier.pressFeedback(cellInteraction, pressedScale = 0.96f)
+            .combinedClickable(interactionSource = cellInteraction, indication = LocalIndication.current, onClick = { actions.open(b) }, onLongClick = { actions.longPress(b) }),
+    ) {
         Box {
             KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), fallbackPath = store.coverFile(b.id).path)
             // Picked: a mint ring around the cover, so it reads as "selected" and not as the finished badge.
@@ -519,7 +526,13 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             items(list, key = { it.id }) { b ->
-                Column(Modifier.width(94.dp).clickable { onOpen(b) }) {
+                // A cover is the biggest tap target in the app: it sinks, and the title with it, so the whole
+                // card answers as one piece instead of only the ripple of the cover.
+                val cardInteraction = remember { MutableInteractionSource() }
+                Column(
+                    Modifier.width(94.dp).pressFeedback(cardInteraction, pressedScale = 0.96f)
+                        .clickable(interactionSource = cardInteraction, indication = LocalIndication.current) { onOpen(b) },
+                ) {
                     KCover(b, store.thumbFile(b.id).path, Modifier.fillMaxWidth(), showBadge = false, fallbackPath = store.coverFile(b.id).path)
                     // A fixed two-line title box: without it a one-line title pulls its progress bar up and the
                     // shelf's bars sit on four different baselines.

@@ -248,7 +248,7 @@
     <string name="s_group_appearance">外観</string>
     <string name="s_group_reading">読書</string>
     <string name="s_group_reader_bar">リーダーバー</string>
-    <string name="s_reader_bar_hint">ページ下部のバーに表示する項目です。非表示にするとバーから外れるだけで、ほかの動作は変わりません。</string>
+    <string name="s_reader_bar_hint">この並びの最初の2つがバーに表示され、残りは「もっと見る」の下に入ります。非表示にするとバーから完全に外れます。</string>
     <string name="s_move_up">上へ移動</string>
     <string name="s_move_down">下へ移動</string>
     <string name="s_group_library">ライブラリ</string>

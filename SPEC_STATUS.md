@@ -490,6 +490,26 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.5 — released 2026-11-04
+
+Version 22, asset `Kairn-0.9.5.apk` 6,325,512 bytes, md5 `315e98bd…`. The two places in the bar are no longer
+reserved: the **first two items of the arrangement** hold them, tools included. A tool there draws as a pill and
+opens its sheet; a mode pushed past the second place waits behind More and still toggles, mint while running.
+`BarItem.isMode` now only says whether an item is a live toggle, never where it sits, and `BarItem.MAIN_SLOTS` is
+the 2. Settings' arrows step past any **visible** neighbour - hidden items still hold list positions, so stepping
+into one would look like a dead arrow.
+
+Auto scroll is filtered out when the page mode is not scroll, so the second place falls to the next arranged
+item; a device test asserted the old assumption and had to switch scroll mode on to keep the two modes in the
+bar. That test failing was the model working, not a defect.
+
+Tab changes are 85 ms (fades 70/60) instead of 170, and the nav pill 80 instead of 160. Press feedback now also
+covers nav tabs (0.93), chips (0.95), book covers in grid and shelf (0.96), the segmented control (0.97), the
+colour swatches (0.93) and the reader's More row (0.97). Full-width Settings and sheet rows keep ripple only.
+
+Verified: 138 JVM tests, **60 on device**, lint 0 errors, six locales at 394 keys, asset downloaded back and md5
+matched, same CN=Kairn certificate.
+
 ## 0.9.4 — released 2026-11-04
 
 Version 21, asset `Kairn-0.9.4.apk` 6,325,388 bytes, md5 `41a853c1…`. Motion, deliberately small: nothing runs
@@ -568,8 +588,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.4**, published 2026-11-04, asset `Kairn-0.9.4.apk`,
-6,325,388 bytes (0.9.3 was 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.5**, published 2026-11-04, asset `Kairn-0.9.5.apk`,
+6,325,512 bytes (0.9.4 was 6,325,388, 0.9.3 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**

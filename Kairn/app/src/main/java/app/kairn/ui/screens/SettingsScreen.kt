@@ -176,9 +176,9 @@ fun SettingsScreen(
             KCard {
                 fun move(item: BarItem, up: Boolean) {
                     val list = s.barOrder.toMutableList()
-                    // Swapped with its neighbour of the same KIND: a tool cannot become a pill, and the
-                    // other kind keeps the slots it had.
-                    val siblings = list.filter { it.isMode == item.isMode }
+                    // Swapped with the neighbouring row you can SEE: a hidden item still holds its place in the
+                    // list, and stepping into it would look like the arrow did nothing.
+                    val siblings = list.filter { it !in s.barHidden }
                     val at = siblings.indexOf(item)
                     val other = siblings.getOrNull(if (up) at - 1 else at + 1) ?: return
                     val a = list.indexOf(item)
@@ -188,9 +188,10 @@ fun SettingsScreen(
                     store.saveSettings { it.copy(barOrder = list) }
                 }
 
-                val rows = s.barOrder.filter { it.isMode } + s.barOrder.filterNot { it.isMode }
+                // Straight down the arrangement now: any item can hold either of the two places in the bar.
+                val rows = s.barOrder
                 rows.forEachIndexed { i, item ->
-                    val siblings = s.barOrder.filter { it.isMode == item.isMode }
+                    val siblings = s.barOrder.filter { it !in s.barHidden }
                     val at = siblings.indexOf(item)
                     KRow(stringResource(barLabel(item)), divider = i > 0) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
