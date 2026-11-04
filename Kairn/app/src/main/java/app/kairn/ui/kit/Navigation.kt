@@ -1,6 +1,8 @@
 package app.kairn.ui.kit
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -12,6 +14,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,16 +51,23 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
             Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = if (glass) 6.dp else 10.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Tab.entries.forEach { t ->
                     val on = t == selected
+                    // 160 ms on the selection: the pill and the tint travel together, so a tab change reads as
+                    // one movement rather than a colour swap and a jump.
+                    val pill by animateColorAsState(
+                        if (on) (if (glass) Color(0x26FFFFFF) else K.mint.copy(alpha = .14f)) else Color.Transparent,
+                        tween(160), label = "pill",
+                    )
+                    val ink by animateColorAsState(if (on) K.mint else K.mut, tween(160), label = "ink")
                     Column(
                         Modifier.weight(1f).heightIn(min = 56.dp).clip(RoundedCornerShape(18.dp)).selectable(selected = on, role = Role.Tab) { onSelect(t) },
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
                     ) {
-                        Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(999.dp)).background(if (on) (if (glass) Color(0x26FFFFFF) else K.mint.copy(alpha = .14f)) else Color.Transparent), contentAlignment = Alignment.Center) {
-                            Icon(t.icon, null, tint = if (on) K.mint else K.dim, modifier = Modifier.size(22.dp))
+                        Box(Modifier.size(56.dp, 30.dp).clip(RoundedCornerShape(999.dp)).background(pill), contentAlignment = Alignment.Center) {
+                            Icon(t.icon, null, tint = ink, modifier = Modifier.size(22.dp))
                         }
                         // Nav label contrast on the glass panel: K.mut is 6.56:1. Nothing smaller or dimmer
                         // goes on the primary navigation.
-                        Text(stringResource(t.label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (on) K.mint else K.mut)
+                        Text(stringResource(t.label), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ink)
                     }
                 }
             }

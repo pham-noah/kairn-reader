@@ -490,6 +490,22 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.4 — released 2026-11-04
+
+Version 21, asset `Kairn-0.9.4.apk` 6,325,388 bytes, md5 `41a853c1…`. Motion, deliberately small: nothing runs
+longer than 170 ms and no animation changes a layout, so a tap never waits on one.
+
+Press feedback is one modifier, `pressFeedback` (kit/Motion.kt): 4% scale down over 90 ms and back, on `KButton`,
+`KIconButton`, the reader's mode pills and its four tool buttons. The ripple stays.
+
+Tabs slide a tenth of the width in the direction of travel over 170 ms with a 120/140 ms fade either side, and a
+horizontal flick past 110 dp changes tab - the shell's `tabSwipe`. It yields to sideways scrollers, because a
+child that consumes the drag cancels the detector: the Continue reading shelf is unaffected. The nav bar's
+selection fades pill and tint over 160 ms.
+
+Verified: 138 JVM tests; the 59-test device suite run twice back to back, green both times; lint 0 errors;
+swiping checked by hand on the emulator in both directions, and vertical scrolling confirmed not to change tab.
+
 ## 0.9.3 — released 2026-11-04
 
 Version 20, asset `Kairn-0.9.3.apk` 6,309,004 bytes, md5 `e02de92f…`. The Reader bar setting arranges as well
@@ -552,8 +568,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.3**, published 2026-11-04, asset `Kairn-0.9.3.apk`,
-6,309,004 bytes (0.9.2 was 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.4**, published 2026-11-04, asset `Kairn-0.9.4.apk`,
+6,325,388 bytes (0.9.3 was 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**

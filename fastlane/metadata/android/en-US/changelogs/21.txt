@@ -1,0 +1,3 @@
+Buttons sink 4% under your finger for 90 ms and come back - every button, icon button, reader pill and tool.
+Tabs change with a short slide and fade, and swipe left or right on the content to move between them.
+The nav bar's selection pill now fades in rather than snapping.

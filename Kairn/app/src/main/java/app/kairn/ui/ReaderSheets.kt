@@ -5,6 +5,9 @@
 
 package app.kairn.ui
 
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import app.kairn.ui.kit.pressFeedback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,10 +53,14 @@ import org.readium.r2.shared.publication.Publication
  */
 
 @Composable
-internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi, onClick: () -> Unit) =
-    Column(Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
+internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(Modifier.weight(1f).heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp))
+        .pressFeedback(interaction)
+        .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         Icon(icon, label, tint = ui.chromeText, modifier = Modifier.size(22.dp)); Text(label, color = ui.chromeText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
+}
 
 private val readerThemes = listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK)   // constant: not rebuilt per recomposition; ordered by page tone
 private val pageModes = listOf(R.string.s_pages, R.string.s_scroll)

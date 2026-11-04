@@ -8,6 +8,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.ui.kit.pressFeedback
 import app.kairn.R
 import app.kairn.data.BarItem
 import app.kairn.data.Mark
@@ -382,10 +385,12 @@ private fun ModePill(
     onClick: () -> Unit,
 ) {
     val tint = if (live) K.mint else colors.chromeText
+    val interaction = remember { MutableInteractionSource() }
     Row(
         modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
             .background(if (live) K.mint.copy(alpha = 0.16f) else CColor.Transparent)
-            .clickable(onClick = onClick)
+            .pressFeedback(interaction)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 10.dp)
             .semantics { contentDescription = label },
         verticalAlignment = Alignment.CenterVertically,

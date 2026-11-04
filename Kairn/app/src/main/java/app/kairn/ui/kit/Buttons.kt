@@ -1,6 +1,8 @@
 package app.kairn.ui.kit
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -54,8 +57,14 @@ fun KButton(
             glass && style == KButtonStyle.Danger -> base.glassSurface(shape, fill = K.danger.copy(alpha = .16f), elevation = 5.dp, hairline = K.danger.copy(alpha = .30f))
             else -> base.clip(shape).background(bg).then(if (border != null) Modifier.border(BorderStroke(1.dp, border), shape) else Modifier)
         }
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        surface.alpha(if (enabled) 1f else .45f).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+        surface.alpha(if (enabled) 1f else .45f).pressFeedback(interaction)
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                enabled = enabled, role = Role.Button, onClick = onClick,
+            )
             .padding(horizontal = if (small) 16.dp else 22.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
@@ -71,14 +80,19 @@ fun KIconButton(
     icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier,
     bordered: Boolean = false, tint: Color = K.txt, size: Int = Dim.tap,
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Box(
-        modifier.size(size.dp).clip(CircleShape)
+        modifier.size(size.dp).pressFeedback(interaction, pressedScale = 0.90f).clip(CircleShape)
             .then(
                 if (bordered && glass) Modifier.glassSurface(CircleShape, fill = Glass.fill, elevation = 5.dp)
                 else if (bordered) Modifier.background(K.surf).border(1.dp, K.line, CircleShape)
                 else Modifier
             )
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.Button, onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = tint, modifier = Modifier.size(22.dp)) }
 }

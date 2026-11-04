@@ -6,6 +6,15 @@ import app.kairn.ui.ReaderActivity
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -150,7 +159,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
     CompositionLocalProvider(LocalToast provides toast) {
         Box(Modifier.fillMaxSize().then(if (glass) Modifier.ambientWash() else Modifier.background(K.bg))) {
             Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) {
+                Box(Modifier.weight(1f).then(if (overlay == null) Modifier.tabSwipe(tab) { tab = it } else Modifier)) {
                     when (overlay) {
                         Overlay.Onboarding -> OnboardingScreen(deps.store) { goAdd ->
                             deps.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
@@ -169,7 +178,16 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                             autoFolderName = backupFlow.autoFolderName(),
                             onPickAutoFolder = { backupFlow.pickAutoFolder() },
                             onAutoBackupOff = { deps.store.saveSettings { it.copy(autoBackupFolder = "") } })
-                        null -> when (tab) {
+                        null -> AnimatedContent(
+                            targetState = tab,
+                            transitionSpec = {
+                                // A tenth of the width and 170 ms: a change of tab, not a page turn.
+                                val shift = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                                (slideInHorizontally(tween(170)) { w -> shift * w / 10 } + fadeIn(tween(140)))
+                                    .togetherWith(slideOutHorizontally(tween(170)) { w -> -shift * w / 10 } + fadeOut(tween(120)))
+                            },
+                            label = "tab",
+                        ) { shown -> when (shown) {
                             Tab.Library -> LibraryScreen(deps.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
                                 onBackup = { overlay = Overlay.Backup },
                                 onOpenAt = { b, locator ->
@@ -194,6 +212,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                                 },
                                 onCheckUpdates = { checkUpdates(openSheet = true) },
                                 showUpdates = selfUpdate)
+                        }
                         }
                     }
                 }
@@ -242,3 +261,27 @@ internal class ShellDeps(
     val positionsCache: app.kairn.data.PositionsCache,
     val readium: app.kairn.data.ReadiumHelper,
 )
+
+/**
+ * A horizontal flick on the content changes tab, the way the shelf and the reader already respond to a swipe.
+ *
+ * It gives way to anything that scrolls sideways: a child that consumes the drag cancels this detector before
+ * the threshold, so the "Continue reading" shelf keeps its horizontal scroll. 110 dp and a completed drag, so
+ * a short nudge does nothing.
+ */
+private fun Modifier.tabSwipe(tab: Tab, onSwipe: (Tab) -> Unit): Modifier = pointerInput(tab) {
+    var total = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { total = 0f },
+        onDragEnd = {
+            val threshold = 110.dp.toPx()
+            val next = when {
+                total <= -threshold -> Tab.entries.getOrNull(tab.ordinal + 1)
+                total >= threshold -> Tab.entries.getOrNull(tab.ordinal - 1)
+                else -> null
+            }
+            if (next != null) onSwipe(next)
+        },
+        onHorizontalDrag = { _, dragAmount -> total += dragAmount },
+    )
+}
