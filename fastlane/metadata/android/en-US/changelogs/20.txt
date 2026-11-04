@@ -1,0 +1,3 @@
+The Reader bar setting now arranges as well as hides: each of the six items has up and down arrows, and the bar draws them in that order.
+"More" is part of the arrangement too - if you put a tool first, More moves to the front and the read aloud and auto scroll pills sit after it.
+The Vietnamese hint on that screen is rewritten: it read word for word, not the way Vietnamese is written.

@@ -249,6 +249,8 @@
     <string name="s_group_reading">阅读</string>
     <string name="s_group_reader_bar">阅读栏</string>
     <string name="s_reader_bar_hint">页面底部栏显示的内容。隐藏某项会将其从栏中移除，其他设置不受影响。</string>
+    <string name="s_move_up">上移</string>
+    <string name="s_move_down">下移</string>
     <string name="s_group_library">书架</string>
     <string name="s_group_your_data">你的数据</string>
     <string name="s_group_about">关于</string>

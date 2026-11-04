@@ -162,6 +162,8 @@ internal fun ReaderScreen(
     wpm: Int = ReaderLogic.WPM,
     /** What the reader switched off in Settings; an empty set is the bar this app has always drawn. */
     hidden: Set<BarItem> = emptySet(),
+    /** The order they arranged, modes and tools each drawn in it. */
+    order: List<BarItem> = BarItem.DEFAULT_ORDER,
 ) {
     Box(Modifier.fillMaxSize()) {
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
@@ -215,67 +217,72 @@ internal fun ReaderScreen(
                 Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
                     var expanded by remember { mutableStateOf(false) }
                     SeekBar(ui, colors, act, wpm)
-                    // The bar stays minimal: "More" holds the four sheets, and the two reading modes sit
-                    // beside it as toggles with a visible state. They are not tools and they are not hidden -
-                    // a mode that moves the page must be visible while it moves it.
-                    val twoUp = !ui.speech.on && !ui.prefs.scroll     // nothing between them: share the row evenly
-                    // Settings can take any of them out; an empty bar still has the seek bar above it.
-                    val tools = listOf(
-                        Triple(BarItem.CONTENTS, Icons.AutoMirrored.Filled.List, R.string.s_tool_contents),
-                        Triple(BarItem.SEARCH, Icons.Default.Search, R.string.s_tool_search),
-                        Triple(BarItem.NOTES, Icons.Default.StickyNote2, R.string.s_tool_notes),
-                        Triple(BarItem.DISPLAY, Icons.Default.TextFormat, R.string.s_tool_display),
-                    ).filter { it.first !in hidden }
+                    // One row, laid out in the order Settings holds. "More" is a slot like any other - it
+                    // sits where the first tool is - and it is the flexible one, so the mode pills can be
+                    // arranged on either side of it and the row still fits what is left.
+                    val visible = order.filter { it !in hidden }
+                        // Auto scroll exists only in scroll mode, and the speed pill takes its place while
+                        // the voice is on: a mode that moves the page must be visible while it moves it.
+                        .filter { it != BarItem.AUTO_SCROLL || (ui.prefs.scroll && !ui.speech.on) }
+                    val tools = visible.filter { !it.isMode }
+                    val hasTools = tools.isNotEmpty()
+                    // With no tools the pills share the row between them; with tools they are fixed and
+                    // "More" takes the slack.
+                    val pillWidth = if (hasTools) Modifier else Modifier.weight(1f)
+                    var moreDrawn = false
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        if (tools.isNotEmpty()) Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
-                            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
-                            Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
-                        }
-                        // While it is reading, the speed takes the auto scroll slot - the two never make sense
-                        // together - so the row never grows past what fits on a phone.
-                        if (ui.speech.on) {
-                            ModePill(null, stringResource(R.string.s_speech_rate_value, ui.prefs.speechRate), false, colors) { ui.sheet = ReaderSheet.TTS }
-                            Spacer(Modifier.width(6.dp))
-                        } else if (ui.prefs.scroll && BarItem.AUTO_SCROLL !in hidden) {
-                            // Auto scroll exists only in scroll mode, so outside it the toggle is not shown at all.
-                            ModePill(
-                                if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
-                                stringResource(R.string.s_auto_scroll),
-                                ui.autoScrolling, colors, onClick = act::toggleAutoScroll,
-                            )
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        if (BarItem.READ_ALOUD !in hidden) {
-                            ModePill(
-                                when {
-                                    ui.speech.on && ui.speech.paused -> Icons.Default.PlayArrow
-                                    ui.speech.on -> Icons.Default.Pause
-                                    else -> Icons.Default.VolumeUp
-                                },
-                                stringResource(
-                                    when {
-                                        ui.speech.starting -> R.string.s_tts_starting
-                                        ui.speech.on && ui.speech.paused -> R.string.s_resume
-                                        ui.speech.on -> R.string.s_pause
-                                        else -> R.string.s_read_aloud
-                                    },
-                                ),
-                                ui.speech.on, colors,
-                                modifier = if (twoUp) Modifier.weight(1f) else Modifier,
-                            ) { act.toggleTts() }
+                        visible.forEachIndexed { index, item ->
+                            if (index > 0) Spacer(Modifier.width(6.dp))
+                            when (item) {
+                                BarItem.READ_ALOUD -> {
+                                    if (ui.speech.on) {
+                                        ModePill(null, stringResource(R.string.s_speech_rate_value, ui.prefs.speechRate), false, colors) { ui.sheet = ReaderSheet.TTS }
+                                        Spacer(Modifier.width(6.dp))
+                                    }
+                                    ModePill(
+                                        when {
+                                            ui.speech.on && ui.speech.paused -> Icons.Default.PlayArrow
+                                            ui.speech.on -> Icons.Default.Pause
+                                            else -> Icons.Default.VolumeUp
+                                        },
+                                        stringResource(
+                                            when {
+                                                ui.speech.starting -> R.string.s_tts_starting
+                                                ui.speech.on && ui.speech.paused -> R.string.s_resume
+                                                ui.speech.on -> R.string.s_pause
+                                                else -> R.string.s_read_aloud
+                                            },
+                                        ),
+                                        ui.speech.on, colors,
+                                        modifier = pillWidth,
+                                    ) { act.toggleTts() }
+                                }
+
+                                BarItem.AUTO_SCROLL -> ModePill(
+                                    if (ui.autoScrolling) Icons.Default.Pause else Icons.Default.ArrowDownward,
+                                    stringResource(R.string.s_auto_scroll),
+                                    ui.autoScrolling, colors,
+                                    modifier = pillWidth,
+                                    onClick = act::toggleAutoScroll,
+                                )
+
+                                else -> if (!moreDrawn) {
+                                    moreDrawn = true
+                                    Row(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).clickable { expanded = !expanded },
+                                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = colors.chromeText, modifier = Modifier.size(20.dp))
+                                        Text(if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more), color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                     AnimatedVisibility(expanded) {
                         Row(Modifier.fillMaxWidth()) {
-                            tools.forEach { (item, icon, label) ->
-                                ReaderTool(icon, stringResource(label), colors) {
-                                    ui.sheet = when (item) {
-                                        BarItem.CONTENTS -> ReaderSheet.CONTENTS
-                                        BarItem.SEARCH -> ReaderSheet.SEARCH
-                                        BarItem.NOTES -> ReaderSheet.NOTES
-                                        else -> ReaderSheet.DISPLAY
-                                    }
+                            // In the order Settings holds, which is the order the reader arranged.
+                            tools.forEach { item ->
+                                ReaderTool(toolIcon(item), stringResource(toolLabel(item)), colors) {
+                                    ui.sheet = toolSheet(item)
                                 }
                             }
                         }
@@ -342,6 +349,29 @@ internal fun ReaderScreen(
 /**
  * One reading mode as a toggle: its own state is on the bar, so starting or stopping it never needs a sheet.
  */
+@Composable
+/** The tool's glyph, label and sheet. One place, so the bar and the setting cannot disagree. */
+private fun toolIcon(item: BarItem): ImageVector = when (item) {
+    BarItem.CONTENTS -> Icons.AutoMirrored.Filled.List
+    BarItem.SEARCH -> Icons.Default.Search
+    BarItem.NOTES -> Icons.Default.StickyNote2
+    else -> Icons.Default.TextFormat
+}
+
+private fun toolLabel(item: BarItem): Int = when (item) {
+    BarItem.CONTENTS -> R.string.s_tool_contents
+    BarItem.SEARCH -> R.string.s_tool_search
+    BarItem.NOTES -> R.string.s_tool_notes
+    else -> R.string.s_tool_display
+}
+
+private fun toolSheet(item: BarItem): ReaderSheet = when (item) {
+    BarItem.CONTENTS -> ReaderSheet.CONTENTS
+    BarItem.SEARCH -> ReaderSheet.SEARCH
+    BarItem.NOTES -> ReaderSheet.NOTES
+    else -> ReaderSheet.DISPLAY
+}
+
 @Composable
 private fun ModePill(
     icon: ImageVector?,

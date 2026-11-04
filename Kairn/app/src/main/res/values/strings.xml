@@ -257,6 +257,8 @@
     <string name="s_group_reading">Reading</string>
     <string name="s_group_reader_bar">Reader bar</string>
     <string name="s_reader_bar_hint">What the bar at the bottom of the page shows. Hiding something takes it out of the bar; nothing else changes.</string>
+    <string name="s_move_up">Move up</string>
+    <string name="s_move_down">Move down</string>
     <string name="s_group_library">Library</string>
     <string name="s_group_your_data">Your data</string>
     <string name="s_group_about">About</string>

@@ -265,6 +265,8 @@
     <string name="s_group_reading">Lectura</string>
     <string name="s_group_reader_bar">Barra del lector</string>
     <string name="s_reader_bar_hint">Lo que muestra la barra al pie de la página. Ocultar algo lo quita de la barra; nada más cambia.</string>
+    <string name="s_move_up">Subir</string>
+    <string name="s_move_down">Bajar</string>
     <string name="s_group_library">Biblioteca</string>
     <string name="s_group_your_data">Tus datos</string>
     <string name="s_group_about">Acerca de</string>

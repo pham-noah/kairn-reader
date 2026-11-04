@@ -166,4 +166,23 @@ class ModelsTest {
     @Test fun `no bar setting at all means every item is visible`() {
         assertEquals(emptySet<BarItem>(), AppSettings.from(JSONObject()).barHidden)
     }
+
+    /** The arrangement survives a save, and an item this version does not know is dropped rather than kept. */
+    @Test fun `the bar order survives a round-trip`() {
+        val arranged = listOf(BarItem.AUTO_SCROLL, BarItem.READ_ALOUD, BarItem.DISPLAY, BarItem.CONTENTS, BarItem.NOTES, BarItem.SEARCH)
+        val after = AppSettings.from(JSONObject(AppSettings(barOrder = arranged).toJson().toString()))
+        assertEquals(arranged, after.barOrder)
+    }
+
+    @Test fun `a bar item missing from the saved order is appended, never dropped`() {
+        // What an older file looks like to a release that knows one more item.
+        val saved = JSONObject().put("barOrder", org.json.JSONArray(listOf("READ_ALOUD", "CONTENTS")))
+        val order = AppSettings.from(saved).barOrder
+        assertEquals(listOf(BarItem.READ_ALOUD, BarItem.CONTENTS), order.take(2))
+        assertEquals(BarItem.entries.toSet(), order.toSet())
+    }
+
+    @Test fun `no bar order at all means the default order`() {
+        assertEquals(BarItem.DEFAULT_ORDER, AppSettings.from(JSONObject()).barOrder)
+    }
 }

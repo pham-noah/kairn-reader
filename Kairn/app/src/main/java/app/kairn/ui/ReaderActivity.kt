@@ -142,6 +142,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                         colors = readerUi(prefsApplier.theme(ui.prefs), ui.prefs.pageColor, ui.prefs.inkColor),
                         isTablet = isTablet, toast = toast, act = this@ReaderActivity, wpm = s.readingWpm,
                         hidden = s.barHidden,
+                        order = s.barOrder,
                     )
                 }
             }

@@ -172,6 +172,7 @@ data class AppSettings(
     val swipeChapters: Boolean = true,        // R-07: swipe left/right to change chapter in scroll mode
     val swipeThreshold: Int = 40,             // R-07: how far (dp) a horizontal drag must go to count
     val barHidden: Set<BarItem> = emptySet(), // what the reader's bottom bar leaves out; empty = all
+    val barOrder: List<BarItem> = BarItem.DEFAULT_ORDER,  // the order the reader arranged them in
     val autoDetect: Boolean = true,           // L-01: find EPUBs already on the device on open
     val folders: List<WatchedFolder> = emptyList(),
     val defaults: ReaderPrefs = ReaderPrefs(),
@@ -198,6 +199,7 @@ data class AppSettings(
         .put("keepScreenOn", keepScreenOn).put("fullscreen", fullscreen).put("volumeKeys", volumeKeys)
         .put("swipeChapters", swipeChapters).put("swipeThreshold", swipeThreshold)
         .put("barHidden", JSONArray(barHidden.map { it.name }))
+        .put("barOrder", JSONArray(barOrder.map { it.name }))
         .put("autoDetect", autoDetect)
         .put("checkUpdates", checkUpdates).put("lastUpdateCheck", lastUpdateCheck)
         .put("shareSelection", shareSelection).put("lookupSelection", lookupSelection)
@@ -227,6 +229,14 @@ data class AppSettings(
                         if (a.isNull(i)) null else runCatching { BarItem.valueOf(a.getString(i)) }.getOrNull()
                     }.toSet()
                 } ?: emptySet(),
+                // The saved order, with anything this version or a newer one added appended rather than
+                // dropped: a bar item must never vanish because it was not in the saved list.
+                barOrder = o.optJSONArray("barOrder")?.let { a ->
+                    val saved = (0 until a.length()).mapNotNull { i ->
+                        if (a.isNull(i)) null else runCatching { BarItem.valueOf(a.getString(i)) }.getOrNull()
+                    }.distinct()
+                    saved + BarItem.entries.filterNot { it in saved }
+                } ?: BarItem.DEFAULT_ORDER,
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
                 shareSelection = o.optBoolean("shareSelection", d.shareSelection),
                 lookupSelection = o.optBoolean("lookupSelection", d.lookupSelection),

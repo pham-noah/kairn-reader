@@ -7,6 +7,9 @@ import androidx.core.os.LocaleListCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,15 +50,15 @@ private val languageTags: List<String?> = listOf(null, "en", "es", "fi", "ja", "
 }
 
 /** N-07: one place for appearance, library, data and about. */
-/** The six things the reader's bottom bar can show, in the order the bar draws them. */
-private val barItems = listOf(
-    BarItem.READ_ALOUD to R.string.s_read_aloud,
-    BarItem.AUTO_SCROLL to R.string.s_auto_scroll,
-    BarItem.CONTENTS to R.string.s_tool_contents,
-    BarItem.SEARCH to R.string.s_tool_search,
-    BarItem.NOTES to R.string.s_tool_notes,
-    BarItem.DISPLAY to R.string.s_tool_display,
-)
+/** The six things the reader's bottom bar can show, in the words the bar itself uses. */
+private fun barLabel(item: BarItem): Int = when (item) {
+    BarItem.READ_ALOUD -> R.string.s_read_aloud
+    BarItem.AUTO_SCROLL -> R.string.s_auto_scroll
+    BarItem.CONTENTS -> R.string.s_tool_contents
+    BarItem.SEARCH -> R.string.s_tool_search
+    BarItem.NOTES -> R.string.s_tool_notes
+    BarItem.DISPLAY -> R.string.s_tool_display
+}
 
 @Composable
 fun SettingsScreen(
@@ -162,8 +165,8 @@ fun SettingsScreen(
                 KRow(stringResource(R.string.s_reading_defaults), divider = true, onClick = { defaultsOpen = true }) { KChevron() }
             }
         }
-        // What the reader's bar shows. Stored as what is HIDDEN, so a bar item added later still appears
-        // for anyone who never touched this.
+        // What the reader's bar shows, and in what order. Stored as what is HIDDEN plus the arrangement,
+        // so a bar item added later still appears for anyone who never touched this.
         KGroup(stringResource(R.string.s_group_reader_bar)) {
             Text(
                 stringResource(R.string.s_reader_bar_hint),
@@ -171,11 +174,40 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
             )
             KCard {
-                barItems.forEachIndexed { i, (item, label) ->
-                    KRow(stringResource(label), divider = i > 0) {
-                        KSwitch(item !in s.barHidden, onChange = { on ->
-                            store.saveSettings { it.copy(barHidden = if (on) it.barHidden - item else it.barHidden + item) }
-                        })
+                fun move(item: BarItem, up: Boolean) {
+                    val list = s.barOrder.toMutableList()
+                    // Swapped with its neighbour of the same KIND: a tool cannot become a pill, and the
+                    // other kind keeps the slots it had.
+                    val siblings = list.filter { it.isMode == item.isMode }
+                    val at = siblings.indexOf(item)
+                    val other = siblings.getOrNull(if (up) at - 1 else at + 1) ?: return
+                    val a = list.indexOf(item)
+                    val b = list.indexOf(other)
+                    list[a] = other
+                    list[b] = item
+                    store.saveSettings { it.copy(barOrder = list) }
+                }
+
+                val rows = s.barOrder.filter { it.isMode } + s.barOrder.filterNot { it.isMode }
+                rows.forEachIndexed { i, item ->
+                    val siblings = s.barOrder.filter { it.isMode == item.isMode }
+                    val at = siblings.indexOf(item)
+                    KRow(stringResource(barLabel(item)), divider = i > 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            KIconButton(
+                                Icons.Default.KeyboardArrowUp, stringResource(R.string.s_move_up),
+                                onClick = { move(item, up = true) },
+                                tint = if (at > 0) K.txt else K.dim, size = 40,
+                            )
+                            KIconButton(
+                                Icons.Default.KeyboardArrowDown, stringResource(R.string.s_move_down),
+                                onClick = { move(item, up = false) },
+                                tint = if (at < siblings.lastIndex) K.txt else K.dim, size = 40,
+                            )
+                            KSwitch(item !in s.barHidden, onChange = { on ->
+                                store.saveSettings { it.copy(barHidden = if (on) it.barHidden - item else it.barHidden + item) }
+                            })
+                        }
                     }
                 }
             }

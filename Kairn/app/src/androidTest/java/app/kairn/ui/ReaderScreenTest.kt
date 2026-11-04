@@ -14,6 +14,7 @@ import app.kairn.data.ThemeId
 import app.kairn.ui.kit.ToastState
 import app.kairn.ui.theme.KairnTheme
 import app.kairn.ui.theme.readerUi
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -58,9 +59,14 @@ class ReaderScreenTest {
         override fun toggleAutoScroll() { calls += "toggleAutoScroll" }
     }
 
-    private fun compose(ui: ReaderUiState, fake: ReaderActions, hidden: Set<BarItem> = emptySet()) = rule.setContent {
+    private fun compose(
+        ui: ReaderUiState,
+        fake: ReaderActions,
+        hidden: Set<BarItem> = emptySet(),
+        order: List<BarItem> = BarItem.DEFAULT_ORDER,
+    ) = rule.setContent {
         KairnTheme(glass = false) {
-            ReaderScreen(ui, readerUi(ThemeId.DARK), isTablet = false, toast = ToastState(), act = fake, hidden = hidden)
+            ReaderScreen(ui, readerUi(ThemeId.DARK), isTablet = false, toast = ToastState(), act = fake, hidden = hidden, order = order)
         }
     }
 
@@ -131,5 +137,40 @@ class ReaderScreenTest {
         rule.onAllNodesWithContentDescription("Notes").assertCountEquals(0)
         rule.onAllNodesWithContentDescription("Contents").assertCountEquals(1)
         rule.onAllNodesWithContentDescription("Display").assertCountEquals(1)
+    }
+
+    @Test fun the_tools_are_drawn_in_the_order_the_reader_arranged() {
+        val ui = ReaderUiState().apply { loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml" }
+        compose(
+            ui, FakeReader(),
+            order = listOf(BarItem.DISPLAY, BarItem.READ_ALOUD, BarItem.NOTES, BarItem.CONTENTS, BarItem.AUTO_SCROLL, BarItem.SEARCH),
+        )
+        rule.onNodeWithText("More").performClick()
+
+        // Display now sits left of Notes, and Notes left of Contents - the default would be the reverse.
+        val display = rule.onNodeWithContentDescription("Display").getUnclippedBoundsInRoot().left
+        val notes = rule.onNodeWithContentDescription("Notes").getUnclippedBoundsInRoot().left
+        val contents = rule.onNodeWithContentDescription("Contents").getUnclippedBoundsInRoot().left
+        assertTrue("Display must come first", display.value < notes.value)
+        assertTrue("Notes must come before Contents", notes.value < contents.value)
+    }
+
+    @Test fun a_mode_can_sit_either_side_of_more_and_the_row_still_fits() {
+        val ui = ReaderUiState().apply {
+            loading = false; bookTitle = "A Book"; chapterHref = "c1.xhtml"
+            prefs = prefs.copy(scroll = true)         // auto scroll is on the bar in scroll mode
+        }
+        // Tools first, then the modes: "More" must move to where the tools begin, and the pills after it.
+        compose(
+            ui, FakeReader(),
+            order = listOf(BarItem.CONTENTS, BarItem.SEARCH, BarItem.AUTO_SCROLL, BarItem.NOTES, BarItem.READ_ALOUD, BarItem.DISPLAY),
+        )
+
+        val more = rule.onNodeWithText("More").getUnclippedBoundsInRoot()
+        val autoScroll = rule.onNodeWithContentDescription("Auto scroll").getUnclippedBoundsInRoot()
+        val readAloud = rule.onNodeWithContentDescription("Read aloud").getUnclippedBoundsInRoot()
+
+        assertTrue("More comes first when the tools come first", more.left.value < autoScroll.left.value)
+        assertTrue("the modes keep their arranged order after it", autoScroll.left.value < readAloud.left.value)
     }
 }
