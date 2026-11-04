@@ -490,6 +490,25 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.3 — released 2026-11-04
+
+Version 20, asset `Kairn-0.9.3.apk` 6,309,004 bytes, md5 `e02de92f…`. The Reader bar setting arranges as well
+as hides: up/down arrows per row, swapping only with a neighbour of the same kind, and the bar draws modes and
+tools in that order.
+
+"More" became a slot in the arrangement instead of a fixed left-hand cell: it sits where the tools begin, so a
+tool placed first puts More at the front with the mode pills after it. It stays the flexible piece, so the pills
+fit on either side; with no tools the pills share the row, and a pill label is one line.
+
+`AppSettings.barOrder` holds the arrangement. An item missing from a saved order is **appended, never dropped**,
+so a bar item cannot vanish because an older file did not list it.
+
+Translations were read back one language at a time against each file's own vocabulary. Four were correct as
+written; the Vietnamese hint had English word order ("Những gì thanh ở cuối trang hiển thị") and is now
+"Các mục hiển thị trên thanh ở cuối trang". "Move up" / "Move down" added in all five; 394 keys per locale.
+
+Verified: 138 JVM tests, 59 on device, lint 0 errors, and the published asset downloaded back and matched.
+
 ## 0.9.1 and 0.9.2 — released 2026-11-04
 
 Two hotfixes in one evening, both from the update sheet and the reader bar.
@@ -533,8 +552,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.2**, published 2026-11-04, asset `Kairn-0.9.2.apk`,
-6,307,888 bytes (0.9.1 fixed the update sheet at 6,306,092, 0.9.0 was 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.3**, published 2026-11-04, asset `Kairn-0.9.3.apk`,
+6,309,004 bytes (0.9.2 was 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**
