@@ -490,12 +490,30 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.0 — released 2026-11-04
+
+Version 17, `versionName` 0.9.0, signed with CN=Kairn (cert SHA-256 `69086f40…`) so it installs over 0.8.6 in
+place. Release at `/releases/tag/v0.9.0`, asset `Kairn-0.9.0.apk` 6,306,088 bytes, md5
+`7b0013d56f7db680686c74942efdb3cf` (downloaded back after publishing and matched).
+
+Nothing the reader sees changed: `app/src/main/res/` is untouched in the diff. This release carries the
+internal rebuild from the SOLID audit (`SOLID_AUDIT.md`) - preference application, read-aloud, auto scroll, the
+backup flow and the backup folder interface extracted, `ReaderActivity` 973 -> 822 lines, `AppShell` 299 -> 244,
+tests 116/49 -> 124/52.
+
+Verified on the emulator: 0.8.6 installed and onboarded, then `adb install -r` of the 0.9.0 APK succeeded with
+no uninstall, and the app opened straight to the Library - the settings and library files survived the
+upgrade.
+
+The mirror's tag `v0.9.0` points at `Kairn 0.9.0` (`a2a1e26`); the development repo's tag points at the version
+commit. Tree contents are identical at that point - compared per path, blob by blob.
+
 ## Distribution state (checked 2026-11-04)
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.8.6**, published 2026-11-03, asset `Kairn-0.8.6.apk`,
-6,289,704 bytes. `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.0**, published 2026-11-04, asset `Kairn-0.9.0.apk`,
+6,306,088 bytes (v0.8.6 was 6,289,704 before it). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**
