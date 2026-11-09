@@ -492,7 +492,7 @@ after the SDK bump; it now polls for the saved page turn.
 
 ## 0.9.6 — released 2026-11-09
 
-Version 23, asset `Kairn-0.9.6.apk`. A hardening release: fifteen defects found by attacking the app rather
+Version 23, asset `Kairn-0.9.6.apk` 6,325,512 bytes, md5 `8a5d2301…`. A hardening release: fifteen defects found by attacking the app rather
 than by using it, all closed, no feature added and no screen changed.
 
 Position merge: `mergeBook` compared records by `lastRead` but `Backup.restore` wrote every `data/pos/` sidecar
@@ -624,8 +624,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.5**, published 2026-11-04, asset `Kairn-0.9.5.apk`,
-6,325,512 bytes (0.9.4 was 6,325,388, 0.9.3 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
+needed an uninstall and a rescan). Latest: **v0.9.6**, published 2026-11-09, asset `Kairn-0.9.6.apk`,
+6,325,512 bytes, md5 `8a5d2301…` (0.9.5 was 6,325,512, 0.9.4 6,325,388, 0.9.3 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
 0.8.6 - a string compare would put 0.10.0 first.
 
 **Two repositories, and they are not interchangeable.**
