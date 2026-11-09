@@ -15,8 +15,7 @@ import org.readium.r2.navigator.epub.EpubNavigatorFragment
  * page stops the drift so the reader can look at something, and it comes back 700 ms after the finger leaves so
  * a tap does not restart it under the next tap.
  *
- * It lives here rather than in the Activity because none of it is a navigator or a window concern: it is a
- * scroll loop with a hold, and the Activity now only decides when to start and stop it.
+ * It is a scroll loop with a hold; the Activity only decides when to start and stop it.
  */
 internal class ReaderAutoScroll(
     private val navigator: () -> EpubNavigatorFragment?,

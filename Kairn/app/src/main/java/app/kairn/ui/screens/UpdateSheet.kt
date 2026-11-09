@@ -72,8 +72,8 @@ fun UpdateSheet(
                             .heightIn(max = NOTES_MAX).verticalScroll(rememberScrollState()),
                     ) { NoteBlocks(noteBlocks(r.notes)) }
                 }
-                // The action slot holds its height from "Download" to "Downloading": the sheet used to shrink
-                // the moment the button was replaced by the progress row, and the reader had to drag it back.
+                // The slot holds its height from "Download" to "Downloading", so the sheet does not resize
+                // under the finger when the button becomes a progress row.
                 Box(Modifier.fillMaxWidth().heightIn(min = ACTION_MIN).padding(top = 12.dp)) {
                     when {
                         ui.downloading -> Column {

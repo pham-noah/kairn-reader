@@ -5,7 +5,7 @@ package app.kairn.data
  *
  * The first [MAIN_SLOTS] of the arrangement are drawn in the bar itself - any item, tool or mode - and the rest
  * wait behind "More". [isMode] says whether the item is a live toggle (read aloud, auto scroll) or a door to a
- * sheet; it no longer decides where the item sits.
+ * sheet; it does not decide where the item sits.
  *
  * The setting stores what is HIDDEN and the order the reader arranged, so a bar item added in a later
  * release is visible and last for everyone who never opened the setting - an empty hidden set and the

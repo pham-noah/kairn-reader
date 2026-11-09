@@ -1,0 +1,3 @@
+A merge restore keeps the newer reading position instead of the backup's, so a week-old backup no longer moves every book back a week.
+The Wi-Fi transfer page no longer freezes on one idle connection; broken uploads are answered, and an upload that would fill the phone is refused.
+Kindle clippings land on the right book, and a few ways a crafted file could reach past the app's own folder are closed.

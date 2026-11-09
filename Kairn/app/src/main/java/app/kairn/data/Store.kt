@@ -204,6 +204,7 @@ class Store private constructor(val root: File, val copiesDir: File) {
 
     @Synchronized
     fun put(b: Book) {
+        if (!Book.isSafeId(b.id)) { Log.w("KairnStore", "refusing a record whose id is not a file name"); return }
         if (get(b.id) == b) return                               // identical record: nothing to write or emit
         val file = File(booksDir, "${b.id}.json")
         enqueue(file) { writeAtomic(file, b.toJson().toString(2)) }
@@ -238,6 +239,8 @@ class Store private constructor(val root: File, val copiesDir: File) {
 
     @Synchronized
     fun remove(id: String) {
+        // Ids become file names a few lines down: one that is not ours must never reach the delete.
+        if (!Book.isSafeId(id)) return
         // Before the records go: a listener that needs the old record can still read it.
         synchronized(removalListeners) { removalListeners.toList() }.forEach { it.onRemoved(id) }
         books.update { l -> l.filterNot { it.id == id } }
@@ -270,19 +273,22 @@ class Store private constructor(val root: File, val copiesDir: File) {
         fun forTesting(baseDir: File) = Store(File(baseDir, "data"), File(baseDir, "imported"))
 
         fun writeAtomic(target: File, text: String) {
-            val tmp = File(target.parentFile, target.name + ".tmp")
-            tmp.writeText(text)
-            // ATOMIC_MOVE replaces the target in one step, so the old record is never truncated before the
-            // new one is complete. The copy fallback that used to sit here did truncate it, which is the one
-            // thing this function promises not to do - a write that cannot land leaves the previous file be.
-            val moved = runCatching {
-                java.nio.file.Files.move(
-                    tmp.toPath(), target.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                )
-            }.isSuccess || tmp.renameTo(target)
-            if (!moved) Log.w("KairnStore", "could not replace ${target.name}; the previous file is intact")
+            // Never throws: a write that cannot land leaves the previous file intact and the caller keeps
+            // going, even when something occupies the temporary file's path.
+            runCatching {
+                val tmp = File(target.parentFile, target.name + ".tmp")
+                tmp.writeText(text)
+                // ATOMIC_MOVE replaces the target in one step: the old record is never truncated before the
+                // new one is complete, and a write that cannot land leaves the previous file untouched.
+                val moved = runCatching {
+                    java.nio.file.Files.move(
+                        tmp.toPath(), target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    )
+                }.isSuccess || tmp.renameTo(target)
+                if (!moved) Log.w("KairnStore", "could not replace ${target.name}; the previous file is intact")
+            }.onFailure { Log.w("KairnStore", "could not write ${target.name}", it) }
         }
     }
 }

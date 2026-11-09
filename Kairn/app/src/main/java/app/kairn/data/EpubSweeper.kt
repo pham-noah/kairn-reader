@@ -63,7 +63,9 @@ internal suspend fun findEpubs(
     found: MutableSet<String> = mutableSetOf(),
     onFound: suspend (File) -> Unit,
 ) {
-    if (depth > MAX_DEPTH || f.name.startsWith("Android")) return
+    // Exactly "Android": its contents are app-private and enormous. A folder that merely starts with the
+    // word - "Android Notes" - is the reader's own, and an EPUB in it must still be found.
+    if (depth > MAX_DEPTH || f.name == "Android") return
     if (f.isDirectory) {
         f.listFiles()?.forEach { findEpubs(it, depth + 1, found, onFound) }
     } else if (f.isFile && f.name.endsWith(".epub", ignoreCase = true)) {

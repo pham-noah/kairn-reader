@@ -21,9 +21,8 @@ import org.readium.r2.shared.publication.services.content.content
  * the chapter, and that is turned into a painted sentence - and, in page mode, a page turn, because a page
  * cannot scroll to follow a voice the way a scroll view can.
  *
- * It was 150 lines of policy inside the Activity, mixed with navigation, marks and the window. The Activity
- * still owns the two things that are its own: the sleep timer (it schedules a toast and a delay) and the
- * foreground service that keeps the process alive while the screen is off.
+ * The Activity keeps the two things that need it: the sleep timer and the foreground service that keeps the
+ * process alive while the screen is off.
  */
 internal class ReaderSpeech(
     private val context: Context,
@@ -57,6 +56,27 @@ internal class ReaderSpeech(
     private var lastSentence = -1
     private var followedPage = -1
     private var followAt = 0L
+
+    /**
+     * The current chapter's text, extracted ahead of the tap. Parsing a chapter through Readium's content
+     * model is the only part of "read aloud" that costs real milliseconds on a fat chapter, and it depends on
+     * the chapter alone - so it is paid once, when the chapter is opened, instead of on the tap.
+     */
+    @Volatile private var cachedHref: String? = null
+    @Volatile private var cachedText: String? = null
+
+    /** Extract [loc]'s chapter in the background so a tap on Read aloud is only a tap. */
+    fun preload(loc: Locator) = scope.launch {
+        val p = publication() ?: return@launch
+        val href = loc.href.toString()
+        if (href == cachedHref) return@launch
+        val at = SystemClock.elapsedRealtime()
+        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
+        if (text.isNullOrBlank()) return@launch
+        cachedText = text
+        cachedHref = href
+        Log.i("KairnPerf", "tts preload ${text.length} chars ${SystemClock.elapsedRealtime() - at}ms")
+    }
 
     fun toggle() {
         when {
@@ -108,7 +128,10 @@ internal class ReaderSpeech(
 
     private fun speak(loc: Locator) = scope.launch {
         val p = publication() ?: return@launch
-        val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
+        val at = SystemClock.elapsedRealtime()
+        val href = loc.href.toString()
+        val cached = if (href == cachedHref) cachedText else null
+        val text = cached ?: withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
         if (text.isNullOrBlank()) {
             ui.speech.on = false; ui.speech.starting = false
             toast(R.string.s_tts_chapter_failed)
@@ -116,9 +139,10 @@ internal class ReaderSpeech(
         }
         val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
         spokenText = text
-        spokenHref = loc.href.toString()
+        spokenHref = href
         lastSentence = -1
         followedPage = -1
+        Log.i("KairnPerf", "tts tap→speak ${SystemClock.elapsedRealtime() - at}ms ${if (cached != null) "cached" else "extracted"}")
         engine.speak(text.substring(from), ui.prefs.speechRate, from)
     }
 

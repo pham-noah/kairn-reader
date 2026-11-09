@@ -18,9 +18,8 @@ import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 
 /**
- * DS-04: a release body is Markdown, and the sheet used to print it as Markdown - `## Reading`, `- a page turn`
- * and the pipe table from the published notes, all literally. It is parsed into a handful of blocks here and
- * drawn with the app's own type, so the update reads like the rest of Kairn.
+ * DS-04: a release body is Markdown. It is parsed into a handful of blocks and drawn with the app's own type,
+ * so an update reads like the rest of Kairn.
  *
  * Deliberately small: headings, bullets, tables, paragraphs, and bold or code spans inside them. That is what
  * the release notes use; anything else falls through as a paragraph rather than turning into markup on screen.

@@ -82,9 +82,12 @@ class Backup(private val ctx: Context, private val store: Store) {
                             when {
                                 name.startsWith("data/books/") ->
                                     mergeBook(File(store.root, name.removePrefix("data/")), zip.getInputStream(e).use { it.readBytes() }, replace, store::writeFile)
-                                // The reading position lives in its own file; it is restored as written.
+                                // The reading position lives in its own file. A MERGE keeps the newer one: the
+                                // records above are merged by lastRead, so writing an old sidecar over a newer
+                                // one would put every book back where the backup left it.
                                 name.startsWith("data/pos/") ->
-                                    store.writeFile(File(store.root, name.removePrefix("data/")), String(zip.getInputStream(e).use { it.readBytes() }))
+                                    mergePositionJson(File(store.root, name.removePrefix("data/")),
+                                        String(zip.getInputStream(e).use { it.readBytes() }), replace, store::writeFile)
                                 // Merge keeps the settings on this phone; it only adopts the backup's when there
                                 // are none (a fresh install restoring onto an empty app).
                                 name == "data/settings.json" -> {
@@ -173,12 +176,34 @@ internal fun mergeBook(
 }
 
 /**
+ * Merges one position sidecar. [replace] and a sidecar that is not there take the archive as written; a merge
+ * keeps whichever side read more recently, the same rule [mergeBook] applies to the record itself.
+ * Top level so a JVM test can call it without a Context.
+ */
+internal fun mergePositionJson(
+    target: File,
+    archived: String,
+    replace: Boolean,
+    write: (File, String) -> Unit = { f, t -> Store.writeAtomic(f, t) },
+) {
+    if (replace || !target.exists()) { write(target, archived); return }
+    val theirs = runCatching { JSONObject(archived) }.getOrNull() ?: return      // unusable: keep ours
+    val mine = runCatching { JSONObject(target.readText()) }.getOrNull()
+    if (mine == null) { write(target, archived); return }                        // ours unusable: take theirs
+    if (theirs.optLong("lastRead", 0) > mine.optLong("lastRead", 0)) write(target, archived)
+}
+
+/**
  * Whether these zip entries look like one of our backups. This must be true before anything is deleted.
  *
- * Any "data/" entry is enough: a backup of an EMPTY library legitimately holds settings.json and no books.
+ * A backup of an EMPTY library legitimately holds settings.json and no books, so either is enough - but an
+ * entry that would be skipped on the way back in ("..", which no restore writes) must not count as one:
+ * otherwise an archive that restores nothing still validates, and a replace then prunes the whole library.
  */
 internal fun isKairnBackup(names: List<String>?): Boolean =
-    names != null && names.any { it.startsWith("data/") }
+    names != null &&
+        names.none { it.contains("..") } &&
+        names.any { it.startsWith("data/books/") || it == "data/settings.json" }
 
 /**
  * The entry names in a zip stream, or null when the stream cannot be read as a zip at all.

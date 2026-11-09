@@ -21,6 +21,11 @@ class WifiTransfer(
 ) {
     @Volatile private var server: ServerSocket? = null
     private var thread: Thread? = null
+    /** Wrong-address requests since the last good one; see [codeDelayMs]. */
+    private val wrongCodes = java.util.concurrent.atomic.AtomicInteger(0)
+    /** One worker per connection: a client that stalls must not hold up the next upload. */
+    private var pool: java.util.concurrent.ExecutorService? = null
+    private val live: MutableSet<Socket> = java.util.Collections.synchronizedSet(HashSet())
     /** The optional path code: every request has to carry it, so a stranger on the network cannot upload. */
     @Volatile private var code: String? = null
     var port: Int = 0
@@ -44,6 +49,9 @@ class WifiTransfer(
         this.code = code?.takeIf { it.isNotBlank() }
         server = bound
         port = bound.localPort
+        pool = java.util.concurrent.Executors.newCachedThreadPool { r ->
+            Thread(r, "kairn-wifi-conn").apply { isDaemon = true }
+        }
         thread = Thread({ acceptLoop(bound) }, "kairn-wifi").apply { isDaemon = true; start() }
         return true
     }
@@ -53,20 +61,49 @@ class WifiTransfer(
         server = null
         code = null
         runCatching { s.close() }
+        // A connection still open when the page closes must not keep reading: it is closed with the server.
+        synchronized(live) { live.toList() }.forEach { runCatching { it.close() } }
+        live.clear()
+        pool?.shutdownNow()
+        pool = null
         thread = null
     }
 
     private fun acceptLoop(s: ServerSocket) {
         while (!s.isClosed) {
             val client = runCatching { s.accept() }.getOrNull() ?: break
-            runCatching { client.soTimeout = SOCKET_TIMEOUT_MS; handle(client) }
-            runCatching { client.close() }
+            val exec = pool
+            if (exec == null) { runCatching { client.close() }; break }
+            // Bounded, so a flood of connections from one neighbour cannot spin up a thread per socket.
+            if (live.size >= MAX_CONNECTIONS) { runCatching { client.close() }; continue }
+            // One worker per connection: a client that connects and sends nothing must not hold the loop.
+            val submitted = runCatching {
+                exec.execute {
+                    live.add(client)
+                    try {
+                        client.soTimeout = SOCKET_TIMEOUT_MS
+                        handle(client)
+                    } catch (_: Throwable) {
+                        // A client that vanished mid-request costs its own connection and nothing else.
+                    } finally {
+                        live.remove(client)
+                        runCatching { client.close() }
+                    }
+                }
+            }.isSuccess
+            if (!submitted) runCatching { client.close() }
         }
     }
 
     private fun handle(client: Socket) {
         val input = BufferedInputStream(client.getInputStream())
-        val requestLine = readLine(input) ?: return
+        // A four-digit code is the whole lock, so a wrong request waits once a run of them has failed; a
+        // mistyped address costs nothing.
+        val failed = wrongCodes.get()
+        if (failed >= LOCKOUT_AFTER) runCatching { Thread.sleep(codeDelayMs(failed)) }
+        // A line that never ends (or a client that went away) is answered, not dropped: a browser shows
+        // "connection reset" with nothing to explain it otherwise.
+        val requestLine = readLine(input) ?: return respond(client, 400, TEXT, "Bad request")
         val parts = requestLine.split(' ')
         if (parts.size < 2) return respond(client, 400, TEXT, "Bad request")
         val method = parts[0]
@@ -74,7 +111,7 @@ class WifiTransfer(
 
         val headers = HashMap<String, String>()
         while (true) {
-            val line = readLine(input) ?: break
+            val line = readLine(input) ?: return respond(client, 400, TEXT, "Bad request")
             if (line.isEmpty()) break
             val colon = line.indexOf(':')
             if (colon > 0) headers[line.substring(0, colon).trim().lowercase(Locale.US)] = line.substring(colon + 1).trim()
@@ -82,14 +119,22 @@ class WifiTransfer(
 
         val path = target.substringBefore('?')
         when {
-            method == "GET" && (path == "$prefix/" || path == prefix || (prefix.isEmpty() && path == "/")) ->
+            method == "GET" && (path == "$prefix/" || path == prefix || (prefix.isEmpty() && path == "/")) -> {
+                wrongCodes.set(0)                        // the right address: a clean slate
                 respond(client, 200, HTML, PAGE)
+            }
             method == "POST" && path == "$prefix/upload" -> receive(client, input, headers, target)
-            else -> respond(client, 404, TEXT, "Not found")
+            else -> {
+                if (code != null && countsAsGuess(path)) wrongCodes.incrementAndGet()
+                respond(client, 404, TEXT, "Not found")
+            }
         }
     }
 
     /** Writes exactly Content-Length bytes to the destination folder, then reports the file. */
+    // usableSpace is the deliberately conservative side of the guess: this is a guard against filling the
+    // phone, not an allocator, and the write itself still fails safely (500, partial file deleted).
+    @android.annotation.SuppressLint("UsableSpace")
     private fun receive(client: Socket, input: InputStream, headers: Map<String, String>, target: String) {
         val length = headers["content-length"]?.toLongOrNull() ?: return respond(client, 411, TEXT, "Length required")
         if (length <= 0 || length > MAX_BYTES) return respond(client, 413, TEXT, "That file is too large")
@@ -97,6 +142,10 @@ class WifiTransfer(
             ?: return respond(client, 400, TEXT, "Only .epub files are accepted")
 
         dir.mkdirs()
+        // Filling the phone is the one way an upload can damage the app: refuse before writing rather than
+        // leaving every later write (records, positions) to fail on a full disk.
+        val free = dir.usableSpace
+        if (free in 1 until length + MIN_FREE_BYTES) return respond(client, 507, TEXT, "Not enough space on the phone")
         val dest = uniqueFile(dir, name)
         val ok = runCatching {
             dest.outputStream().use { out -> copyExactly(input, out, length) }
@@ -106,6 +155,7 @@ class WifiTransfer(
             runCatching { dest.delete() }
             return respond(client, 500, TEXT, "The transfer failed")
         }
+        wrongCodes.set(0)
         onFile(dest, dest.name)
         respond(client, 200, TEXT, "ok")
     }
@@ -147,6 +197,25 @@ class WifiTransfer(
     companion object {
         const val DEFAULT_PORT = 8765
         private const val SOCKET_TIMEOUT_MS = 20_000
+        /** Wrong codes tolerated before each further one is made to wait. */
+        private const val LOCKOUT_AFTER = 20
+        /** Free space kept on the phone after an upload, so the app's own writes still have room. */
+        private const val MIN_FREE_BYTES = 64L * 1024 * 1024
+
+        /**
+         * Whether a wrong address is a guess at the code: a four-digit first segment. The browser's own
+         * requests (/favicon.ico, /robots.txt) are wrong addresses too, and must not trip the throttle.
+         */
+        internal fun countsAsGuess(path: String): Boolean = Regex("^/\\d{4}(/|$)").matches(path)
+
+        /**
+         * How long a wrong request is made to wait, so a four-digit code cannot be walked through in a minute.
+         * Zero for the first [LOCKOUT_AFTER] attempts: a reader who mistypes the address is not punished.
+         */
+        internal fun codeDelayMs(failures: Int): Long =
+            if (failures < LOCKOUT_AFTER) 0L else minOf(2_000L, 100L * (failures - LOCKOUT_AFTER + 1))
+        /** Concurrent connections. A phone serves one browser; this is slack for parallel uploads, not a limit to hit. */
+        private const val MAX_CONNECTIONS = 16
         private const val MAX_BYTES = 512L * 1024 * 1024
         private const val TEXT = "text/plain; charset=utf-8"
         private const val HTML = "text/html; charset=utf-8"
@@ -195,6 +264,7 @@ class WifiTransfer(
         private fun statusText(code: Int) = when (code) {
             200 -> "OK"; 204 -> "No Content"; 400 -> "Bad Request"; 404 -> "Not Found"
             411 -> "Length Required"; 413 -> "Payload Too Large"; 500 -> "Internal Server Error"
+            507 -> "Insufficient Storage"
             else -> "Error"
         }
 

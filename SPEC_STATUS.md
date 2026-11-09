@@ -490,6 +490,42 @@ Seven items from the audit, each with a test:
 Tests: 86 JVM, 36 on device, lint 0 errors. The tap-zone test used a fixed 3 s sleep and raced the cold start
 after the SDK bump; it now polls for the saved page turn.
 
+## 0.9.6 — released 2026-11-09
+
+Version 23, asset `Kairn-0.9.6.apk`. A hardening release: fifteen defects found by attacking the app rather
+than by using it, all closed, no feature added and no screen changed.
+
+Position merge: `mergeBook` compared records by `lastRead` but `Backup.restore` wrote every `data/pos/` sidecar
+over the live one unconditionally, so a merge rollback every book to the backup's page. `mergePositionJson`
+applies the same rule to the sidecar (newer `lastRead` wins; `replace` still takes the archive).
+
+Wi-Fi transfer: the accept loop serviced one connection at a time with a 20 s socket timeout, so one idle
+socket (a browser preconnect will do) stalled every upload - measured 19 695 ms before, 307 ms after. One
+worker per connection now, capped at 16, with live sockets closed by `stop()`. A request or header line over
+8 KB is answered 400 instead of dropped. The four-digit code throttles after 20 wrong attempts
+(`codeDelayMs`: 100 ms per further attempt, cap 2 s; only four-digit paths count, so `/favicon.ico` cannot
+trip it), and an upload that would leave under 64 MB free is refused with 507.
+
+Records and archives: a record id is a file name, and `"../../escaped"` wrote and deleted outside `files/data/`.
+`Book.isSafeId` (`[A-Za-z0-9_-]{1,64}`) is enforced in `Book.from`, `Store.put` and `Store.remove`. An archive
+now validates only when it holds `data/books/…` or `data/settings.json` and no entry containing `..`; previously
+a traversal-only archive validated, restored nothing, and the replace branch pruned the library.
+
+Reader: `minutesLeft*` returns null for `wpm <= 0` (0 divided by zero inside composition) and `readingWpm` is
+clamped 60..1200 on read. `chapterTitles` walks iteratively with a 64-level cap - a 20 000-deep nav was a
+`StackOverflowError`. `ReaderPrefs.from` clamps fontScale/lineHeight/paragraphSpacing/margins/warmth/brightness/
+scrollSpeed/speechRate to the sliders' ranges. `Clippings.matches` needs 4+ characters for a containment match,
+so "It" no longer claims Little Women, The Hobbit and White Teeth.
+
+Elsewhere: `Update.semver` is bounded to whole 6-digit parts inside `runCatching`, `downloadFileName` keeps a
+release tag from choosing a path, `Store.writeAtomic` never throws (a directory at the `.tmp` path failed a
+whole restore), and the device sweep skips exactly `Android` rather than every name starting with it.
+
+Verified: **195 JVM tests** (13 of them Robolectric compositions of the library, settings, add books and the
+reader), lint 11 warnings all of them dependency-version notices, `assembleDebug` and `assembleRelease` build,
+the APK carries no test framework, same CN=Kairn certificate as 0.9.5. Not verified: no book opened on a
+device for this release; the reader's rendering path is unchanged.
+
 ## 0.9.5 — released 2026-11-04
 
 Version 22, asset `Kairn-0.9.5.apk` 6,325,512 bytes, md5 `315e98bd…`. The two places in the bar are no longer

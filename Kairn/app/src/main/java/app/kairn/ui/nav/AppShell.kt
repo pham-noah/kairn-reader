@@ -181,8 +181,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                         null -> AnimatedContent(
                             targetState = tab,
                             transitionSpec = {
-                                // A tenth of the width and 85 ms: a change of tab, not a page turn. Twice the
-                                // speed it shipped at - the old one was felt as a wait before the screen arrived.
+                                // A tenth of the width and 85 ms: a change of tab, not a page turn.
                                 val shift = if (targetState.ordinal > initialState.ordinal) 1 else -1
                                 (slideInHorizontally(tween(85)) { w -> shift * w / 10 } + fadeIn(tween(70)))
                                     .togetherWith(slideOutHorizontally(tween(85)) { w -> -shift * w / 10 } + fadeOut(tween(60)))

@@ -36,8 +36,8 @@ android {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
         targetSdk = 36
-        versionCode = 22
-        versionName = "0.9.5"
+        versionCode = 23
+        versionName = "0.9.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -65,6 +65,13 @@ android {
         isCoreLibraryDesugaringEnabled = true   // required by Readium
     }
     kotlinOptions { jvmTarget = "17" }
+    // The JVM tests may reach a Log call on a failure path (a refused record id, a write that could not
+    // land). Stubs return zero instead of throwing, so those paths are testable without a device.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        // Robolectric needs the merged resources and manifest to inflate a theme and resolve strings.
+        unitTests.isIncludeAndroidResources = true
+    }
     buildFeatures { compose = true }
     composeCompiler {
         // Emits build/compose_compiler/*-composables.txt & *-classes.txt, which state per-composable
@@ -134,6 +141,12 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")   // org.json on the JVM, for data-layer tests
+    // The UI is drawn once on the JVM as well: Robolectric + Compose runs a real composition without a
+    // device, so a screen that throws while laying out is caught by ./gradlew test.
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test:core-ktx:1.7.0")
 
     // Ships a Baseline Profile: a list of the hot code paths on first launch, AOT-compiled at install,
     // so the Compose startup + first frame do not have to be JIT-warmed on the user's phone. The profile

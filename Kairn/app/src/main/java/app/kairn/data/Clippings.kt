@@ -58,14 +58,23 @@ object Clippings {
     /** Lowercase letters and digits only, so punctuation and spacing cannot stop a match. */
     fun normalise(s: String): String = s.lowercase().filter { it.isLetterOrDigit() }
 
-    /** Whether a clipping belongs to [book]. A missing author on either side is not a reason to reject. */
+    /**
+     * Whether a clipping belongs to [book]. A missing author on either side is not a reason to reject.
+     *
+     * Containment needs a title long enough to mean something: normalised, "It" sits inside "littlewomen"
+     * and "thehobbit", so a two-letter title would claim unrelated clippings.
+     */
     fun matches(c: Clipping, book: Book): Boolean {
         val ct = normalise(c.title)
         val bt = normalise(book.title)
         if (ct.isEmpty() || bt.isEmpty()) return false
-        if (!(ct == bt || ct.contains(bt) || bt.contains(ct))) return false
+        val same = ct == bt || (minOf(ct.length, bt.length) >= MIN_CONTAINED && (ct.contains(bt) || bt.contains(ct)))
+        if (!same) return false
         return authorMatches(c.author, book.author)
     }
+
+    /** The shortest normalised title allowed to match as a substring of another. */
+    private const val MIN_CONTAINED = 4
 
     private fun tokens(author: String): List<String> =
         author.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 3 }

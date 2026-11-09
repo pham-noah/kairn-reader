@@ -161,8 +161,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             openBook(late)
         }
         // Bind text-to-speech while the book is already open: the engine's cold bind is seconds long, and
-        // paying for it inside the tap is what made "Read aloud" read as a dead button.
-        lifecycleScope.launch { delay(1200); speech.warm() }
+        // paying for it inside the tap is what made "Read aloud" read as a dead button. Started after the
+        // first layout pass so the bind overlaps the page load rather than competing with it - a delay
+        // measured from onCreate left the whole of a quick "open, tap Read aloud" inside the bind.
+        window.decorView.post { speech.warm() }
     }
 
     /** The parts of the reader that come straight from the stored record. */
@@ -287,6 +289,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 if (loc.href.toString() != ui.chapterHref) {
                     ui.chapterHref = loc.href.toString()
                     loadChapterWords(loc)
+                    speech.preload(loc)                 // extract the chapter now, not inside the first tap
                     if (ui.speech.on && !ui.speech.starting) speech.speakFrom(loc)   // follow the reader into the next chapter
                 }
                 if (ui.jumpBack?.href == loc.href && ui.jumpBack?.locations?.progression == loc.locations.progression) ui.jumpBack = null

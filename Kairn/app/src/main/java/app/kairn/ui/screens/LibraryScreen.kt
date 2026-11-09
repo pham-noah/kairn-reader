@@ -347,8 +347,8 @@ fun LibraryScreen(
         if (recent.isNotEmpty() && !filtering) ContinueShelf(recent, store, onOpen)
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 10.dp, start = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(pluralStringResource(R.plurals.books_count, shown.size, shown.size), style = KType.small)
-            // A Box stacks its children, so the reverse arrow must be a SIBLING of the menu anchor: inside
-            // the Box it was drawn on top of the sort label ("Recently read").
+            // A Box stacks its children: the reverse arrow is a sibling of the menu anchor, not inside it,
+            // or it would overlay the sort label.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box {
                     Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {

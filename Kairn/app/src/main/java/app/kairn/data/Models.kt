@@ -70,25 +70,32 @@ data class ReaderPrefs(
         .put("speechRate", speechRate.toDouble())
 
     companion object {
+        /** A value from disk, clamped to what the sliders can produce. A hand-edited or foreign record must not
+         * be able to hand the renderer a 10,000% font size (which draws nothing) or a negative line height. */
+        private fun clamped(o: JSONObject, key: String, base: Double, lo: Double, hi: Double): Double {
+            val v = o.optDouble(key, base)
+            return if (v.isNaN() || v.isInfinite()) base else v.coerceIn(lo, hi)
+        }
+
         fun from(o: JSONObject?, base: ReaderPrefs = ReaderPrefs()): ReaderPrefs {
             if (o == null) return base
             return ReaderPrefs(
                 theme = runCatching { ThemeId.valueOf(o.getString("theme")) }.getOrDefault(base.theme),
-                fontScale = o.optDouble("fontScale", base.fontScale),
-                lineHeight = o.optDouble("lineHeight", base.lineHeight),
-                paragraphSpacing = o.optDouble("paragraphSpacing", base.paragraphSpacing),
-                margins = o.optDouble("margins", base.margins),
+                fontScale = clamped(o, "fontScale", base.fontScale, 0.7, 2.5),
+                lineHeight = clamped(o, "lineHeight", base.lineHeight, 1.0, 2.2),
+                paragraphSpacing = clamped(o, "paragraphSpacing", base.paragraphSpacing, 0.0, 2.0),
+                margins = clamped(o, "margins", base.margins, 0.5, 2.5),
                 justify = o.optBoolean("justify", base.justify),
                 hyphens = o.optBoolean("hyphens", base.hyphens),
                 vertical = o.optBoolean("vertical", base.vertical),
                 twoPage = o.optBoolean("twoPage", base.twoPage),
                 scroll = o.optBoolean("scroll", base.scroll),
-                warmth = o.optDouble("warmth", base.warmth.toDouble()).toFloat(),
-                brightness = o.optDouble("brightness", base.brightness.toDouble()).toFloat(),
+                warmth = clamped(o, "warmth", base.warmth.toDouble(), 0.0, 1.0).toFloat(),
+                brightness = clamped(o, "brightness", base.brightness.toDouble(), -1.0, 1.0).toFloat(),
                 pageColor = o.optInt("pageColor", 0).takeIf { it != 0 } ?: base.pageColor,
                 inkColor = o.optInt("inkColor", 0).takeIf { it != 0 } ?: base.inkColor,
-                scrollSpeed = o.optDouble("scrollSpeed", base.scrollSpeed.toDouble()).toFloat(),
-                speechRate = o.optDouble("speechRate", base.speechRate.toDouble()).toFloat(),
+                scrollSpeed = clamped(o, "scrollSpeed", base.scrollSpeed.toDouble(), 20.0, 200.0).toFloat(),
+                speechRate = clamped(o, "speechRate", base.speechRate.toDouble(), 0.6, 2.0).toFloat(),
                 fontFamily = if (o.has("fontFamily") && !o.isNull("fontFamily"))
                     o.optString("fontFamily").ifEmpty { null } else base.fontFamily,
             )
@@ -131,6 +138,14 @@ data class Book(
         .put("prefs", prefs?.toJson() ?: JSONObject.NULL)
 
     companion object {
+        /**
+         * Whether [id] can be a file name. An id becomes `books/<id>.json`, `pos/<id>.json`, a cover and a
+         * thumbnail, so a restored record carrying "../.." in it would write and delete outside the data
+         * folder. Ids are content hashes; anything else is not one of ours.
+         */
+        internal fun isSafeId(id: String): Boolean =
+            id.length in 1..64 && id.all { (it in 'a'..'z') || (it in 'A'..'Z') || (it in '0'..'9') || it == '-' || it == '_' }
+
         // optString, not getString: one null or a number in tags must not cost the whole record.
         private fun strings(a: JSONArray?) = List(a?.length() ?: 0) { a!!.optString(it) }.filter { it.isNotBlank() }
 
@@ -139,7 +154,7 @@ data class Book(
          * leniently and a single malformed mark is skipped rather than failing the book.
          */
         fun from(o: JSONObject): Book? {
-            val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
+            val id = o.optString("id").takeIf { isSafeId(it) } ?: return null
             val uri = o.optString("uri").takeIf { it.isNotBlank() } ?: return null
             return Book(
             id = id, title = o.optString("title").ifBlank { "Untitled" }, author = o.optString("author"),
@@ -265,7 +280,7 @@ data class AppSettings(
                 } ?: emptyList(),
                 lastBackup = o.optLong("lastBackup", 0),
                 lastNudge = o.optLong("lastNudge", 0),
-                readingWpm = o.optInt("readingWpm", 240),
+                readingWpm = o.optInt("readingWpm", 240).coerceIn(60, 1200),   // a 0 from a hand-edited file must not divide by zero
                 lastBackupName = o.optString("lastBackupName"),
                 checkUpdates = o.optBoolean("checkUpdates", d.checkUpdates),
                 lastUpdateCheck = o.optLong("lastUpdateCheck", 0),

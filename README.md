@@ -54,7 +54,7 @@ The address carries a four-digit code, and nothing else on the network can reach
 ## Notes, highlights, backup
 
 Six highlight colours, notes typed on a selection and edited later, one bookmark per chapter, a per-book list
-to jump from, an undo on every delete, Markdown export. Kindle highlights come in from the Kindle's own
+to jump from, an undo on a deleted highlight, note or bookmark, Markdown export. Kindle highlights come in from the Kindle's own
 `My Clippings.txt`, placed by finding each quote in the book. A reading record keeps minutes per day, a streak
 and the finished count - in `stats.json`, on the phone. Backup is one zip, optionally with the book files
 inside; restore merges or replaces. Point Settings at a folder once and a backup lands there every few days
@@ -99,8 +99,8 @@ JDK 17+ and the Android SDK; `local.properties` needs `sdk.dir`. The Gradle wrap
 builds against SDK 36 (Android 16) with AGP 8.11 and Kotlin 2.1.
 
     ./gradlew :app:assembleDebug
-    ./gradlew :app:testDebugUnitTest          # 116 JVM tests, no device needed
-    ./gradlew :app:connectedDebugAndroidTest  # 49 on-device tests, needs a phone or emulator
+    ./gradlew :app:testDebugUnitTest          # 195 JVM tests, no device needed
+    ./gradlew :app:connectedDebugAndroidTest  # 60 on-device tests, needs a phone or emulator
     ./gradlew :app:lintDebug
     ./gradlew :app:assembleRelease            # signed with the release key when one is present
     python3 tools/check_translations.py       # key parity, format arguments, plural categories

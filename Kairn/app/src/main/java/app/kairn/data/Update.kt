@@ -81,15 +81,30 @@ object Update {
 
     /** "0.8.0" against "0.7.5": numeric on the first three parts, non-numeric parts ignored. */
     fun isNewer(candidate: String, current: String): Boolean {
+        // The tag is remote text: a release named "9.9.99999999999999999" must read as "not newer", not
+        // throw a NumberFormatException out of the check.
         val a = semver(candidate) ?: return false
         val b = semver(current) ?: return false
         for (i in 0..2) if (a[i] != b[i]) return a[i] > b[i]
         return false
     }
 
-    private fun semver(text: String): IntArray? {
-        val m = Regex("(\\d+)\\.(\\d+)\\.(\\d+)").find(text) ?: return null
-        return intArrayOf(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt())
+    private fun semver(text: String): IntArray? = runCatching {
+        // Whole numeric parts only: a 17-digit run must not be read as its first six digits.
+        val m = Regex("(?<!\\d)(\\d{1,6})\\.(\\d{1,6})\\.(\\d{1,6})(?!\\d)").find(text) ?: return@runCatching null
+        intArrayOf(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt())
+    }.getOrNull()
+
+    /**
+     * A release tag turned into a cache file name. The tag is remote text: "0.9.5" stays, and a tag carrying
+     * a path ("../../x") is reduced to letters, digits, dots and dashes - a download must land in its folder.
+     */
+    internal fun downloadFileName(version: String): String {
+        val safe = version
+            .filter { it.isLetterOrDigit() || it == '.' || it == '-' || it == '_' }
+            .take(40)
+            .trim('.', '-', '_')
+        return "kairn-" + safe.ifEmpty { "update" } + ".apk"
     }
 
     /**
@@ -102,7 +117,7 @@ object Update {
         onProgress: (Float) -> Unit = {},
     ): java.io.File? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val dir = java.io.File(ctx.cacheDir, "updates").apply { mkdirs() }
-        val target = java.io.File(dir, "kairn-${r.version}.apk")
+        val target = java.io.File(dir, downloadFileName(r.version))
         runCatching {
             val c = java.net.URL(r.url).openConnection() as java.net.HttpURLConnection
             c.connectTimeout = 15000

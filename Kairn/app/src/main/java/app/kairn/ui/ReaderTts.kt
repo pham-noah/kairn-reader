@@ -104,6 +104,7 @@ internal class ReaderTts(
      */
     private fun chooseVoice() {
         val e = engine ?: return
+        val at = SystemClock.elapsedRealtime()
         val sys = Locale.getDefault()
         val best = runCatching {
             e.voices?.filter { it.locale.language == sys.language }
@@ -111,7 +112,7 @@ internal class ReaderTts(
                 ?.firstOrNull()
         }.getOrNull()
         if (best != null) runCatching { e.voice = best }
-        Log.i("KairnPerf", "tts voice ${best?.name ?: "engine default"} ${best?.locale ?: ""}")
+        Log.i("KairnPerf", "tts voice ${best?.name ?: "engine default"} ${best?.locale ?: ""} picked in ${SystemClock.elapsedRealtime() - at}ms")
     }
 
     /** [base] is where [text] sits in the chapter, so a spoken word maps back onto the page. */

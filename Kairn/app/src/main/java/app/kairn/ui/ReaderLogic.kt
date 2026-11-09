@@ -31,22 +31,26 @@ object ReaderLogic {
      */
     fun chapterTitles(toc: List<TocNode>, readingOrder: List<TocNode>): Map<String, String> {
         val map = HashMap<String, String>()
-        fun walk(ls: List<TocNode>) {
-            ls.forEach { l ->
-                l.title?.takeIf { it.isNotBlank() }?.let { title ->
-                    val href = l.href.toString()
-                    map[href] = title
-                    map[href.substringAfterLast('/')] = title
-                }
-                walk(l.children)
+        // Iterative and bounded: a table of contents from an untrusted file can nest deeper than the JVM stack.
+        val stack = ArrayDeque<Pair<TocNode, Int>>()
+        toc.asReversed().forEach { stack.addLast(it to 1) }
+        while (stack.isNotEmpty()) {
+            val (l, depth) = stack.removeLast()
+            l.title?.takeIf { it.isNotBlank() }?.let { title ->
+                val href = l.href.toString()
+                map[href] = title
+                map[href.substringAfterLast('/')] = title
             }
+            if (depth < MAX_TOC_DEPTH) l.children.asReversed().forEach { stack.addLast(it to depth + 1) }
         }
-        walk(toc)
         readingOrder.forEach { l ->
             l.title?.takeIf { it.isNotBlank() }?.let { map.putIfAbsent(l.href.toString(), it) }
         }
         return map
     }
+
+    /** A real contents list is a handful of levels; this is only a wall for a crafted one. */
+    private const val MAX_TOC_DEPTH = 64
 
     /** The reading speed behind the time-left estimate. */
     const val WPM = 240
@@ -87,7 +91,7 @@ object ReaderLogic {
      */
     fun minutesLeft(pace: Pace, totalPositions: Int, bookProgression: Float, wpm: Int = WPM): Int? {
         val perPosition = pace.wordsPerPosition ?: return null
-        if (totalPositions <= 0) return null
+        if (totalPositions <= 0 || wpm <= 0) return null
         val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * totalPositions * perPosition).toInt()
         return remaining / wpm
     }
@@ -97,7 +101,7 @@ object ReaderLogic {
      * No ratio, no extrapolation: remaining words are the book's words times what is left of it.
      */
     fun minutesLeftInBook(bookWords: Int, bookProgression: Float, wpm: Int = WPM): Int? {
-        if (bookWords <= 0) return null
+        if (bookWords <= 0 || wpm <= 0) return null
         val remaining = ((1f - bookProgression.coerceIn(0f, 1f)) * bookWords).toInt()
         return remaining / wpm
     }
@@ -107,7 +111,7 @@ object ReaderLogic {
 
     /** Minutes left in the chapter on screen: its own word count, times what is left of it. */
     fun minutesLeftInChapter(chapterWords: Int, chapterProgression: Float, wpm: Int = WPM): Int? {
-        if (chapterWords <= 0) return null
+        if (chapterWords <= 0 || wpm <= 0) return null
         val remaining = ((1f - chapterProgression.coerceIn(0f, 1f)) * chapterWords).toInt()
         return remaining / wpm
     }
