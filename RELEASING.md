@@ -15,8 +15,7 @@ renamed `Kairn <version>`. Nothing fast-forwards between them, so the released t
 3. Annotated tag in the development repo, pushed.
 4. Replay the tree into `kairn-reader`, commit as `Kairn X.Y.Z`, tag, push.
 5. Release from the tag, asset named `Kairn-X.Y.Z.apk`; download it back and compare hashes.
-6. Install it over the previous release once, on a device.
-7. Bump `fdroid/app.kairn.yml` if F-Droid is in play.
+6. Bump `fdroid/app.kairn.yml` if F-Droid is in play.
 
 ## 1. Version and words
 
@@ -91,19 +90,12 @@ read badly on the page and leave the updater matching by pattern instead of by n
 
 If the numbers differ, the upload is wrong, whatever the page says.
 
-## 6. The one step no build proves
-
-Install the published APK over the previous release on a phone. If it installs in place, the key still
-matches and the library, places and settings survive; if Android demands an uninstall, the key changed or the
-APK was signed with another one. This is a one-minute check that has already caught a whole release cycle's
-worth of pain (0.8.0/0.8.1 were debug-signed, and every update cost a rescan).
-
-## 7. F-Droid
+## 6. F-Droid
 
 `fdroid/app.kairn.yml` is a draft, not a submission: MR !52993 was closed on 2026-10-19 against v0.3.0. To
 resubmit:
 
-- bump `versionCode`, `version` and `commit` in the recipe together — it currently pins 0.8.5 / 15 and drifts
+- bump `versionCode`, `version` and `commit` in the recipe together — it currently pins 0.9.6 / 23 and drifts
   by one release every time this is forgotten;
 - keep `self_update` false for the store build (`res/values/bools.xml` is the gate; the recipe sets it in a
   `prebuild` sed). F-Droid forbids an app that updates itself, and a store build that offers to is rejected;
