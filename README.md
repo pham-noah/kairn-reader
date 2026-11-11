@@ -110,7 +110,7 @@ outside this repo), pointed at with `KAIRN_KEYSTORE_PROPS`; without one it fails
 passed, which is what CI and F-Droid build with. That key is not in the repo and must not be lost: only it
 can install over an existing install.
 
-[SPEC_STATUS.md](SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0 API traps, the performance work,
+[docs/SPEC_STATUS.md](docs/SPEC_STATUS.md) holds the engineering detail: Readium 3.0.0 API traps, the performance work,
 and which spec item maps to what.
 
 ## What is next

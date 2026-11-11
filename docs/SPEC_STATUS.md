@@ -1,6 +1,6 @@
 # Kairn — implementation status and engineering notes
 
-The product description lives in [README.md](README.md). This file is the technical side: what is built
+The product description lives in [README.md](../README.md). This file is the technical side: what is built
 against which spec item, what is not, and the things that will bite anyone touching the code.
 
 ## What is built, by spec ID
@@ -56,7 +56,7 @@ v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
 
 A Kindle "Location 631-633" points into a Kindle rendering of the file and means nothing inside the EPUB -
 Readium would put the highlight on whatever text happens to sit at that progression, which for a different
-edition is a different paragraph. So [ClippingImport](Kairn/app/src/main/java/app/kairn/data/ClippingImport.kt)
+edition is a different paragraph. So [ClippingImport](../Kairn/app/src/main/java/app/kairn/data/ClippingImport.kt)
 runs the reader's own `Publication.search()` per clipping, longest query first (60 chars, then 30, then 15),
 and the first hit's locator becomes the mark's locator. A quote that is not found is counted and NOT placed:
 an imported highlight on the wrong page is worse than one that did not arrive.
@@ -429,22 +429,22 @@ installs in place over 0.8.2 and keeps filesDir. compileSdk/targetSdk 36, AGP 8.
 
 What changed, and where the sharp edges are:
 
-- **Read aloud with the screen off.** [SpeechService](Kairn/app/src/main/java/app/kairn/ui/SpeechService.kt) is a
+- **Read aloud with the screen off.** [SpeechService](../Kairn/app/src/main/java/app/kairn/ui/SpeechService.kt) is a
   `mediaPlayback` foreground service with a Stop action. `ReaderActivity.onPause` starts it while reading and
   stops it otherwise; `stopTts` and `onDestroy` stop it too. The service owns no audio - the voice, the page
   follow and the sleep timer all stay in the reader's process, which is exactly why the process needs holding.
   Asserted on device by `SpeechServiceDeviceTest`: backgrounding the reader while it reads leaves the service
   running, and stopping the voice ends it.
-- **Automatic backup.** [AutoBackup](Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
+- **Automatic backup.** [AutoBackup](../Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
   `autoBackupDays` into the SAF tree chosen in Settings, pruning its own `PREFIX` files to `autoBackupKeep`.
   Silent on failure by design. It was not exercised end to end at release time (a SAF tree cannot be granted
   from adb); it has been since - see "Test counts, and the two hops that were unproven".
-- **Search cache.** [SearchIndex](Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
+- **Search cache.** [SearchIndex](../Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
   per book under `filesDir/search/`, keyed by the book file's size and mtime. Two traps it hit: `DocumentFile`
   cannot stat a `file://` book (stat the copy directly), and `Link.href` is an `Href` wrapper while `Locator`
   wants a `Url`, whose `String` constructor is deprecated to ERROR level (use the `Url(String)` factory).
   Covered by `SearchIndexDeviceTest`.
-- **Positions cache.** [PositionsCache](Kairn/app/src/main/java/app/kairn/data/PositionsCache.kt) stores the
+- **Positions cache.** [PositionsCache](../Kairn/app/src/main/java/app/kairn/data/PositionsCache.kt) stores the
   locator list `positions()` returns, one gzipped file per book under `filesDir/positions/`, valid against the
   same size+mtime stamp and a `FORMAT` constant that a pagination change bumps. Storing locators (rather than
   just counts) is what makes it worth it: the progress slider navigates with the restored `Locator` objects,
