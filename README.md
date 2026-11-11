@@ -8,6 +8,8 @@ folder, or let it find the EPUBs already on your device.
 ![Library](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/01-library.png)
 ![Reading](https://raw.githubusercontent.com/pham-noah/kairn-reader/main/fastlane/metadata/android/en-US/images/phoneScreenshots/02-reader.png)
 
+[Discord](https://discord.gg/tz42eZyNtD) — questions, bug reports and release news.
+
 ## Why it is built this way
 
 - **Nothing phones home.** No analytics, no crash reporting, no accounts.
