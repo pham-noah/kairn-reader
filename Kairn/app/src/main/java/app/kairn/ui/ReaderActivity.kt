@@ -152,12 +152,18 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         val book = app.store.get(bookId)
         if (book != null) {
             applyBook(book)
-            lifecycleScope.launch { openBook(book) }
+            lifecycleScope.launch {
+                // The book's own cast, read off the main thread: every speak and the sheet read this state,
+                // never the disk. It lands long before a finger can reach Read aloud.
+                ui.speech.cast = withContext(Dispatchers.IO) { app.store.loadCast(bookId) }
+                openBook(book)
+            }
         } else lifecycleScope.launch {
             // A cold "Open with" can arrive before the first library read finishes: wait, then retry.
             app.store.awaitLoaded()
             val late = app.store.get(bookId) ?: return@launch finish()
             applyBook(late)
+            ui.speech.cast = withContext(Dispatchers.IO) { app.store.loadCast(bookId) }
             openBook(late)
         }
         // Bind text-to-speech while the book is already open: the engine's cold bind is seconds long, and
@@ -662,10 +668,26 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             toast = { res -> Toast.makeText(this, getString(res), Toast.LENGTH_LONG).show() },
             endOfChapterTimer = { if (ui.speech.sleepChoice < 0) { endSleep(); true } else false },
             cancelSleepTimer = { sleepJob?.cancel(); sleepJob = null; ui.speech.sleepChoice = 0 },
+            cast = { ui.speech.cast },
+            onSpeakers = { names -> ui.speech.castSpeakers = names },
         )
     }
 
     override fun toggleTts() = speech.toggle()
+
+    // The cast is this book's, saved beside its position. A change is heard at once if it is speaking.
+    override fun setCastEnabled(on: Boolean) {
+        ui.speech.cast = ui.speech.cast.copy(enabled = on)
+        app.store.saveCast(bookId, ui.speech.cast)
+        speech.setCast()
+        Log.i("KairnPerf", "tts cast ${if (on) "on" else "off"} for ${ui.speech.castSpeakers.size} speakers")
+    }
+
+    override fun setCastVoice(speaker: String, slot: Int) {
+        ui.speech.cast = ui.speech.cast.withVoice(speaker, slot)
+        app.store.saveCast(bookId, ui.speech.cast)
+        speech.setCast()
+    }
 
     override fun stopTts() = speech.stop()
 

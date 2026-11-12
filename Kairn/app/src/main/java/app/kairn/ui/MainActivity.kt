@@ -4,6 +4,7 @@ import android.content.Intent
 import android.util.Log
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var thumbsBackfilled = false
+    private var metaBackfilled = false
 
     // L-01: at boot nothing should compete with the first frames: wait for the library read, let the
     override fun onResume() {
@@ -56,6 +58,16 @@ class MainActivity : AppCompatActivity() {
             delay(1_200)
             app.library.scan(force = false)
             if (!thumbsBackfilled) { thumbsBackfilled = true; app.library.backfillThumbs() }
+            // Records imported before 1.0 have no series or description: one bounded pass per launch fills
+            // them in, after the grid is already drawn.
+            if (!metaBackfilled) {
+                metaBackfilled = true
+                val at = SystemClock.elapsedRealtime()
+                val n = app.library.backfillMeta { done, total ->
+                    if (done == total) Log.i("KairnPerf", "meta backfilled $done/$total in ${SystemClock.elapsedRealtime() - at}ms")
+                }
+                if (n > 0) Log.i("KairnPerf", "meta backfilled n=$n")
+            }
             // After the scan, never before it: a scheduled backup should contain the library as it is now.
             if (app.autoBackup.runIfDue()) Log.i("KairnPerf", "auto backup written")
         }

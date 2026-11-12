@@ -150,41 +150,67 @@ object ReaderLogic {
         return (end + 1).coerceIn(0, text.length - 1)
     }
 
-    /** A chunk to speak, and where it starts in the chapter text, so a spoken word maps back to it. */
-    data class TtsPiece(val start: Int, val text: String)
+    /**
+     * A chunk to speak, and where it starts in the chapter text, so a spoken word maps back to it.
+     * [speaker] is "" for the narrator and a name for a quoted line; a chunk never mixes two speakers.
+     */
+    data class TtsPiece(val start: Int, val text: String, val speaker: String = "")
 
     private val sentenceEnd = Regex("[.!?\\u2026][\"')\\]]*\\s+|\\n{1,}")
 
-    /** Like [ttsChunks], but each chunk carries its offset in the ORIGINAL text. */
-    fun ttsPieces(text: String): List<TtsPiece> {
-        val sentences = ArrayList<TtsPiece>()
-        var start = 0
-        while (start < text.length) {
-            val m = sentenceEnd.find(text, start)
-            val end = if (m == null) text.length else m.range.last + 1
-            sentences += TtsPiece(start, text.substring(start, end))
-            start = end
-        }
+    /**
+     * Like [ttsChunks], but each chunk carries its offset in the ORIGINAL text.
+     *
+     * With [spans] the chunks also break on a change of speaker. That is what makes a cast audible: one
+     * utterance carries one voice, and the engine switches between utterances, never inside one.
+     */
+    fun ttsPieces(text: String, spans: List<SpeechCast.Span> = emptyList()): List<TtsPiece> {
+        if (spans.isEmpty()) return chunk(text, 0, text.length, "")
+        // A piece is cut by the speaker, not by the sentence: the boundary that matters to the engine is the
+        // one where the voice changes, and a sentence can contain two of those.
+        val out = ArrayList<TtsPiece>(spans.size)
+        for (s in spans) out += chunk(text, s.start.coerceIn(0, text.length), s.end.coerceIn(0, text.length), s.speaker)
+        return out
+    }
+
+    /** One speaker's [from]..[to] of [text], packed into utterances no longer than [TTS_CHUNK]. */
+    private fun chunk(text: String, from: Int, to: Int, speaker: String): List<TtsPiece> {
         val out = ArrayList<TtsPiece>()
         var cur: StringBuilder? = null
         var curStart = 0
-        for (s in sentences) {
-            val body = s.text.trim()
+        fun flush() {
+            cur?.let { if (it.isNotEmpty()) out += TtsPiece(curStart, it.toString(), speaker) }
+            cur = null
+        }
+        var start = from
+        while (start < to) {
+            val m = sentenceEnd.find(text, start)
+            val end = when {
+                m == null -> to
+                m.range.last + 1 > to -> to
+                else -> m.range.last + 1
+            }
+            val raw = text.substring(start, end)
+            val body = raw.trim()
+            start = end
             if (body.isEmpty()) continue
-            val lead = s.start + (s.text.length - s.text.trimStart().length)
+            val lead = start - raw.length + (raw.length - raw.trimStart().length)
             var piece = body
             var at = lead
             while (piece.length > TTS_CHUNK) {
-                cur?.let { out += TtsPiece(curStart, it.toString()); cur = null }
-                out += TtsPiece(at, piece.take(TTS_CHUNK))
+                flush()
+                out += TtsPiece(at, piece.take(TTS_CHUNK), speaker)
                 piece = piece.drop(TTS_CHUNK); at += TTS_CHUNK
             }
-            if (cur == null) { cur = StringBuilder(); curStart = at }
-            else if (cur.length + piece.length + 1 > TTS_CHUNK) { out += TtsPiece(curStart, cur.toString()); cur = StringBuilder(); curStart = at }
-            if (cur!!.isNotEmpty()) cur.append(' ')
-            cur!!.append(piece)
+            var c = cur
+            if (c == null) { c = StringBuilder(); cur = c; curStart = at }
+            else if (c.length + piece.length + 1 > TTS_CHUNK) {
+                flush(); c = StringBuilder(); cur = c; curStart = at
+            }
+            if (c.isNotEmpty()) c.append(' ')
+            c.append(piece)
         }
-        cur?.let { if (it.isNotEmpty()) out += TtsPiece(curStart, it.toString()) }
+        flush()
         return out
     }
 

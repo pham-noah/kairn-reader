@@ -29,6 +29,7 @@ import app.kairn.R
 import app.kairn.data.Book
 import app.kairn.data.ClippingImport
 import app.kairn.data.Clippings
+import app.kairn.data.OpdsClient
 import app.kairn.data.Update
 import app.kairn.ui.kit.*
 import app.kairn.ui.screens.*
@@ -41,7 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Full-screen screens that sit above the tabs. */
-enum class Overlay { Onboarding, Add, Backup }
+enum class Overlay { Onboarding, Add, Backup, Catalog }
 
 /**
  * App shell: three tabs, overlays, one toast host, and the system pickers.
@@ -154,7 +155,10 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
     // L-01: open the picker at the device storage root so "find books" sweeps everything at once.
     val launchPickFolder = { pickFolder.launch("content://com.android.externalstorage.documents/root/primary".toUri()) }
 
-    BackHandler(overlay != null && overlay != Overlay.Onboarding) { overlay = null }
+    BackHandler(overlay != null && overlay != Overlay.Onboarding) {
+        // A catalog lives inside Add books: system back steps out one level, not two.
+        overlay = if (overlay == Overlay.Catalog) Overlay.Add else null
+    }
 
     CompositionLocalProvider(LocalToast provides toast) {
         Box(Modifier.fillMaxSize().then(if (glass) Modifier.ambientWash() else Modifier.background(K.bg))) {
@@ -165,6 +169,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                             deps.store.saveSettings { it.copy(onboarded = true) }; overlay = if (goAdd) Overlay.Add else null
                         }
                         Overlay.Add -> AddBooksScreen(deps.store, { overlay = null }, launchPickFolder, launchPickBook,
+                                onCatalog = { overlay = Overlay.Catalog },
                             onImportClippings = { pickClippings.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) },
                             onImportFile = { file, name ->
                                 scope.launch {
@@ -172,6 +177,11 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                                     toast.show(if (b.broken) ctx.getString(R.string.toast_could_not_read, name) else ctx.getString(R.string.toast_added, b.title))
                                 }
                             })
+                        Overlay.Catalog -> CatalogScreen(
+                            deps.store, deps.library, OpdsClient(versionName),
+                            onBack = { overlay = Overlay.Add },
+                            onImported = { n -> toast.show(ctx.resources.getQuantityString(app.kairn.R.plurals.s_books_from_catalog, n, n)) },
+                        )
                         Overlay.Backup -> BackupScreen(backupFlow.ui, deps.store, { overlay = null },
                             onBackupNow = { backupFlow.backUpNow() },
                             onRestoreFromFile = { backupFlow.restoreFromFile() },
@@ -196,7 +206,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                                             .putExtra(ReaderActivity.EXTRA_ID, b.id)
                                             .putExtra(ReaderActivity.EXTRA_LOCATOR, locator)
                                     )
-                                })
+                                }, library = deps.library)
                             Tab.Collections -> CollectionsScreen(deps.store) { shelf = it; tab = Tab.Library }
                             Tab.Settings -> SettingsScreen(deps.store, { overlay = Overlay.Add }, { overlay = Overlay.Backup }, {
                                 // Enabling detection is also the moment to ask for the grant it needs.

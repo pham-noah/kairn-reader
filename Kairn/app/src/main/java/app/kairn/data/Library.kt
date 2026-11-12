@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import java.io.File
 import java.security.MessageDigest
 
@@ -93,7 +94,14 @@ class Library(private val ctx: Context, private val store: Store, private val re
             )
             readium.saveCover(pub, store, id)
             // The word count is a property of the file, measured once here so every open is instant.
-            b.copy(words = readium.countWords(pub))
+            // The OPF's own fields come along at the same visit: series, description, publisher, date.
+            val meta = readMeta(uri)
+            b.copy(
+                words = readium.countWords(pub),
+                series = meta?.series, seriesIndex = meta?.seriesIndex, desc = meta?.description,
+                publisher = meta?.publisher, published = meta?.published, language = meta?.language,
+                metaRead = meta != null,
+            )
         } finally {
             // A throw while counting must not leave the zip handle to the GC: a sweep retries this file.
             runCatching { pub.close() }
@@ -257,6 +265,47 @@ class Library(private val ctx: Context, private val store: Store, private val re
      */
     suspend fun backfillThumbs() = withContext(Dispatchers.IO) { ensureThumbs() }
 
+    /** Opens the EPUB and takes the OPF fields; null when the file cannot be read as a zip. */
+    private fun readMeta(uri: Uri): EpubMeta? = runCatching {
+        EpubOpf.read { ctx.contentResolver.openInputStream(uri) }
+    }.getOrNull()
+
+    /**
+     * A record imported before the OPF was read (every version up to 0.9.6) has no series and no description.
+     * One read fills them in and sets [Book.metaRead], so a book is visited once and an OPF that held nothing
+     * is not retried on every launch.
+     */
+    suspend fun ensureMeta(book: Book): Book = withContext(Dispatchers.IO) {
+        if (book.metaRead || book.broken) return@withContext book
+        val meta = readMeta(book.uri.toUri()) ?: return@withContext book
+        val updated = book.copy(
+            series = meta.series, seriesIndex = meta.seriesIndex, desc = meta.description,
+            publisher = meta.publisher, published = meta.published, language = meta.language, metaRead = true,
+        )
+        store.put(updated)
+        updated
+    }
+
+    /**
+     * The whole library, once, in the background after the first paint. It used to take 40 books per launch,
+     * which left a 200-book library half-filled for five launches and a sort that quietly did nothing.
+     *
+     * Each read yields between books, so scrolling the grid or opening a book is never held behind it, and
+     * [onProgress] reports (done, total) for the log rather than for a spinner nobody asked for.
+     */
+    suspend fun backfillMeta(limit: Int = Int.MAX_VALUE, onProgress: (Int, Int) -> Unit = { _, _ -> }) =
+        withContext(Dispatchers.IO) {
+            val queue = metaQueue(store.books.value, limit)
+            var done = 0
+            for (b in queue) {
+                ensureMeta(b)
+                done++
+                if (done % 5 == 0 || done == queue.size) onProgress(done, queue.size)
+                yield()
+            }
+            done
+        }
+
     private fun ensureThumbs() {
         store.books.value.forEach { b ->
             val thumb = store.thumbFile(b.id)
@@ -315,3 +364,10 @@ internal fun sweepIsDue(
     everyMs: Long = 86_400_000L,
     missingEveryMs: Long = 3_600_000L,
 ) = force || lastSweep == 0L || now - lastSweep > everyMs || (anyMissing && now - lastSweep > missingEveryMs)
+
+/**
+ * Every record whose OPF has never been read, in library order, capped at [limit]. A file that is broken or
+ * missing is not worth a zip read; one that was read and held nothing is marked and never comes back.
+ */
+internal fun metaQueue(books: List<Book>, limit: Int = Int.MAX_VALUE): List<Book> =
+    books.asSequence().filter { !it.metaRead && !it.broken && !it.missing }.take(limit).toList()

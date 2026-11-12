@@ -119,6 +119,8 @@ internal class ReaderSpeechState {
     var starting by mutableStateOf(false)        // tapped, but the engine has not produced audio yet
     var paused by mutableStateOf(false)          // held at the word it reached
     var sleepChoice by mutableIntStateOf(0)      // 0 = no timer, >0 minutes, -1 = end of chapter
+    var cast by mutableStateOf(app.kairn.data.BookCast())   // per book: character voices, and their slots
+    var castSpeakers by mutableStateOf<List<String>>(emptyList())  // who speaks in the chapter on screen
 }
 
 /**
@@ -141,6 +143,8 @@ internal interface ReaderActions {
     fun search(query: String)
     fun toggleTts()
     fun stopTts()
+    fun setCastEnabled(on: Boolean)
+    fun setCastVoice(speaker: String, slot: Int)
     fun setSpeechRate(rate: Float)
     fun setSleepTimer(minutes: Int)
     fun toggleAutoScroll()
@@ -338,7 +342,11 @@ internal fun ReaderScreen(
             else -> stringResource(R.string.s_notes_and_highlights)
         }) {
             when (ui.sheet) {
-                ReaderSheet.TTS -> TtsSheet(ui.prefs, ui.speech.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts)
+                ReaderSheet.TTS -> TtsSheet(
+                    ui.prefs, ui.speech.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts,
+                    cast = ui.speech.cast, speakers = ui.speech.castSpeakers,
+                    onCastEnabled = act::setCastEnabled, onCastVoice = act::setCastVoice,
+                )
                 ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, ui.chapterHref, act::goTo)
                 ReaderSheet.SEARCH -> {

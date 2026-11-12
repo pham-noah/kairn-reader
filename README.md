@@ -22,6 +22,9 @@ folder, or let it find the EPUBs already on your device.
 
 ## Reading
 
+- **Character voices.** Read aloud gives each name in a chapter its own voice, and keeps the narrator's
+  voice for narration and for any line the text does not attribute. It is the phone's own text-to-speech, so
+  nothing is downloaded and no book leaves the device. Every name can be moved to another voice, per book.
 - Page or scroll, with auto scroll at a speed you set per book. It holds still while your finger is on the
   page and picks up when you lift it.
 - Read aloud from where you are, and it carries on into the next chapter. Pause and resume land on the word
@@ -44,7 +47,9 @@ folder, or let it find the EPUBs already on your device.
 
 ## Library
 
-Grid or list; a "Continue reading" shelf with each book's progress and when you were last in it; search over
+Grid or list; a book that belongs to a series says which part it is, and Series is a sort order that keeps a
+series together in its own order; a "Continue reading" shelf with each book's progress and when you were last
+in it; search over
 titles and over the text inside every book, cached after the first pass so a repeat search is instant; sort,
 reading status, collections and tags you can rename or delete; several books to one collection or one tag at
 once; watched folders; a scan for the EPUBs already on your device; generated covers for books without one;
@@ -52,6 +57,13 @@ once; watched folders; a scan for the EPUBs already on your device; generated co
 
 To add books from a computer on the same Wi-Fi, open the transfer page and drop EPUBs on it from a browser.
 The address carries a four-digit code, and nothing else on the network can reach it.
+
+A **catalog** works the other way round: add your Calibre content server's address (or any OPDS catalog) and
+browse its shelves from the phone. A book is downloaded only when you tap it. A username and password stay on
+this phone and are left out of every backup.
+
+Long-press a book for **About this book**: series, description, publisher, date, language and file size,
+next to the actions that belong to it.
 
 ## Notes, highlights, backup
 
@@ -69,7 +81,8 @@ English, Español, Suomi, 日本語, Tiếng Việt and 简体中文, switched f
 
 ## Privacy
 
-Kairn makes no outgoing request unless you start the Wi-Fi transfer or leave the update check on. The
+Kairn makes no outgoing request unless you start the Wi-Fi transfer, download from a catalog you added, or
+leave the update check on. The
 transfer server only listens: the computer makes the request, the server lives only while that screen is
 open, and it will not answer without the code shown on screen.
 
@@ -121,12 +134,8 @@ and which spec item maps to what.
 reader on Vietnamese would still be worth having. Every user-facing string is a resource and every count is a
 plural, so the next language is a `values-xx/strings.xml` away.
 
-**Image zoom inside the page.** Readium has no zoom of its own, so it means scaling the page itself; the part
-that has not held up on a device is the hit test for which image you touched.
-
-**Typefaces from your own font files.** Readium serves fonts only from the app's bundled assets, so a font
-picked from the device would have to arrive as a base64 `@font-face` injected per resource - possible, and
-heavier than it looks.
+**A native reader for the translations.** Every string is a resource and every count is a plural; what the
+five languages still lack is someone who grew up with them reading the app once.
 
 **F-Droid**, once the project has the history its reviewers ask for.
 

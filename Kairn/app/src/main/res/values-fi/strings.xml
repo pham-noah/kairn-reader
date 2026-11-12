@@ -54,7 +54,7 @@
     <string name="s_delete_this_note">Poistetaanko tämä muistiinpano?</string>
     <string name="s_done">Valmis</string>
     <string name="s_edit_details_collections_and_tags">Muokkaa tietoja, kokoelmia ja tunnisteita</string>
-    <string name="s_everything_here_works_without_internet">Kaikki täällä toimii ilman internetiä.</string>
+    <string name="s_everything_here_works_without_internet">Ei tiliä, ei pilveä.</string>
     <string name="s_existing_tags">Nykyiset tunnisteet</string>
     <string name="s_export_notes">Vie muistiinpanot</string>
     <string name="s_find_books_on_this_device">Etsi kirjoja tästä laitteesta</string>
@@ -446,4 +446,41 @@
     <string name="s_language">Kieli</string>
     <string name="s_libron">Libron</string>
     <string name="s_libron_licence">SIL Open Font License, mukana sovelluksessa</string>
+
+    <!-- 1.0.0 -->
+    <string name="s_sort_series">Sarja</string>
+    <string name="s_details">Tiedot</string>
+    <string name="s_about_this_book">Tietoja kirjasta</string>
+    <string name="s_no_description">Tiedostossa ei ole kuvausta.</string>
+    <string name="s_publisher">Kustantaja</string>
+    <string name="s_published">Julkaistu</string>
+    <string name="s_file_size">Tiedostokoko</string>
+    <string name="s_not_listed">Ei tietoa</string>
+    <string name="s_character_voices">Hahmojen äänet</string>
+    <string name="s_catalog">Luettelo</string>
+    <string name="s_from_a_catalog">Luettelosta</string>
+    <string name="s_catalog_address">Luettelon osoite</string>
+    <string name="s_catalog_name">Nimi</string>
+    <string name="s_catalog_username">Käyttäjänimi (valinnainen)</string>
+    <string name="s_catalog_password">Salasana (valinnainen)</string>
+    <string name="s_catalog_add">Lisää luettelo</string>
+    <string name="s_catalog_hint_short">Calibre-palvelimesi tai mikä tahansa OPDS-osoite</string>
+    <string name="s_catalog_remove">Poista tämä luettelo</string>
+    <string name="s_catalog_hint">Calibre-palvelimesi osoite tai mikä tahansa OPDS-luettelo. Käyttäjänimi ja salasana pysyvät tässä puhelimessa eivätkä siirry varmuuskopioihin.</string>
+    <string name="s_catalog_unreachable">Osoitteeseen ei saatu yhteyttä.</string>
+    <string name="s_catalog_not_opds">Sivu ei ole OPDS-luettelo.</string>
+    <string name="s_catalog_up">Yksi taso ylös</string>
+    <string name="s_catalog_nothing_here">Täällä ei ole mitään.</string>
+    <string name="s_catalog_empty">Ei vielä luetteloa. Lisää Calibre-palvelimesi osoite tai mikä tahansa muu OPDS-luettelo.</string>
+    <string name="s_catalog_downloading">Ladataan %1$s…</string>
+    <string name="s_start_reading">Aloita lukeminen</string>
+    <string name="s_voice_n">Ääni %1$d</string>
+    <string name="s_cast_hint">Nimet luetaan tekstistä. Rivit, joita ei voi kohdistaa, jäävät kertojan äänelle.</string>
+    <string name="s_cast_empty">Tästä luvusta ei löytynyt puhujia.</string>
+    <string name="s_cast_narrator_note">Kerronta ja epäselvät rivit pysyvät kertojan äänellä.</string>
+    <plurals name="s_highlights_n"><item quantity="one">%1$d korostus</item><item quantity="other">%1$d korostusta</item></plurals>
+    <plurals name="s_notes_n"><item quantity="one">%1$d muistiinpano</item><item quantity="other">%1$d muistiinpanoa</item></plurals>
+    <plurals name="s_bookmarks_n"><item quantity="one">%1$d kirjanmerkki</item><item quantity="other">%1$d kirjanmerkkiä</item></plurals>
+    <plurals name="s_speakers_found"><item quantity="one">%1$d puhuja</item><item quantity="other">%1$d puhujaa</item></plurals>
+    <plurals name="s_books_from_catalog"><item quantity="one">%1$d kirja lisätty</item><item quantity="other">%1$d kirjaa lisätty</item></plurals>
 </resources>

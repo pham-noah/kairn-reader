@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
 import app.kairn.data.Book
+import app.kairn.data.EpubMeta
 import app.kairn.data.Status
 import app.kairn.data.Store
 import app.kairn.ui.kit.*
@@ -66,6 +67,7 @@ import app.kairn.ui.theme.KType
 
 private enum class SortBy(@androidx.annotation.StringRes val label: Int) {
     RECENT(R.string.s_sort_recent), TITLE(R.string.s_sort_title), AUTHOR(R.string.s_sort_author), ADDED(R.string.s_sort_added),
+    SERIES(R.string.s_sort_series),
 }
 
 /** Row shapes for the grid, so Lazy can reuse slots when the library list changes. */
@@ -136,6 +138,10 @@ private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: B
         }
         Text(b.title, style = KType.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 18.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp))
         Text(b.author, fontSize = 14.sp, color = K.dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+        // Only where there is one: a series line on every book would be a column of nothing.
+        EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
+            Text(label, fontSize = 12.sp, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+        }
     }
 }
 
@@ -149,6 +155,9 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
         Column(Modifier.weight(1f)) {
             Text(b.title, style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(b.author, style = KType.small, maxLines = 1)
+            EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
+                Text(label, style = KType.small, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             val (t, warn) = when {
                 b.missing -> stringResource(R.string.s_list_file_missing) to true
                 b.broken -> stringResource(R.string.s_list_broken) to true
@@ -168,6 +177,8 @@ fun LibraryScreen(
     onOpen: (Book) -> Unit, onAdd: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
     onBackup: () -> Unit = {},
     onOpenAt: (Book, String) -> Unit = { _, _ -> },
+    /** The book's own page needs to re-read an OPF imported before 1.0; null in tests. */
+    library: app.kairn.data.Library? = null,
 ) {
     val toast = LocalToast.current
     val ctx = LocalContext.current
@@ -216,6 +227,7 @@ fun LibraryScreen(
     var problem by remember { mutableStateOf<Book?>(null) }
     var actions by remember { mutableStateOf<Book?>(null) }
     var editing by remember { mutableStateOf<Book?>(null) }
+    var details by remember { mutableStateOf<Book?>(null) }
     var quickAdd by remember { mutableStateOf<Book?>(null) }   // "add this book to a collection" chips
     // Selection mode: tick several books, then put them all into one collection.
     var selecting by remember { mutableStateOf(false) }
@@ -258,7 +270,11 @@ fun LibraryScreen(
                     SortBy.RECENT -> compareByDescending<Book> { it.lastRead }.thenByDescending { it.added }
                     SortBy.TITLE -> compareBy { it.title.lowercase() }
                     SortBy.AUTHOR -> compareBy { it.author.lowercase() }
-                    SortBy.ADDED -> compareByDescending { it.added }
+                    SortBy.ADDED -> compareByDescending<Book> { it.added }
+                    // A series is a shelf: its books together, in its own order, and everything else after
+                    // them by title. The sentinel is the last character a title can start with, so a book
+                    // outside any series can never sort among the series.
+                    SortBy.SERIES -> compareBy<Book>({ it.series?.lowercase() ?: "\uFFFF" }, { it.seriesIndex ?: 0.0 }, { it.title.lowercase() })
                 }
                 if (sortFlipped) natural.reversed() else natural
             })
@@ -445,7 +461,8 @@ fun LibraryScreen(
     }
     actions?.let { b ->
         KSheet({ actions = null }, b.title) {
-            KAction(stringResource(R.string.s_edit_details_collections_and_tags), Icons.Default.Edit, { editing = b; actions = null }, divider = false)
+            KAction(stringResource(R.string.s_details), Icons.Default.Info, { details = b; actions = null }, divider = false)
+            KAction(stringResource(R.string.s_edit_details_collections_and_tags), Icons.Default.Edit, { editing = b; actions = null })
             // One tap to file a book, instead of entering selection mode for a single book.
             KAction(stringResource(R.string.s_add_to_a_collection), Icons.Default.BookmarkAdd, { quickAdd = b; actions = null })
             KAction(stringResource(R.string.s_select_several_books), Icons.Default.LibraryAdd, { selecting = true; picked = setOf(b.id); actions = null })
@@ -501,6 +518,17 @@ fun LibraryScreen(
         }
     }
     editing?.let { EditBookSheet(it, store) { editing = null } }
+    details?.let { opened ->
+        // The live record, so the sheet follows a status change made inside it or behind it.
+        val cur = books.firstOrNull { it.id == opened.id } ?: opened
+        BookDetailSheet(
+            book = cur, store = store, library = library,
+            onClose = { details = null },
+            onOpen = { details = null; currentOpen(cur) },
+            onEdit = { details = null; editing = cur },
+            onRemove = { store.remove(cur.id); details = null; toast.show(removedToast) },
+        )
+    }
 }
 
 /** Shown when a filter or a search leaves nothing: a blank grid with "0 books" above it reads as a bug. */

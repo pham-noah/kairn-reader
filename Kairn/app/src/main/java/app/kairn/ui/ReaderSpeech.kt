@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import app.kairn.R
+import app.kairn.data.BookCast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +39,10 @@ internal class ReaderSpeech(
     private val endOfChapterTimer: () -> Boolean,
     /** A manual stop ends the timer too - a chip must not promise to stop a voice that is already stopped. */
     private val cancelSleepTimer: () -> Unit,
+    /** This book's cast, as the reader arranged it. Read on every speak, so a change is never stale. */
+    private val cast: () -> BookCast = { BookCast() },
+    /** The chapter's cast, for the sheet that lets the reader correct it. */
+    private val onSpeakers: (List<String>) -> Unit = {},
 ) {
     private val engine = ReaderTts(
         context,
@@ -64,6 +69,8 @@ internal class ReaderSpeech(
      */
     @Volatile private var cachedHref: String? = null
     @Volatile private var cachedText: String? = null
+    /** Who speaks, per chapter, computed with the text and thrown away with it. */
+    @Volatile private var cachedSpans: List<SpeechCast.Span> = emptyList()
 
     /** Extract [loc]'s chapter in the background so a tap on Read aloud is only a tap. */
     fun preload(loc: Locator) = scope.launch {
@@ -73,9 +80,18 @@ internal class ReaderSpeech(
         val at = SystemClock.elapsedRealtime()
         val text = withContext(Dispatchers.IO) { runCatching { p.content(loc)?.text() }.getOrNull() }
         if (text.isNullOrBlank()) return@launch
+        // Attribution is O(text) with a handful of regex scans: paid once per chapter, never on the tap.
+        val spansAt = SystemClock.elapsedRealtime()
+        val spans = withContext(Dispatchers.IO) { SpeechCast.attribute(text) }
+        cachedSpans = spans
         cachedText = text
         cachedHref = href
-        Log.i("KairnPerf", "tts preload ${text.length} chars ${SystemClock.elapsedRealtime() - at}ms")
+        onSpeakers(SpeechCast.speakers(spans))
+        Log.i(
+            "KairnPerf",
+            "tts preload ${text.length} chars ${SystemClock.elapsedRealtime() - at}ms " +
+                "cast=${SpeechCast.speakers(spans).size} in ${SystemClock.elapsedRealtime() - spansAt}ms",
+        )
     }
 
     fun toggle() {
@@ -111,6 +127,43 @@ internal class ReaderSpeech(
 
     fun setRate(rate: Float) = engine.setRate(rate)
 
+    /** A cast change while it speaks: same chapter, same word, new voices from here on. */
+    fun setCast() {
+        if (!ui.speech.on || ui.speech.paused) return
+        val spans = cachedSpans
+        // The pieces already queued carry their speakers; only the slots changed, and they are re-queued
+        // from the word being spoken.
+        engine.setCast(CastPlan(on = cast().enabled, spans = spans, slots = planFor(spans).slots))
+    }
+
+    /**
+     * Speaker -> voice slot. The reader's own choices win; everyone else is handed slots 1..4 in the order
+     * they first speak, so a chapter of six characters does not put three of them on the same voice when
+     * four are available.
+     */
+    private fun planFor(spans: List<SpeechCast.Span>): CastPlan {
+        val c = cast()
+        if (!c.enabled) return CastPlan.NONE
+        val names = SpeechCast.speakers(spans)
+        if (names.isEmpty()) return CastPlan.NONE
+        val slots = HashMap<String, Int>()
+        names.forEachIndexed { i, name ->
+            slots[name] = c.voices[name] ?: (1 + i % BookCast.SLOTS)
+        }
+        return CastPlan(on = true, spans = spans, slots = slots)
+    }
+
+    /** [spans] moved to start at [from], because the engine is given the chapter from the reader's word. */
+    private fun shifted(spans: List<SpeechCast.Span>, from: Int): List<SpeechCast.Span> =
+        spans.mapNotNull { s ->
+            val a = (s.start - from).coerceAtLeast(0)
+            val b = (s.end - from).coerceAtLeast(0)
+            if (b <= a) null else s.copy(start = a, end = b)
+        }
+
+    /** The chapter's cast, for the sheet. Empty until a chapter has been read or preloaded. */
+    fun speakers(): List<String> = SpeechCast.speakers(cachedSpans)
+
     /** Warm the engine while the book is opening: a cold bind is seconds long. */
     fun warm() = engine.warm()
 
@@ -138,12 +191,22 @@ internal class ReaderSpeech(
             return@launch
         }
         val from = ReaderLogic.ttsStartOffset(text, loc.locations.progression?.toFloat() ?: 0f)
+        val spans = if (text == cachedText) cachedSpans else withContext(Dispatchers.IO) { SpeechCast.attribute(text) }
+        cachedSpans = spans
+        cachedText = text
+        cachedHref = href
+        onSpeakers(SpeechCast.speakers(spans))
         spokenText = text
         spokenHref = href
         lastSentence = -1
         followedPage = -1
         Log.i("KairnPerf", "tts tap→speak ${SystemClock.elapsedRealtime() - at}ms ${if (cached != null) "cached" else "extracted"}")
-        engine.speak(text.substring(from), ui.prefs.speechRate, from)
+        // The plan is rebuilt from the live cast on every speak: a voice the reader just changed must be the
+        // one that speaks, not the one that was saved when the book opened.
+        // Cast off means one piece for the chapter, exactly as before the feature existed: no extra
+        // utterance boundaries where nobody is changing voice.
+        val plan = planFor(spans).let { p -> if (p.on) p.copy(spans = shifted(spans, from)) else CastPlan.NONE }
+        engine.speak(text.substring(from), ui.prefs.speechRate, from, plan)
     }
 
     /** The voice's place in the chapter, at most every 300 ms. Paint the sentence, and turn the page. */

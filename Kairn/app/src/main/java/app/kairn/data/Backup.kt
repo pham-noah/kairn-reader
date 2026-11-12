@@ -26,9 +26,19 @@ class Backup(private val ctx: Context, private val store: Store) {
                 out.use { raw ->
                     ZipOutputStream(raw.buffered()).use { zip ->
                         files.forEachIndexed { i, f ->
-                            val rel = if (f.startsWith(store.root)) "data/" + f.relativeTo(store.root).path
+                            // Forward slashes always: an archive is a format, and the restore path matches on
+                            // "data/books/". A backslash from a non-Android JVM would be read as a foreign zip.
+                            val rel = if (f.startsWith(store.root)) "data/" + f.relativeTo(store.root).path.replace(File.separatorChar, '/')
                                       else "imported/" + f.name
-                            zip.putNextEntry(ZipEntry(rel)); f.inputStream().use { it.copyTo(zip) }; zip.closeEntry()
+                            zip.putNextEntry(ZipEntry(rel))
+                            if (f.name == "settings.json") {
+                                // A catalog password stays on this phone: the zip may be copied to a computer,
+                                // a cloud folder or a friend, and a server login is not a preference.
+                                zip.write(store.settings.value.withoutSecrets().toJson().toString().toByteArray())
+                            } else {
+                                f.inputStream().use { it.copyTo(zip) }
+                            }
+                            zip.closeEntry()
                             onProgress((i + 1f) / files.size)
                         }
                     }
@@ -94,6 +104,12 @@ class Backup(private val ctx: Context, private val store: Store) {
                                     val target = File(store.root, "settings.json")
                                     if (replace || !target.exists()) store.writeFile(target, zip.getInputStream(e).use { String(it.readBytes()) })
                                 }
+                                // A cast is a taste, not a place: a merge keeps the one on this phone and only
+                                // takes the archive's when there is none, the same rule the settings follow.
+                                name.startsWith("data/cast/") -> {
+                                    val target = File(store.root, name.removePrefix("data/"))
+                                    if (replace || !target.exists()) unzipInto(zip, e, target)
+                                }
                                 name.startsWith("data/covers/") || name.startsWith("data/thumbs/") -> {
                                     val target = File(store.root, name.removePrefix("data/"))
                                     if (replace || !target.exists()) unzipInto(zip, e, target)
@@ -112,6 +128,9 @@ class Backup(private val ctx: Context, private val store: Store) {
                         // A position for a book the archive does not hold would follow the next book to take that id.
                         val kept = archivedBooks.map { it.removePrefix("data/books/").removeSuffix(".json") }.toSet()
                         store.posDir.listFiles()?.filterNot { it.name.removeSuffix(".json") in kept }?.forEach { it.delete() }
+                        // Same for a cast: one for a book the archive does not hold would follow the next
+                        // book to take that id, and give its characters someone else's voices.
+                        store.castDir.listFiles()?.filterNot { it.name.removeSuffix(".json") in kept }?.forEach { it.delete() }
                     }
                     store.reload()
                     // lastSweep describes THIS device's storage, so it never comes out of an archive: a restored

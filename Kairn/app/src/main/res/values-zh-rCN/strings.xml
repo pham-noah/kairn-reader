@@ -34,8 +34,7 @@
         <item quantity="other">%1$d本书 · %2$s，点按清除</item>
     </plurals>
     <string name="s_off">关闭</string>
-    <plurals name="s_every_days_in">
-        <item quantity="other">每%1$d天备份到%2$s，保留最新的%3$d个</item>
+    <plurals name="s_every_days_in"><item quantity="other">每%1$d天备份到%2$s，保留最新的%3$d个</item>
     </plurals>
     <string name="s_backup_and_restore">备份与恢复</string>
     <string name="s_brightness_this_app_only">亮度，仅本应用</string>
@@ -52,7 +51,7 @@
     <string name="s_delete_this_note">删除这条笔记？</string>
     <string name="s_done">完成</string>
     <string name="s_edit_details_collections_and_tags">编辑信息、合集和标签</string>
-    <string name="s_everything_here_works_without_internet">这里的一切都不需要联网。</string>
+    <string name="s_everything_here_works_without_internet">无需账号，无需云端。</string>
     <string name="s_existing_tags">已有标签</string>
     <string name="s_export_notes">导出笔记</string>
     <string name="s_find_books_on_this_device">在这台设备上找书</string>
@@ -366,8 +365,7 @@
     <string name="s_scroll_speed">滚动速度</string>
     <string name="s_dp_per_second">%1$d dp/秒</string>
     <string name="s_searching_books">正在搜索书内内容（%1$d/%2$d）</string>
-    <plurals name="s_hits_in_books">
-        <item quantity="other">书中找到%1$d处</item>
+    <plurals name="s_hits_in_books"><item quantity="other">书中找到%1$d处</item>
     </plurals>
     <string name="s_menu_share">分享</string>
     <string name="s_menu_look_up">查词</string>
@@ -435,4 +433,41 @@
     <string name="s_language">语言</string>
     <string name="s_libron">Libron</string>
     <string name="s_libron_licence">SIL 开放字体许可，随应用内置</string>
+
+    <!-- 1.0.0 -->
+    <string name="s_sort_series">系列</string>
+    <string name="s_details">详情</string>
+    <string name="s_about_this_book">关于这本书</string>
+    <string name="s_no_description">文件中没有简介。</string>
+    <string name="s_publisher">出版社</string>
+    <string name="s_published">出版日期</string>
+    <string name="s_file_size">文件大小</string>
+    <string name="s_not_listed">未提供</string>
+    <string name="s_character_voices">角色语音</string>
+    <string name="s_catalog">目录</string>
+    <string name="s_from_a_catalog">从目录添加</string>
+    <string name="s_catalog_address">目录地址</string>
+    <string name="s_catalog_name">名称</string>
+    <string name="s_catalog_username">用户名（可选）</string>
+    <string name="s_catalog_password">密码（可选）</string>
+    <string name="s_catalog_add">添加目录</string>
+    <string name="s_catalog_hint_short">你的 Calibre 服务器，或任意 OPDS 地址</string>
+    <string name="s_catalog_remove">移除此目录</string>
+    <string name="s_catalog_hint">你的 Calibre 服务器地址，或任意 OPDS 目录。用户名和密码只保存在这台手机上，不会写入备份。</string>
+    <string name="s_catalog_unreachable">无法连接该地址。</string>
+    <string name="s_catalog_not_opds">该页面不是 OPDS 目录。</string>
+    <string name="s_catalog_up">上一级</string>
+    <string name="s_catalog_nothing_here">这里什么都没有。</string>
+    <string name="s_catalog_empty">还没有目录。请添加你的 Calibre 服务器地址或其他 OPDS 目录。</string>
+    <string name="s_catalog_downloading">正在下载 %1$s…</string>
+    <string name="s_start_reading">开始阅读</string>
+    <string name="s_voice_n">声音 %1$d</string>
+    <string name="s_cast_hint">名字从正文中读取。无法判断说话人的句子仍由旁白朗读。</string>
+    <string name="s_cast_empty">本章没有找到说话人。</string>
+    <string name="s_cast_narrator_note">旁白和无法判断的句子仍使用旁白的声音。</string>
+    <plurals name="s_highlights_n"><item quantity="other">%1$d 条高亮</item></plurals>
+    <plurals name="s_notes_n"><item quantity="other">%1$d 条笔记</item></plurals>
+    <plurals name="s_bookmarks_n"><item quantity="other">%1$d 个书签</item></plurals>
+    <plurals name="s_speakers_found"><item quantity="other">%1$d 位说话人</item></plurals>
+    <plurals name="s_books_from_catalog"><item quantity="other">已添加 %1$d 本书</item></plurals>
 </resources>

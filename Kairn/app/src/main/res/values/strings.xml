@@ -55,7 +55,7 @@
     <string name="s_delete_this_note">Delete this note?</string>
     <string name="s_done">Done</string>
     <string name="s_edit_details_collections_and_tags">Edit details, collections and tags</string>
-    <string name="s_everything_here_works_without_internet">Everything here works without internet.</string>
+    <string name="s_everything_here_works_without_internet">No account, no cloud.</string>
     <string name="s_existing_tags">Existing tags</string>
     <string name="s_export_notes">Export notes</string>
     <string name="s_find_books_on_this_device">Find books on this device</string>
@@ -446,4 +446,41 @@
     <string name="s_language">Language</string>
     <string name="s_libron">Libron</string>
     <string name="s_libron_licence">SIL Open Font License, bundled with the app</string>
+
+    <!-- 1.0.0: series, the book's own page, character voices, catalogs -->
+    <string name="s_sort_series">Series</string>
+    <string name="s_details">Details</string>
+    <string name="s_about_this_book">About this book</string>
+    <string name="s_no_description">No description in this file.</string>
+    <string name="s_publisher">Publisher</string>
+    <string name="s_published">Published</string>
+    <string name="s_file_size">File size</string>
+    <string name="s_not_listed">Not listed</string>
+    <plurals name="s_highlights_n"><item quantity="one">%1$d highlight</item><item quantity="other">%1$d highlights</item></plurals>
+    <plurals name="s_notes_n"><item quantity="one">%1$d note</item><item quantity="other">%1$d notes</item></plurals>
+    <plurals name="s_bookmarks_n"><item quantity="one">%1$d bookmark</item><item quantity="other">%1$d bookmarks</item></plurals>
+    <string name="s_character_voices">Character voices</string>
+    <string name="s_cast_hint">Names come from the text. A line that cannot be attributed stays in the narrator’s voice.</string>
+    <string name="s_cast_empty">No speakers found in this chapter.</string>
+    <plurals name="s_speakers_found"><item quantity="one">%1$d speaker</item><item quantity="other">%1$d speakers</item></plurals>
+    <string name="s_catalog">Catalog</string>
+    <string name="s_from_a_catalog">From a catalog</string>
+    <string name="s_catalog_address">Catalog address</string>
+    <string name="s_catalog_name">Name</string>
+    <string name="s_catalog_username">Username (optional)</string>
+    <string name="s_catalog_password">Password (optional)</string>
+    <string name="s_catalog_add">Add a catalog</string>
+    <string name="s_catalog_hint_short">Your Calibre server, or any OPDS address</string>
+    <string name="s_catalog_remove">Remove this catalog</string>
+    <string name="s_catalog_hint">Your Calibre server’s address, or any OPDS catalog. The username and password stay on this phone and are left out of backups.</string>
+    <string name="s_catalog_unreachable">Could not reach that address.</string>
+    <string name="s_catalog_not_opds">That page is not an OPDS catalog.</string>
+    <string name="s_catalog_up">Up one level</string>
+    <string name="s_catalog_nothing_here">Nothing here.</string>
+    <string name="s_catalog_empty">No catalog yet. Add your Calibre server’s address, or any other OPDS catalog.</string>
+    <string name="s_catalog_downloading">Downloading %1$s…</string>
+    <plurals name="s_books_from_catalog"><item quantity="one">%1$d book added</item><item quantity="other">%1$d books added</item></plurals>
+    <string name="s_start_reading">Start reading</string>
+    <string name="s_voice_n">Voice %1$d</string>
+    <string name="s_cast_narrator_note">Narration and anything unclear keeps the narrator’s voice.</string>
 </resources>

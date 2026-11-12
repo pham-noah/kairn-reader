@@ -24,6 +24,7 @@ class Store private constructor(val root: File, val copiesDir: File) {
     val coversDir = File(root, "covers").apply { mkdirs() }
     val thumbsDir = File(root, "thumbs").apply { mkdirs() }     // small pre-decoded cover thumbnails
     val posDir = File(root, "pos").apply { mkdirs() }           // the reading position, apart from the marks
+    val castDir = File(root, "cast").apply { mkdirs() }         // one cast per book: who speaks in which voice
     private val settingsFile = File(root, "settings.json")
     private val statsFile = File(root, "stats.json")
 
@@ -168,6 +169,23 @@ class Store private constructor(val root: File, val copiesDir: File) {
     /** Where this book's position lives: a few hundred bytes, so a page turn does not rewrite its marks. */
     fun posFile(id: String) = File(posDir, "$id.json")
 
+    /** The cast this reader gave this book (BookCast). Its own folder so a backup carries it by name. */
+    fun castFile(id: String) = File(castDir, "$id.json")
+
+    /** Never throws: a cast file that will not parse is a book that reads in one voice, not a broken app. */
+    fun loadCast(id: String): BookCast {
+        if (!Book.isSafeId(id)) return BookCast()
+        val f = castFile(id)
+        if (!f.exists()) return BookCast()
+        return runCatching { BookCast.from(JSONObject(f.readText())) }.getOrDefault(BookCast())
+    }
+
+    fun saveCast(id: String, cast: BookCast) {
+        if (!Book.isSafeId(id)) return
+        val f = castFile(id)
+        writeFile(f, cast.toJson().toString())
+    }
+
     /**
      * R-09. The position, progress, last read and status move to the sidecar and the record keeps everything
      * else, so saving a page does not serialise every mark in the book. Memory is the same Book as before;
@@ -245,7 +263,7 @@ class Store private constructor(val root: File, val copiesDir: File) {
         synchronized(removalListeners) { removalListeners.toList() }.forEach { it.onRemoved(id) }
         books.update { l -> l.filterNot { it.id == id } }
         // Queued like writes, so a pending older write for the same file cannot bring it back.
-        for (f in listOf(File(booksDir, "$id.json"), posFile(id), coverFile(id), thumbFile(id))) enqueue(f) { f.delete() }
+        for (f in listOf(File(booksDir, "$id.json"), posFile(id), coverFile(id), thumbFile(id), castFile(id))) enqueue(f) { f.delete() }
     }
 
     @Synchronized

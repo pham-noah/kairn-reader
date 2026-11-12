@@ -34,8 +34,7 @@
         <item quantity="other">%1$d冊・%2$s タップで削除</item>
     </plurals>
     <string name="s_off">オフ</string>
-    <plurals name="s_every_days_in">
-        <item quantity="other">%1$d日ごとに%2$sへ、最新の%3$d件を残します</item>
+    <plurals name="s_every_days_in"><item quantity="other">%1$d日ごとに%2$sへ、最新の%3$d件を残します</item>
     </plurals>
     <string name="s_backup_and_restore">バックアップと復元</string>
     <string name="s_brightness_this_app_only">明るさ（このアプリのみ）</string>
@@ -52,7 +51,7 @@
     <string name="s_delete_this_note">このメモを削除しますか？</string>
     <string name="s_done">完了</string>
     <string name="s_edit_details_collections_and_tags">詳細・コレクション・タグを編集</string>
-    <string name="s_everything_here_works_without_internet">ここはすべてインターネットなしで動きます。</string>
+    <string name="s_everything_here_works_without_internet">アカウントもクラウドも不要。</string>
     <string name="s_existing_tags">既存のタグ</string>
     <string name="s_export_notes">メモを書き出す</string>
     <string name="s_find_books_on_this_device">この端末の本を探す</string>
@@ -366,8 +365,7 @@
     <string name="s_scroll_speed">スクロール速度</string>
     <string name="s_dp_per_second">%1$d dp/秒</string>
     <string name="s_searching_books">本の中を検索しています（%1$d/%2$d）</string>
-    <plurals name="s_hits_in_books">
-        <item quantity="other">本の中で%1$d件見つかりました</item>
+    <plurals name="s_hits_in_books"><item quantity="other">本の中で%1$d件見つかりました</item>
     </plurals>
     <string name="s_menu_share">共有</string>
     <string name="s_menu_look_up">調べる</string>
@@ -435,4 +433,41 @@
     <string name="s_language">言語</string>
     <string name="s_libron">Libron</string>
     <string name="s_libron_licence">SIL Open Font License、アプリに同梱</string>
+
+    <!-- 1.0.0 -->
+    <string name="s_sort_series">シリーズ</string>
+    <string name="s_details">詳細</string>
+    <string name="s_about_this_book">この本について</string>
+    <string name="s_no_description">このファイルに説明はありません。</string>
+    <string name="s_publisher">出版社</string>
+    <string name="s_published">発行</string>
+    <string name="s_file_size">ファイルサイズ</string>
+    <string name="s_not_listed">記載なし</string>
+    <string name="s_character_voices">登場人物の声</string>
+    <string name="s_catalog">カタログ</string>
+    <string name="s_from_a_catalog">カタログから</string>
+    <string name="s_catalog_address">カタログのアドレス</string>
+    <string name="s_catalog_name">名前</string>
+    <string name="s_catalog_username">ユーザー名（任意）</string>
+    <string name="s_catalog_password">パスワード（任意）</string>
+    <string name="s_catalog_add">カタログを追加</string>
+    <string name="s_catalog_hint_short">Calibre サーバー、または任意の OPDS アドレス</string>
+    <string name="s_catalog_remove">このカタログを削除</string>
+    <string name="s_catalog_hint">Calibre サーバーのアドレス、または任意の OPDS カタログ。ユーザー名とパスワードはこの端末にのみ保存され、バックアップには含まれません。</string>
+    <string name="s_catalog_unreachable">そのアドレスに接続できませんでした。</string>
+    <string name="s_catalog_not_opds">このページは OPDS カタログではありません。</string>
+    <string name="s_catalog_up">一つ上の階層へ</string>
+    <string name="s_catalog_nothing_here">ここには何もありません。</string>
+    <string name="s_catalog_empty">まだカタログがありません。Calibre サーバーのアドレス、または他の OPDS カタログを追加してください。</string>
+    <string name="s_catalog_downloading">%1$s をダウンロード中…</string>
+    <string name="s_start_reading">読み始める</string>
+    <string name="s_voice_n">声 %1$d</string>
+    <string name="s_cast_hint">名前は本文から読み取ります。話者が特定できない行はナレーターの声になります。</string>
+    <string name="s_cast_empty">この章には話者が見つかりません。</string>
+    <string name="s_cast_narrator_note">ナレーションと不明な行はナレーターの声のままです。</string>
+    <plurals name="s_highlights_n"><item quantity="other">%1$d 件のハイライト</item></plurals>
+    <plurals name="s_notes_n"><item quantity="other">%1$d 件のノート</item></plurals>
+    <plurals name="s_bookmarks_n"><item quantity="other">%1$d 件のブックマーク</item></plurals>
+    <plurals name="s_speakers_found"><item quantity="other">%1$d 人の話者</item></plurals>
+    <plurals name="s_books_from_catalog"><item quantity="other">%1$d 冊の本を追加しました</item></plurals>
 </resources>

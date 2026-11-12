@@ -34,8 +34,7 @@
         <item quantity="other">%1$d sách · %2$s - chạm để xóa</item>
     </plurals>
     <string name="s_off">Tắt</string>
-    <plurals name="s_every_days_in">
-        <item quantity="other">Mỗi %1$d ngày vào %2$s, giữ %3$d bản mới nhất</item>
+    <plurals name="s_every_days_in"><item quantity="other">Mỗi %1$d ngày vào %2$s, giữ %3$d bản mới nhất</item>
     </plurals>
     <string name="s_backup_and_restore">Sao lưu và khôi phục</string>
     <string name="s_brightness_this_app_only">Độ sáng, chỉ trong ứng dụng này</string>
@@ -52,7 +51,7 @@
     <string name="s_delete_this_note">Xóa ghi chú này?</string>
     <string name="s_done">Xong</string>
     <string name="s_edit_details_collections_and_tags">Sửa thông tin, bộ sưu tập và thẻ</string>
-    <string name="s_everything_here_works_without_internet">Mọi thứ ở đây đều dùng được khi không có mạng.</string>
+    <string name="s_everything_here_works_without_internet">Không tài khoản, không đám mây.</string>
     <string name="s_existing_tags">Thẻ đã có</string>
     <string name="s_export_notes">Xuất ghi chú</string>
     <string name="s_find_books_on_this_device">Tìm sách trên máy này</string>
@@ -366,8 +365,7 @@
     <string name="s_scroll_speed">Tốc độ cuộn</string>
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Đang tìm trong sách của bạn (%1$d trên %2$d)</string>
-    <plurals name="s_hits_in_books">
-        <item quantity="other">%1$d kết quả trong sách của bạn</item>
+    <plurals name="s_hits_in_books"><item quantity="other">%1$d kết quả trong sách của bạn</item>
     </plurals>
     <string name="s_menu_share">Chia sẻ</string>
     <string name="s_menu_look_up">Tra từ</string>
@@ -435,4 +433,41 @@
     <string name="s_language">Ngôn ngữ</string>
     <string name="s_libron">Libron</string>
     <string name="s_libron_licence">Giấy phép SIL Open Font, đóng gói kèm ứng dụng</string>
+
+    <!-- 1.0.0 -->
+    <string name="s_sort_series">Bộ sách</string>
+    <string name="s_details">Chi tiết</string>
+    <string name="s_about_this_book">Về cuốn sách này</string>
+    <string name="s_no_description">Tệp này không có mô tả.</string>
+    <string name="s_publisher">Nhà xuất bản</string>
+    <string name="s_published">Xuất bản</string>
+    <string name="s_file_size">Dung lượng</string>
+    <string name="s_not_listed">Không có</string>
+    <string name="s_character_voices">Giọng của nhân vật</string>
+    <string name="s_catalog">Danh mục</string>
+    <string name="s_from_a_catalog">Từ một danh mục</string>
+    <string name="s_catalog_address">Địa chỉ danh mục</string>
+    <string name="s_catalog_name">Tên</string>
+    <string name="s_catalog_username">Tên đăng nhập (không bắt buộc)</string>
+    <string name="s_catalog_password">Mật khẩu (không bắt buộc)</string>
+    <string name="s_catalog_add">Thêm danh mục</string>
+    <string name="s_catalog_hint_short">Máy chủ Calibre của bạn, hoặc bất kỳ địa chỉ OPDS nào</string>
+    <string name="s_catalog_remove">Xoá danh mục này</string>
+    <string name="s_catalog_hint">Địa chỉ máy chủ Calibre của bạn, hoặc bất kỳ danh mục OPDS nào. Tên đăng nhập và mật khẩu chỉ ở lại trên máy này và không nằm trong bản sao lưu.</string>
+    <string name="s_catalog_unreachable">Không kết nối được tới địa chỉ đó.</string>
+    <string name="s_catalog_not_opds">Trang đó không phải danh mục OPDS.</string>
+    <string name="s_catalog_up">Lên một cấp</string>
+    <string name="s_catalog_nothing_here">Ở đây không có gì.</string>
+    <string name="s_catalog_empty">Chưa có danh mục nào. Hãy thêm địa chỉ máy chủ Calibre của bạn, hoặc danh mục OPDS khác.</string>
+    <string name="s_catalog_downloading">Đang tải %1$s…</string>
+    <string name="s_start_reading">Bắt đầu đọc</string>
+    <string name="s_voice_n">Giọng %1$d</string>
+    <string name="s_cast_hint">Tên được đọc từ văn bản. Câu không xác định được người nói sẽ giữ giọng người kể.</string>
+    <string name="s_cast_empty">Không tìm thấy người nói trong chương này.</string>
+    <string name="s_cast_narrator_note">Phần kể và những câu chưa rõ vẫn giữ giọng người kể.</string>
+    <plurals name="s_highlights_n"><item quantity="other">%1$d điểm đánh dấu</item></plurals>
+    <plurals name="s_notes_n"><item quantity="other">%1$d ghi chú</item></plurals>
+    <plurals name="s_bookmarks_n"><item quantity="other">%1$d dấu trang</item></plurals>
+    <plurals name="s_speakers_found"><item quantity="other">%1$d người nói</item></plurals>
+    <plurals name="s_books_from_catalog"><item quantity="other">Đã thêm %1$d cuốn sách</item></plurals>
 </resources>

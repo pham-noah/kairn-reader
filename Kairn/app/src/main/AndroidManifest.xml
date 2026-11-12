@@ -2,9 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- L-04 Wi-Fi transfer is the ONLY reason this is here, and it is a listening server, not a client:
-         a socket needs the permission either way, but the app never opens an outbound connection. The
-         server runs only while its screen is open (see WifiTransfer / AddBooksScreen). -->
+    <!-- L-04 Wi-Fi transfer and the OPDS catalog are the only reasons this is here. The transfer server
+         only listens, while its screen is open. A catalog request leaves the app only when the reader opens
+         a catalog and taps a book; the update check is the one automatic request (DS-04). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Reading aloud with the screen off: a media-playback foreground service, so the system keeps the
          process (and the voice) alive. No microphone, no media buttons, no audio focus changes. -->
@@ -38,6 +38,7 @@
         android:localeConfig="@xml/locales_config"
         tools:targetApi="33"
         android:name=".KairnApp"
+        android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"

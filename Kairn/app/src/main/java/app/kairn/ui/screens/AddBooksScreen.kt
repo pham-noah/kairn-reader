@@ -41,6 +41,7 @@ fun AddBooksScreen(
     store: Store, onBack: () -> Unit, onPickFolder: () -> Unit, onPickBook: () -> Unit,
     onImportFile: (File, String) -> Unit,
     onImportClippings: () -> Unit = {},
+    onCatalog: () -> Unit = {},
 ) {
     val toast = LocalToast.current
     val settings by store.settings.collectAsStateWithLifecycle()
@@ -136,6 +137,17 @@ fun AddBooksScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 KButton(stringResource(R.string.s_add_folder_or_files), { chooser = true }, style = KButtonStyle.Secondary)
+            }
+            // The network, on purpose and on request: a catalog on this Wi-Fi, or anywhere the reader points.
+            KGroup(stringResource(R.string.s_from_a_catalog)) {
+                KCard {
+                    KRow(
+                        stringResource(R.string.s_catalog),
+                        subtitle = stringResource(R.string.s_catalog_hint_short),
+                        leading = Icons.Default.CloudDownload,
+                        onClick = onCatalog,
+                    ) { KChevron() }
+                }
             }
             // DS-03: the other way books arrive - with someone's highlights already in them.
             KGroup(stringResource(R.string.s_group_from_another_reader)) {

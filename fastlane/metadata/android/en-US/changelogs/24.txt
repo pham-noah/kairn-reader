@@ -1,0 +1,4 @@
+Character voices for read aloud: every speaker a different voice, narrator for everything unclear.
+Series: a book says which part it is, and "Series" is a new sort order.
+About this book: description, publisher, date, language, size, and its actions in one sheet.
+Catalog (OPDS): browse and download from your Calibre server over Wi-Fi.

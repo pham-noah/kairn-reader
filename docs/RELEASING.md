@@ -8,6 +8,19 @@ points at it, F-Droid will point at it, and the store screenshots are served fro
 no SHAs** — the mirror is a replay, 99 commits against the development repo's 177, with its tip commit
 renamed `Kairn <version>`. Nothing fast-forwards between them, so the released tree is compared directly.
 
+## 1.0.0: the cast must be heard before the tag
+
+`assembleDebug` and 247 JVM tests prove the attribution and the piece split. They cannot prove that two
+voices sound like two people, so the release gate for 1.0.0 is one chapter read aloud on a phone with the
+cast on, with `adb logcat -s KairnPerf` open:
+
+- `tts gap Nms before i` between utterances. A median over ~100 ms is a stutter; the cast switch goes off in
+  the release notes' favour, not the code's.
+- the same chapter with the cast off, for the baseline gap on that engine.
+
+If it drags, the order of retreat is: cast per scene, then a bundled model, then single-voice - and the
+store copy says "character voices" only for what was actually heard.
+
 ## Checklist
 
 1. Version, changelog, release notes, SPEC_STATUS.

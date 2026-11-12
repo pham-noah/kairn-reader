@@ -126,6 +126,15 @@ data class Book(
     val lastRead: Long = 0,
     /** The book's word count, measured once. A property of the file, and ids are content hashes, so it cannot go stale. */
     val words: Int = 0,
+    /** From the OPF at import (EpubMeta): the series a library is really sorted by, and what a detail sheet shows. */
+    val series: String? = null,
+    val seriesIndex: Double? = null,
+    val desc: String? = null,
+    val publisher: String? = null,
+    val published: String? = null,
+    val language: String? = null,
+    /** True once the OPF was actually read, including when it held nothing - see Library.ensureMeta. */
+    val metaRead: Boolean = false,
     val marks: List<Mark> = emptyList(),
     val prefs: ReaderPrefs? = null,  // R-10
 ) {
@@ -134,6 +143,10 @@ data class Book(
         .put("tags", JSONArray(tags)).put("collections", JSONArray(collections))
         .put("missing", missing).put("broken", broken).put("locator", locator ?: JSONObject.NULL)
         .put("progress", progress.toDouble()).put("added", added).put("lastRead", lastRead).put("words", words)
+        .put("series", series ?: JSONObject.NULL).put("seriesIndex", seriesIndex ?: JSONObject.NULL)
+        .put("desc", desc ?: JSONObject.NULL).put("publisher", publisher ?: JSONObject.NULL)
+        .put("published", published ?: JSONObject.NULL).put("language", language ?: JSONObject.NULL)
+        .put("metaRead", metaRead)
         .put("marks", JSONArray(marks.map { it.toJson() }))
         .put("prefs", prefs?.toJson() ?: JSONObject.NULL)
 
@@ -157,7 +170,7 @@ data class Book(
             val id = o.optString("id").takeIf { isSafeId(it) } ?: return null
             val uri = o.optString("uri").takeIf { it.isNotBlank() } ?: return null
             return Book(
-            id = id, title = o.optString("title").ifBlank { "Untitled" }, author = o.optString("author"),
+            id = id, title = o.optString("title").ifBlank { "Untitled" }.take(400), author = o.optString("author").take(300),
             uri = uri, folder = o.optString("folder").takeIf { it.isNotEmpty() && it != "null" },
             status = runCatching { Status.valueOf(o.getString("status")) }.getOrDefault(Status.NONE),
             tags = strings(o.optJSONArray("tags")), collections = strings(o.optJSONArray("collections")),
@@ -165,6 +178,13 @@ data class Book(
             locator = o.optString("locator").takeIf { it.isNotEmpty() && it != "null" },
             progress = o.optDouble("progress", 0.0).toFloat(), added = o.optLong("added"),
             lastRead = o.optLong("lastRead"), words = o.optInt("words"),
+            series = o.optString("series").takeIf { it.isNotEmpty() && it != "null" }?.take(200),
+            seriesIndex = o.optDouble("seriesIndex", 0.0).takeIf { it.isFinite() && it > 0.0 },
+            desc = o.optString("desc").takeIf { it.isNotEmpty() && it != "null" }?.take(4000),
+            publisher = o.optString("publisher").takeIf { it.isNotEmpty() && it != "null" }?.take(200),
+            published = o.optString("published").takeIf { it.isNotEmpty() && it != "null" }?.take(64),
+            language = o.optString("language").takeIf { it.isNotEmpty() && it != "null" }?.take(32),
+            metaRead = o.optBoolean("metaRead"),
             marks = o.optJSONArray("marks")?.let { a ->
                 (0 until a.length()).mapNotNull { i -> runCatching { Mark.from(a.getJSONObject(i)) }.getOrNull() }
             } ?: emptyList(),
@@ -175,6 +195,17 @@ data class Book(
 }
 
 data class WatchedFolder(val uri: String, val name: String, val enabled: Boolean = true)
+
+/**
+ * A catalog the reader added (OPDS). The password is kept on this phone only: [AppSettings.withoutSecrets]
+ * is what a backup writes, so a zip handed to someone else never carries it.
+ */
+data class Catalog(
+    val name: String,
+    val url: String,
+    val user: String = "",
+    val pass: String = "",
+)
 
 data class AppSettings(
     val theme: ThemeId = ThemeId.DARK,        // DEC-4
@@ -190,6 +221,7 @@ data class AppSettings(
     val barOrder: List<BarItem> = BarItem.DEFAULT_ORDER,  // the order the reader arranged them in
     val autoDetect: Boolean = true,           // L-01: find EPUBs already on the device on open
     val folders: List<WatchedFolder> = emptyList(),
+    val catalogs: List<Catalog> = emptyList(),  // OPDS: Calibre's content server, or any other catalog
     val defaults: ReaderPrefs = ReaderPrefs(),
     val onboarded: Boolean = false,           // N-06
     val shelves: List<String> = emptyList(),  // collections created before any book is in them
@@ -222,6 +254,10 @@ data class AppSettings(
         .put("autoBackupKeep", autoBackupKeep).put("lastAutoBackup", lastAutoBackup).put("lastSweep", lastSweep)
         .put("folders", JSONArray(folders.map {
             JSONObject().put("uri", it.uri).put("name", it.name).put("enabled", it.enabled)
+        }))
+        .put("catalogs", JSONArray(catalogs.map {
+            JSONObject().put("name", it.name).put("url", it.url)
+                .put("user", it.user).put("pass", it.pass)
         }))
         .put("defaults", defaults.toJson())
 
@@ -269,6 +305,15 @@ data class AppSettings(
                         WatchedFolder(uri, f.optString("name"), f.optBoolean("enabled", true))
                     }
                 } ?: emptyList(),
+                // A catalog with no address is not a catalog; the rest of the list still loads.
+                catalogs = o.optJSONArray("catalogs")?.let { a ->
+                    (0 until a.length()).mapNotNull { i ->
+                        val c = a.optJSONObject(i) ?: return@mapNotNull null
+                        val url = c.optString("url").takeIf { it.startsWith("http://") || it.startsWith("https://") }
+                            ?: return@mapNotNull null
+                        Catalog(c.optString("name").ifBlank { url }, url, c.optString("user"), c.optString("pass"))
+                    }.take(10)
+                } ?: emptyList(),
                 defaults = ReaderPrefs.from(o.optJSONObject("defaults")),
                 onboarded = o.optBoolean("onboarded", false),
                 // optString on a JSON null yields the string "null", and getString throws: skip both.
@@ -287,4 +332,9 @@ data class AppSettings(
             )
         }
     }
+
+    /** The settings a ZIP may carry: a password to someone's Calibre server is not a preference. */
+    fun withoutSecrets(): AppSettings =
+        if (catalogs.none { it.pass.isNotEmpty() }) this
+        else copy(catalogs = catalogs.map { it.copy(pass = "") })
 }

@@ -1,6 +1,6 @@
 # Kairn — implementation status and engineering notes
 
-The product description lives in [README.md](../README.md). This file is the technical side: what is built
+The product description lives in [README.md](README.md). This file is the technical side: what is built
 against which spec item, what is not, and the things that will bite anyone touching the code.
 
 ## What is built, by spec ID
@@ -44,19 +44,37 @@ against which spec item, what is not, and the things that will bite anyone touch
 | Automatic backup on a schedule into a chosen folder, newest few kept | DS-01 |
 | Search cache: book text dumped once, repeat searches grep disk | S-01 |
 | No analytics, no crash reporting, all data in open JSON | N-01..N-02, DEC-8 |
+| Series from the OPF (Calibre's meta and EPUB 3's collection), and a Series sort | L-06 |
+| About this book: description, publisher, date, language, size, and its actions | L-06 |
+| Character voices in read aloud: one voice per name, narrator for everything unclear | R-15 |
+| OPDS catalog browsing and download into the library | L-04 |
 
 ## Not built yet
 
-R-04 custom font import (blocked: see below) · R-12 RTL/vertical verification (partly) · R-13 image zoom ·
-a bundled dictionary *card* (DEC-13: the selection menu hands the word to a dictionary app instead) · all
-v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts in
-`licences/`) and the signed minified release path both exist; F-Droid supplies its own signature.
+R-12 vertical text verification (partly) · a bundled dictionary *card* (DEC-13: the selection menu hands the
+word to a dictionary app instead) · all v1.x items (X-01…X-20). Bundled Manrope + Literata (OFL, licence texts
+in `licences/`) and the signed minified release path both exist; F-Droid supplies its own signature.
+
+## Dropped, not deferred: image zoom and custom fonts
+
+Both were dropped at 1.0.0 rather than carried as plans, because both were tried and measured and neither
+can be made to hold. The knowledge stays here so nobody spends the week again:
+
+- **Image zoom (was R-13).** Readium 3.0.0 has no zoom, so it means scaling the page and hit-testing which
+  picture was touched. `evaluateJavascript` must be called on the MAIN dispatcher (on IO it throws and looks
+  exactly like "no image found"); `TapEvent` carries only a `PointF`; `toDataURL` throws on a tainted canvas,
+  which is what Readium's internal scheme gives you; and `elementsFromPoint` returned the image in one run and
+  an empty `src` in the next at the same point. The instability, not the lookup, is the blocker.
+- **Custom font files (was R-04).** Readium 3.0.0 keeps `FontFamilyDeclaration`, `FontFaceDeclaration` and
+  `FontFaceSource` internal, so an app cannot declare an `@font-face` through the API. The only route is a
+  `<style>` injected per resource through `evaluateJavascript`, which re-injects on every chapter change and
+  shows a flash of unstyled text. Not worth the trade against three bundled typefaces.
 
 ## DS-03: Kindle clippings are placed by search, not by location
 
 A Kindle "Location 631-633" points into a Kindle rendering of the file and means nothing inside the EPUB -
 Readium would put the highlight on whatever text happens to sit at that progression, which for a different
-edition is a different paragraph. So [ClippingImport](../Kairn/app/src/main/java/app/kairn/data/ClippingImport.kt)
+edition is a different paragraph. So [ClippingImport](Kairn/app/src/main/java/app/kairn/data/ClippingImport.kt)
 runs the reader's own `Publication.search()` per clipping, longest query first (60 chars, then 30, then 15),
 and the first hit's locator becomes the mark's locator. A quote that is not found is counted and NOT placed:
 an imported highlight on the wrong page is worse than one that did not arrive.
@@ -429,22 +447,22 @@ installs in place over 0.8.2 and keeps filesDir. compileSdk/targetSdk 36, AGP 8.
 
 What changed, and where the sharp edges are:
 
-- **Read aloud with the screen off.** [SpeechService](../Kairn/app/src/main/java/app/kairn/ui/SpeechService.kt) is a
+- **Read aloud with the screen off.** [SpeechService](Kairn/app/src/main/java/app/kairn/ui/SpeechService.kt) is a
   `mediaPlayback` foreground service with a Stop action. `ReaderActivity.onPause` starts it while reading and
   stops it otherwise; `stopTts` and `onDestroy` stop it too. The service owns no audio - the voice, the page
   follow and the sleep timer all stay in the reader's process, which is exactly why the process needs holding.
   Asserted on device by `SpeechServiceDeviceTest`: backgrounding the reader while it reads leaves the service
   running, and stopping the voice ends it.
-- **Automatic backup.** [AutoBackup](../Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
+- **Automatic backup.** [AutoBackup](Kairn/app/src/main/java/app/kairn/data/AutoBackup.kt) writes one zip per
   `autoBackupDays` into the SAF tree chosen in Settings, pruning its own `PREFIX` files to `autoBackupKeep`.
   Silent on failure by design. It was not exercised end to end at release time (a SAF tree cannot be granted
   from adb); it has been since - see "Test counts, and the two hops that were unproven".
-- **Search cache.** [SearchIndex](../Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
+- **Search cache.** [SearchIndex](Kairn/app/src/main/java/app/kairn/data/SearchIndex.kt) stores one gzipped dump
   per book under `filesDir/search/`, keyed by the book file's size and mtime. Two traps it hit: `DocumentFile`
   cannot stat a `file://` book (stat the copy directly), and `Link.href` is an `Href` wrapper while `Locator`
   wants a `Url`, whose `String` constructor is deprecated to ERROR level (use the `Url(String)` factory).
   Covered by `SearchIndexDeviceTest`.
-- **Positions cache.** [PositionsCache](../Kairn/app/src/main/java/app/kairn/data/PositionsCache.kt) stores the
+- **Positions cache.** [PositionsCache](Kairn/app/src/main/java/app/kairn/data/PositionsCache.kt) stores the
   locator list `positions()` returns, one gzipped file per book under `filesDir/positions/`, valid against the
   same size+mtime stamp and a `FORMAT` constant that a pagination change bumps. Storing locators (rather than
   just counts) is what makes it worth it: the progress slider navigates with the restored `Locator` objects,
@@ -667,3 +685,101 @@ and commit get bumped together before resubmitting. Overriding the flag still ha
 `prebuild` sed, which is cruder than a gradle property - that change is Noah's call.
 
 Do not rediscover this as news: the F-Droid submission is closed and stale, not pending.
+
+## 1.0.0 — the four things that make it a 1.0
+
+Version 24. Four features, not a feature dump: the differentiator the app already claimed, and the three
+holes a real library hits.
+
+### Read aloud: character voices
+
+`ui/SpeechCast.kt` decides, from the chapter text alone, who is speaking: quoted spans, an attribution verb,
+and the capitalised name nearest it - but only outside the quotes, because the first word of a spoken line is
+capitalised too. The rule that outranks the heuristic is in the code comment: **a wrong voice is worse than a
+flat one**, so a line it cannot attribute is read by the narrator. Two known voices and an unattributed line
+alternate, which is the one inference the text itself supports; three or more do not. The cast is capped at
+six.
+
+`ReaderLogic.ttsPieces(text, spans)` now breaks an utterance on a change of speaker, never inside one, and
+`ReaderTts` applies a voice and a pitch between utterances only (a `setVoice` per sentence is a round trip to
+the engine). The engine is asked for two distinct voices in the system language; slots 1-4 are those two at
+different pitches, because a phone has far fewer voices than a book has characters. The cast is one small
+file per book (`data/cast/<id>.json`), with a per-book switch, and it is in the backup.
+
+**The unmeasured part, and it is the one that matters:** switching voices between queued utterances is not
+uniformly supported. Some engines re-initialise and leave an audible gap. `KairnPerf: tts gap Nms before i`
+was added for exactly this and **was not measured, because no device was attached during this release**.
+Until someone reads a chapter with the cast on, "character voices" is a code path with tests, not a promise.
+
+### Series
+
+`data/EpubMeta.kt` reads the OPF directly - `calibre:series`/`calibre:series_index`, or EPUB 3's
+`belongs-to-collection` when its `collection-type` is `series` - along with description, publisher, date and
+language. Readium's `Metadata` does not expose any of those. Two stream passes over a few-kB entry at import;
+records imported before 1.0 are filled in by a bounded background pass (`Library.backfillMeta`, 40 per launch)
+and marked `metaRead` so an OPF that held nothing is not re-read forever. The DOM is hardened the same way the
+OPDS parse is: doctype and external entities refused.
+
+Series sort keeps a series together in its own order and puts everything else after it by title.
+
+### About this book
+
+`ui/screens/BookDetailSheet.kt`: the one place a book's own facts and its actions live together. The body is
+extracted from the sheet as `BookDetailContent` so a JVM composition can assert it - a ModalBottomSheet is a
+Dialog window and does not draw under Robolectric.
+
+### OPDS
+
+`data/Opds.kt` parses Atom (Calibre's content server and everything else), resolves relative hrefs, prefers
+an explicit thumbnail link, and refuses a doctype/entity. `data/OpdsClient.kt` is the second thing in the app
+that opens a socket: 15/20 s timeouts, an 8 MB feed cap, a 1 GB book cap, a partial download deleted rather
+than left to be imported, and only `http`/`https`. `ui/screens/CatalogScreen.kt` is list → browse → download →
+import; nothing is fetched until a row is tapped and covers are not fetched at all.
+
+Two consequences worth knowing:
+
+- **Cleartext is now permitted** (`android:usesCleartextTraffic="true"`). A Calibre server on a LAN serves
+  http, and the address is typed by the reader; the app still only ever talks to what it was pointed at.
+- **A catalog password never enters a backup.** `Backup.write` writes `AppSettings.withoutSecrets()` into the
+  zip, so a restore brings the catalogs back with empty passwords. The settings file on the device keeps them.
+
+### The adversarial pass, before anyone saw it
+
+Nine defects in the four new surfaces, all fixed, all with a probe that now guards them
+(`kairn-qa/BREAK-REPORT-2026-11-12.md` carries the full report and the list of what held up):
+
+- a removed book kept its `cast/<id>.json` (`Store.remove`); mutation-checked probe;
+- a catalog page whose "next" pointed at itself grew the list forever (`Opds.appendPage`: dedupe, 500 cap,
+  `next` cleared at the cap);
+- no bound on any text taken from a feed, an OPF or a restored record (title 300, author 200, series 200,
+  description 4000, and so on at the parse boundary);
+- a failed download left its partial file (`return null` did not delete; only exceptions did);
+- a catalog download had no free-space floor, while the upload path has refused under 64 MB since 0.9.6;
+- `Backup.write` built entry names with `File.path`, so only an Android-made zip matched the `data/books/`
+  restore rule - now always forward slashes;
+- 2 000 quotes in a chapter queued 4 000 utterances (`SpeechCast.MAX_SPANS = 1000` reads such a chapter in one
+  voice, deliberately);
+- `FRODO` and `Frodo` were two characters (canonicalised to the first spelling);
+- the add-a-catalog form said "Username (optional)" twice per field.
+
+Held up under attack: a 10 000-entry feed (623 ms), a 40 MB zip bomb, doctype/entity refusal in both parsers,
+`file:`/`javascript:`/control-character hrefs, megabyte restored records, a 1 000-voice cast file, hostile
+catalog entries that are dropped one at a time, and the backup's password stripping (proved by reading the zip).
+
+### What was verified for 1.0.0
+
+**JVM tests only.** No phone and no emulator were available (the only AVD cannot boot on this machine), so:
+
+| | state |
+|---|---|
+| attribution (11 cases: names, pronouns, articles, curly quotes, alternation, cap, span coverage) | green |
+| piece splitting by speaker, offsets preserved | green |
+| cast file round-trip, hostile id, broken file, slot clamps | green |
+| OPF parse (Calibre, EPUB 3, description cleanup, doctype, garbage) | green |
+| OPDS parse (Calibre page, absolute and relative hrefs, next page, empty feed, doctype, non-http href) | green |
+| book detail sheet drawn on the JVM (7 cases) | green |
+| **247 JVM tests, 0 failures; lint 0 errors / 12 warnings (dependency versions)** | green |
+| the nine hardening probes above (data layer, cast, backup secrets, catalog screen composition) | green |
+| `check_translations.py` | 429 keys, six locales |
+| the cast actually sounding like different people | **not measured** |
+| the catalog download against a real Calibre server | **not measured** |

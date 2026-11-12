@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +95,10 @@ internal fun TtsSheet(
     onRate: (Float) -> Unit,
     onSleep: (Int) -> Unit,
     onStop: () -> Unit,
+    cast: app.kairn.data.BookCast = app.kairn.data.BookCast(),
+    speakers: List<String> = emptyList(),
+    onCastEnabled: (Boolean) -> Unit = {},
+    onCastVoice: (String, Int) -> Unit = { _, _ -> },
 ) {
     KControl(stringResource(R.string.s_speech_rate), stringResource(R.string.s_speech_rate_value, prefs.speechRate)) {
         KSlider(prefs.speechRate, onRate, 0.6f..2f)
@@ -113,7 +118,58 @@ internal fun TtsSheet(
         KChip(stringResource(R.string.s_end_of_chapter), sleepChoice < 0, { onSleep(-1) })
     }
     Text(stringResource(R.string.s_sleep_hint), style = KType.small.copy(color = K.dim),
-        modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 16.dp))
+        modifier = Modifier.padding(start = 4.dp, top = 10.dp, bottom = 6.dp))
+
+    // The differentiator, where the voice already lives: a switch, then one row per name the chapter found.
+    // Each row is the narrator plus four slots, drawn as chips, so a wrong guess is one tap to fix.
+    Column(Modifier.padding(top = 10.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.s_character_voices), style = KType.title)
+                Text(
+                    if (speakers.isEmpty()) stringResource(R.string.s_cast_empty)
+                    else pluralStringResource(R.plurals.s_speakers_found, speakers.size, speakers.size),
+                    style = KType.small.copy(color = K.dim),
+                )
+            }
+            KSwitch(cast.enabled, onCastEnabled)
+        }
+        if (cast.enabled && speakers.isNotEmpty()) {
+            Text(stringResource(R.string.s_cast_hint), style = KType.small.copy(color = K.dim),
+                modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 4.dp))
+            // A bottom sheet clips rather than scrolls, and a cast is up to six rows of chips: on a short
+            // phone the last rows (and the Stop button under them) would be off the bottom of the screen.
+            Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
+            val rows = minOf(speakers.size, 6)
+            for (i in 0 until rows) {
+                val name = speakers[i]
+                val current = if (cast.voices[name] != null) cast.voices.getValue(name) else 1 + i % app.kairn.data.BookCast.SLOTS
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(name, style = KType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    for (slot in 1..app.kairn.data.BookCast.SLOTS) {
+                        KChip(
+                            stringResource(R.string.s_voice_n, slot),
+                            current == slot,
+                            { onCastVoice(name, slot) },
+                        )
+                    }
+                }
+            }
+            }
+            // The narrator always has slot 0 and is never a row: it is the voice that reads everything else.
+            Text(
+                stringResource(R.string.s_cast_narrator_note),
+                style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+            )
+        }
+    }
+    Spacer(Modifier.height(16.dp))
     KButton(stringResource(R.string.s_stop_reading), onStop, style = KButtonStyle.Secondary)
 }
 
