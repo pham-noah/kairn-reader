@@ -686,7 +686,18 @@ and commit get bumped together before resubmitting. Overriding the flag still ha
 
 Do not rediscover this as news: the F-Droid submission is closed and stale, not pending.
 
-## 1.0.0 — the four things that make it a 1.0
+## 1.0.0 — released 2026-11-12
+
+Version 24, asset `Kairn-1.0.0.apk` 6,385,628 bytes, md5 `40f844d6cf387e848a1006eb43ff1f0d`, sha256
+`6aa45337…`, signed with CN=Kairn (SHA-256 `69086f40…`) so it installs over 0.9.6 in place. Tagged `v1.0.0`
+in both repositories; the mirror's `v1.0.0` points at `8b0e681` ("Kairn 1.0.0"), which is the replayed tree.
+The asset was downloaded back after publishing and matched by md5.
+
+F-Droid is deferred to next year by the owner's decision; `fdroid/app.kairn.yml` in this repo is a draft at
+1.0.0 with its commit left as a placeholder, so the next attempt starts from the current build rather than
+0.8.5.
+
+## The four things that make it a 1.0
 
 Version 24. Four features, not a feature dump: the differentiator the app already claimed, and the three
 holes a real library hits.
