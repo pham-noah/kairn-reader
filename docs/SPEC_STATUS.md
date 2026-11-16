@@ -794,3 +794,46 @@ catalog entries that are dropped one at a time, and the backup's password stripp
 | `check_translations.py` | 429 keys, six locales |
 | the cast actually sounding like different people | **not measured** |
 | the catalog download against a real Calibre server | **not measured** |
+
+## 1.0.5 — prepared 2026-11-16
+
+Version 25. A fix release: no new feature, four pieces of chrome that assumed the reading bars never move, and a
+test suite that had not compiled from clean since 1.0.0.
+
+The reader's toast pill (the one that says "Bookmark added") cleared the bottom bar with a fixed 200dp offset, so
+it hung mid-page whenever the bars were hidden — 567dp down a 780dp page — and it could not be dismissed: the
+Activity's swipe gate only excluded the bottom bar, so a flick that started on the pill armed the page turn and
+then swallowed the `ACTION_UP` before Compose saw it. The chapter moved under a message that stayed. The pill now
+follows `ui.bars` (bar height while drawn, navigation inset when hidden), carries swipe-to-dismiss that consumes
+its own drag, and reports its band so `ReaderActivity` can tell a swipe meant for it from a page turn. The top bar
+publishes its bottom edge for the same reason — a drag on the back arrow or the bookmark button used to change the
+chapter. `ReaderLogic.flickPagesFrom` is that rule as a pure function, tested in `FlickZoneTest`. The footnote card
+and the jump-back pill follow the same chrome offset, and both transient pills now share one bottom stack (action
+above message) instead of the jump-back pill floating under the top bar.
+
+The build side: `ReaderActions` gained `setCastEnabled`/`setCastVoice` at 1.0.0 and two fakes were never updated,
+so `:app:compileDebugUnitTestKotlin` and `:app:compileDebugAndroidTestKotlin` were red from a fresh checkout while
+an incremental build here kept reporting green. Both fixed; `ReaderScreenUiTest` (7) and `ScreensUiTest` (3) run
+for the first time. New coverage draws what no test had: `ToastPillUiTest` (12), `WholeAppUiTest` (15, every sheet
+body plus onboarding, collections and backup, with hostile data) and `FlickZoneTest` (6). `StatsSheet` and
+`UpdateSheet` now delegate to `StatsContent`/`UpdateContent` for the same reason `BookDetailSheet` already did.
+
+**Verified:** 294 JVM tests, 0 failures; lint 0 errors / 8 warnings / 0 hints; `assembleDebug` builds; both test
+source sets and the instrumentation suite compile with `--rerun-tasks`; translations 429 keys in six locales. CI on
+the public mirror is green (`327f346`), with the four GitHub actions off the deprecated Node 20 line.
+
+The eight remaining lint warnings are one wall, not eight chores: the 2026 androidx tier and Readium 3.4.0 both
+require AGP 9.1.0+, and Readium 3.4.0 wants compileSdk 37 plus Kotlin 2.4 metadata. The chain was walked to
+`IrGenerationExtensionException` and reverted; the migration is its own task with a device pass, because
+Compose 1.7 → 1.9 is a runtime change.
+
+**Not measured:** no device was attached for this release either, so the pill's new position and its swipe are
+geometry measured on a 360×780dp test screen, not felt by a hand. The cast still has its 1.0.0 gate: one chapter
+read aloud with `KairnPerf: tts gap` behind it.
+
+**Distribution:** asset `Kairn-1.0.5.apk`, 6,404,119 bytes, md5 `5b3e24194c0420013119c1b3f4765f88`, sha256
+`a4b25e17…`, signed with CN=Kairn (SHA-256 `69086f40…`) — the same certificate as 1.0.0, so it installs over it in
+place. Tagged `v1.0.5` in both repositories. The asset was downloaded back after publishing and matched by md5.
+
+F-Droid remains deferred; `fdroid/app.kairn.yml` carries 1.0.5 / versionCode 25 with its commit still a
+placeholder, as at 1.0.0.

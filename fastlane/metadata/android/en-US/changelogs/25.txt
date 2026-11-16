@@ -1,0 +1,4 @@
+The bookmark message now drops with the bars and can be swiped away, and a swipe on it no longer turns the chapter under it.
+"Back to where you were" sits with the message at the bottom instead of over the top of the page.
+A footnote card no longer runs under the bottom bar.
+The test suite compiles from clean again, so every screen is actually checked before a build ships.

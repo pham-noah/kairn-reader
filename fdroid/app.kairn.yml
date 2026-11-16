@@ -1,9 +1,9 @@
 # Draft recipe for F-Droid (metadata/app.kairn.yml in fdroiddata). Not submitted: the earlier merge request
-# was closed against v0.3.0, so resubmitting is Noah's call. Fields read from the build files at 1.0.0:
-# app.kairn, minSdk 26, targetSdk 36, compileSdk 36, versionCode 24 / 1.0.0, subdir Kairn, Apache-2.0.
+# was closed against v0.3.0, so resubmitting is Noah's call. Fields read from the build files at 1.0.5:
+# app.kairn, minSdk 26, targetSdk 36, compileSdk 36, versionCode 25 / 1.0.5, subdir Kairn, Apache-2.0.
 #
 # THE COMMIT BELOW IS A PLACEHOLDER. The updater and F-Droid build from the mirror (kairn-reader), whose
-# history is a replay with different SHAs, so `v1.0.0` must be cut there first and this line pointed at it.
+# history is a replay with different SHAs, so `v1.0.5` must be cut there first and this line pointed at it.
 
 Categories:
   - Reading
@@ -85,9 +85,9 @@ RepoType: git
 Repo: https://github.com/pham-noah/kairn-reader
 
 Builds:
-  - versionName: 1.0.0
-    versionCode: 24
-    commit: PLACEHOLDER-tag-v1.0.0-on-kairn-reader
+  - versionName: 1.0.5
+    versionCode: 25
+    commit: PLACEHOLDER-tag-v1.0.5-on-kairn-reader
     subdir: Kairn
     gradle:
       - yes
