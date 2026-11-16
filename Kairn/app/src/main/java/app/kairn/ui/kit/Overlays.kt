@@ -1,12 +1,14 @@
 package app.kairn.ui.kit
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,7 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.ui.theme.Dim
@@ -25,6 +30,9 @@ import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.glass
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Glass sheet. The glass is the sheet's own surface: never nest a rounded glass surface inside the
  *  ModalBottomSheet, which already clips it. */
@@ -60,23 +68,32 @@ fun KAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector
     }
 }
 
-/** Toast: a light pill near the bottom that fades after a moment. It can carry one action (Undo). */
+/** Toast: a light pill near the bottom that fades after a moment. It can carry one action (Undo), and it can
+ *  be swiped away — a pill over the page that ignores a swipe reads as a stuck one. */
 class ToastState {
     var message by mutableStateOf<String?>(null); private set
     private var actionLabel by mutableStateOf<String?>(null)
     private var pending: (() -> Unit)? = null
     private var stamp by mutableIntStateOf(0)
+    private var lifeMs by mutableLongStateOf(SHORT_MS)
 
     fun show(text: String, actionLabel: String? = null, action: (() -> Unit)? = null) {
         message = text
         this.actionLabel = if (action != null) actionLabel else null
         pending = action
+        lifeMs = if (action != null) LONG_MS else SHORT_MS
         stamp++
+    }
+
+    /** Gone now: the timer ran out, or a swipe took it. An action nobody can press any more is dropped. */
+    fun dismiss() {
+        if (message == null) return
+        pending = null; actionLabel = null; message = null
     }
 
     private fun fire() {
         val a = pending
-        pending = null; actionLabel = null; message = null
+        dismiss()
         a?.invoke()
     }
 
@@ -84,10 +101,25 @@ class ToastState {
         // Keep the last text: when `message` goes null the exit animation still draws the pill.
         val last = remember { arrayOf("") }
         message?.let { last[0] = it }
-        LaunchedEffect(stamp) { if (message != null) { delay(if (actionLabel != null) 5000 else 2600); message = null } }
+        val drag = remember { Animatable(0f) }
+        val scope = rememberCoroutineScope()
+        val slop = with(androidx.compose.ui.platform.LocalDensity.current) { 80.dp.toPx() }
+        LaunchedEffect(stamp) { drag.snapTo(0f); if (message != null) { delay(lifeMs); dismiss() } }
         AnimatedVisibility(message != null, modifier, enter = fadeIn() + slideInVertically { it / 2 }, exit = fadeOut() + slideOutVertically { it / 2 }) {
             Row(
                 Modifier.padding(horizontal = 20.dp).shadow(10.dp, RoundedCornerShape(16.dp)).background(K.toastBg, RoundedCornerShape(16.dp))
+                    // The swipe follows the finger and, past 80dp, takes the pill with it. It consumes the
+                    // drag: the reader pages a chapter on any horizontal flick, and a swipe meant for the
+                    // pill must not turn the page under it.
+                    .offset { IntOffset(drag.value.roundToInt(), 0) }
+                    .graphicsLayer { alpha = 1f - (abs(drag.value) / (slop * 4)).coerceIn(0f, .55f) }
+                    .pointerInput(stamp) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = { if (abs(drag.value) > slop) dismiss() else scope.launch { drag.animateTo(0f) } },
+                            onDragCancel = { scope.launch { drag.animateTo(0f) } },
+                            onHorizontalDrag = { change, dx -> change.consume(); scope.launch { drag.snapTo(drag.value + dx) } },
+                        )
+                    }
                     .padding(horizontal = 16.dp, vertical = 13.dp).fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -104,6 +136,11 @@ class ToastState {
                 }
             }
         }
+    }
+
+    private companion object {
+        const val SHORT_MS = 2600L
+        const val LONG_MS = 5000L      // an action (Undo) has to stay long enough to be pressed
     }
 }
 val LocalToast = staticCompositionLocalOf { ToastState() }

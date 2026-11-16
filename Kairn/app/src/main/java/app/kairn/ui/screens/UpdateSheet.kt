@@ -56,6 +56,17 @@ fun UpdateSheet(
     onClose: () -> Unit,
 ) {
     KSheet(onClose, stringResource(R.string.s_software_update)) {
+        UpdateContent(ui, onCheck, onDownload, onInstall)
+    }
+}
+
+/**
+ * What the check produced and the taps that follow it, without the sheet around it: a `KSheet` is a Dialog
+ * under Robolectric and its body never lays out there, so this is what the JVM test draws.
+ */
+@Composable
+internal fun UpdateContent(ui: UpdateUi, onCheck: () -> Unit, onDownload: () -> Unit, onInstall: () -> Unit) {
+    Column {
         when {
             ui.checking -> Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(20.dp), color = K.mint, strokeWidth = 2.dp)

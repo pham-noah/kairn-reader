@@ -236,6 +236,18 @@ object ReaderLogic {
         marks.any { it.kind == "bookmark" && hrefOf(it) == href }
 
     /**
+     * Whether a flick at [y] may page the chapter: only on the page itself. The two bars and the toast pill
+     * are Compose content in the same window as the book, and the Activity's swipe gate swallows the
+     * ACTION_UP when it takes a flick — so a drag that starts on any of them both pages the chapter and
+     * starves the control of the gesture. A band whose top is not above its bottom (a bar that is out of
+     * composition, a pill that is gone) protects nothing.
+     */
+    fun flickPagesFrom(y: Float, topBarBottom: Float, bottomBarTop: Float, pillTop: Float, pillBottom: Float): Boolean {
+        if (y < topBarBottom || y >= bottomBarTop) return false
+        return !(pillBottom > pillTop && y >= pillTop && y <= pillBottom)
+    }
+
+    /**
      * Last path segment with any fragment dropped. A TOC href is relative to its own entry ("ch03.xhtml")
      * while a locator href is not ("OEBPS/ch03.xhtml"), so the two never compare equal as strings.
      */

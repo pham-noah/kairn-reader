@@ -1,6 +1,9 @@
 # Draft recipe for F-Droid (metadata/app.kairn.yml in fdroiddata). Not submitted: the earlier merge request
-# was closed against v0.3.0, so resubmitting is Noah's call. Fields read from the build files at 0.8.5:
-# app.kairn, minSdk 26, targetSdk 36, compileSdk 36, versionCode 23 / 0.9.6, subdir Kairn, Apache-2.0.
+# was closed against v0.3.0, so resubmitting is Noah's call. Fields read from the build files at 1.0.0:
+# app.kairn, minSdk 26, targetSdk 36, compileSdk 36, versionCode 24 / 1.0.0, subdir Kairn, Apache-2.0.
+#
+# THE COMMIT BELOW IS A PLACEHOLDER. The updater and F-Droid build from the mirror (kairn-reader), whose
+# history is a replay with different SHAs, so `v1.0.0` must be cut there first and this line pointed at it.
 
 Categories:
   - Reading
@@ -25,6 +28,21 @@ Description: |-
   book. Five page tones from light to true black, a warm filter for late nights, and brightness that either
   applies to Kairn alone or follows the rest of the phone. The slider at the bottom shows where you are and
   roughly how long is left.
+
+  Character voices
+  Read aloud gives each name in a chapter its own voice, and keeps the phone's narrator for narration and for
+  any line the text does not attribute - a wrong voice is worse than a flat one, so it never guesses twice.
+  Every name can be moved to another voice, per book, and the whole cast has a switch. It uses the voices the
+  phone already has: nothing is downloaded and no book leaves the device.
+
+  Series and the book's own page
+  A book that belongs to a series says which part it is, and Series is a sort order that keeps a series
+  together. Long-press a book for its description, publisher, date, language and size beside its actions.
+
+  Catalogs (OPDS, optional)
+  Add your Calibre content server's address, or any OPDS catalog, and browse its shelves over your own
+  network. A book downloads only when you tap it. This is the only feature that uses a network besides the
+  update check; a username and password stay on the phone and never enter a backup.
 
   Read aloud
   Kairn can speak the book with the voice your phone already has, at the speed you like. A sleep timer stops
@@ -67,9 +85,9 @@ RepoType: git
 Repo: https://github.com/pham-noah/kairn-reader
 
 Builds:
-  - versionName: 0.9.6
-    versionCode: 23
-    commit: v0.9.6
+  - versionName: 1.0.0
+    versionCode: 24
+    commit: PLACEHOLDER-tag-v1.0.0-on-kairn-reader
     subdir: Kairn
     gradle:
       - yes
@@ -82,5 +100,5 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.8.5
-CurrentVersionCode: 15
+CurrentVersion: 1.0.0
+CurrentVersionCode: 24

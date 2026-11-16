@@ -4,6 +4,7 @@ package app.kairn.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -25,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.semantics.Role
@@ -35,6 +38,7 @@ import androidx.compose.ui.graphics.Color as CColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.ui.kit.pressFeedback
@@ -97,6 +101,13 @@ internal class ReaderUiState {
     // Top edge of the reader's bottom bar in window coordinates. A scroll-mode swipe may only start above
     // it: the bar's slider is Compose content in this same window, and intercepting its drag paged a chapter.
     var chromeTopPx by mutableFloatStateOf(Float.MAX_VALUE)
+    // The two bars' edges and the toast pill's band, all in window coordinates: a flick may only page the
+    // chapter if it starts on the page itself, between the bars and off the pill.
+    var topChromeBottomPx by mutableFloatStateOf(0f)
+    /** The footnote card's height while it is up (0 when it is not): the pill stacks above it, not on it. */
+    var footnoteHeightPx by mutableFloatStateOf(0f)
+    var toastTopPx by mutableFloatStateOf(-1f)
+    var toastBottomPx by mutableFloatStateOf(-1f)
 }
 
 /**
@@ -176,10 +187,23 @@ internal fun ReaderScreen(
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
         if (ui.prefs.warmth > 0f) Box(Modifier.fillMaxSize().background(CColor(0xFFFF9A2E).copy(alpha = ui.prefs.warmth * 0.30f)))
         if (ui.loading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = K.mint)
-        toast.Host(Modifier.align(Alignment.BottomCenter).padding(bottom = 200.dp))
+        // One offset for everything that has to clear the bottom edge: the bar while it is drawn, and the
+        // system's navigation inset once it is gone. A fixed value is only right in one of those states.
+        val bottomPad = chromeBottomPad(ui.bars)
+        // Same rule at the top edge: under the top bar while it is drawn, under the status bar once it is
+        // gone. The jump-back pill's fixed 70dp was 3dp clear of a 67dp bar, and floated 70dp down when
+        // there was no bar at all.
+        val topPad by animateDpAsState(
+            if (ui.bars) with(LocalDensity.current) { ui.topChromeBottomPx.toDp() } + 8.dp
+            else 8.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+            label = "topPad",
+        )
 
         AnimatedVisibility(ui.bars, Modifier.align(Alignment.TopCenter), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-            Column(Modifier.fillMaxWidth().background(colors.chrome)) {
+            Column(Modifier.fillMaxWidth().background(colors.chrome).onGloballyPositioned {
+                // Its bottom edge is where the page begins: a flick on the bar is the bar's, not a page turn.
+                ui.topChromeBottomPx = it.boundsInRoot().bottom
+            }) {
                 Row(Modifier.statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     KIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.s_back_to_library), { act.close() }, tint = colors.chromeText)
                     Text(ui.bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, textAlign = ComposeTextAlign.Center, color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -202,22 +226,26 @@ internal fun ReaderScreen(
 
         ui.jumpBack?.let { j ->   // R-08: "Back to where you were"
             LaunchedEffect(j) { delay(6000); ui.jumpBack = null }
-            Row(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 70.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
+            Row(Modifier.align(Alignment.TopCenter).padding(top = topPad).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
                 .clickable { act.goTo(j); ui.jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text(stringResource(R.string.s_back_to_where_you_were), color = K.mintInk, fontWeight = FontWeight.ExtraBold)
             }
         }
 
         ui.footnote?.let { note ->   // R-08: footnote card, so you do not lose your page
-            Column(Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 150.dp).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(K.surf2).padding(16.dp)) {
+            Column(Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = bottomPad).fillMaxWidth()
+                .onGloballyPositioned { ui.footnoteHeightPx = it.size.height.toFloat() }
+                .clip(RoundedCornerShape(20.dp)).background(K.surf2).padding(16.dp)) {
                 Text(stringResource(R.string.s_footnote), color = K.mint, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                 Text(note, style = KType.small, modifier = Modifier.padding(bottom = 12.dp))
                 KButton(stringResource(R.string.s_close), { ui.footnote = null }, style = KButtonStyle.Secondary, small = true)
             }
         }
 
-        // While the bars are hidden there is nothing to protect (and the bar is out of composition).
-        LaunchedEffect(ui.bars) { if (!ui.bars) ui.chromeTopPx = Float.MAX_VALUE }
+        LaunchedEffect(ui.footnote) { if (ui.footnote == null) ui.footnoteHeightPx = 0f }
+        // While the bars are hidden there is nothing to protect (and the bar is out of composition): the
+        // whole window is page, apart from the pill.
+        LaunchedEffect(ui.bars) { if (!ui.bars) { ui.chromeTopPx = Float.MAX_VALUE; ui.topChromeBottomPx = 0f } }
         AnimatedVisibility(ui.bars, Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
             Column(Modifier.fillMaxWidth().background(colors.chrome).onGloballyPositioned { ui.chromeTopPx = it.positionInRoot().y }) {
                 HorizontalDivider(color = colors.line)
@@ -370,7 +398,30 @@ internal fun ReaderScreen(
             }
         }
         BackHandler(ui.sheet != ReaderSheet.NONE) { ui.sheet = ReaderSheet.NONE }
+        // Last in the Box, so the pill is legible over the bars, the footnote card and the jump-back pill
+        // instead of behind whichever of them happens to be up.
+        val noteLift by animateDpAsState(with(LocalDensity.current) { ui.footnoteHeightPx.toDp() } + 8.dp, label = "noteLift")
+        toast.Host(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPad + (if (ui.footnote == null) 0.dp else noteLift)).onGloballyPositioned { c ->
+                // Where it is, so the Activity can tell a swipe meant for the pill from a page turn.
+                val r = c.boundsInRoot()
+                val up = c.size.height > 0
+                ui.toastTopPx = if (up) r.top else -1f
+                ui.toastBottomPx = if (up) r.bottom else -1f
+            },
+        )
     }
+}
+
+/**
+ * How far above the bottom edge anything floating there has to sit: clear of the bar while it is drawn, and
+ * clear of the system's navigation inset once it is gone. A fixed offset is only right in one of the two:
+ * the toast pill hung in the middle of a full-screen page, and the footnote card sat behind the bar.
+ */
+@Composable
+private fun chromeBottomPad(bars: Boolean): Dp {
+    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return animateDpAsState(if (bars) 200.dp else 16.dp + nav, label = "chromeBottomPad").value
 }
 
 /**

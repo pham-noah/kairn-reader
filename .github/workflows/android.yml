@@ -25,6 +25,11 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
+      # Cheaper than the Gradle run below and it answers a different question: every locale carries every key,
+      # with the same plurals and the same format arguments.
+      - name: Translation keys, plurals and format arguments
+        run: python3 tools/check_translations.py
+
       - name: Unit tests, lint and a debug build
         working-directory: Kairn
         run: |

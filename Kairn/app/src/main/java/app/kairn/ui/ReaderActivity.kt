@@ -503,9 +503,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         // The threshold comes from Settings > Reading > "Swipe distance".
         val flick = app.store.settings.value.swipeThreshold * resources.displayMetrics.density
         val swipeOn = app.store.settings.value.swipeChapters
-        // Only a touch that STARTS on the book may page it. The bars are Compose content in this same
-        // window, so without this a horizontal drag on the seek slider armed the swipe, swallowed the
-        val inReadingArea = ev.y < ui.chromeTopPx
+        // Only a touch that STARTS on the book may page it: both bars and the toast pill are Compose
+        // content in this same window, and taking a flick that began on one of them swallowed the UP
+        // before Compose saw it — the chapter turned under a control that never got its gesture.
+        val inReadingArea = ReaderLogic.flickPagesFrom(ev.y, ui.topChromeBottomPx, ui.chromeTopPx, ui.toastTopPx, ui.toastBottomPx)
         fun flicks(dx: Float, dy: Float) = kotlin.math.abs(dx) > flick && kotlin.math.abs(dx) > kotlin.math.abs(dy) * 3f
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> { downX = ev.x; downY = ev.y; armed = false; tracking = inReadingArea }

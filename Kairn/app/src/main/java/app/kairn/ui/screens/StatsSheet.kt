@@ -27,6 +27,15 @@ import java.util.Locale
  */
 @Composable
 fun StatsSheet(stats: ReadingStats, finishedBooks: Int, onClose: () -> Unit) {
+    KSheet(onClose, stringResource(R.string.s_your_reading)) { StatsContent(stats, finishedBooks) }
+}
+
+/**
+ * The record itself, without the sheet around it: a `KSheet` is a `ModalBottomSheet`, which is a Dialog, so a
+ * body composed in it never lays out under Robolectric. This is the composable the JVM test draws.
+ */
+@Composable
+internal fun StatsContent(stats: ReadingStats, finishedBooks: Int) {
     val week = remember(stats) { stats.recent(7) }
     val best = remember(week) { week.maxOfOrNull { it.second } ?: 0 }
     val weekTotal = remember(week) { week.sumOf { it.second } }
@@ -34,7 +43,7 @@ fun StatsSheet(stats: ReadingStats, finishedBooks: Int, onClose: () -> Unit) {
     val total = remember(stats) { stats.totalMinutes() }
     val today = remember(stats) { stats.minutesToday() }
 
-    KSheet(onClose, stringResource(R.string.s_your_reading)) {
+    Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatBox(stringResource(R.string.s_today), minutes(today), Modifier.weight(1f))
             StatBox(stringResource(R.string.s_this_week), minutes(weekTotal), Modifier.weight(1f))

@@ -45,6 +45,8 @@ class ReaderScreenUiTest {
         override fun search(query: String) {}
         override fun toggleTts() {}
         override fun stopTts() {}
+        override fun setCastEnabled(on: Boolean) {}
+        override fun setCastVoice(speaker: String, slot: Int) {}
         override fun setSpeechRate(rate: Float) {}
         override fun setSleepTimer(minutes: Int) {}
         override fun toggleAutoScroll() {}
