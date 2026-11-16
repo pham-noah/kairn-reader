@@ -190,14 +190,6 @@ internal fun ReaderScreen(
         // One offset for everything that has to clear the bottom edge: the bar while it is drawn, and the
         // system's navigation inset once it is gone. A fixed value is only right in one of those states.
         val bottomPad = chromeBottomPad(ui.bars)
-        // Same rule at the top edge: under the top bar while it is drawn, under the status bar once it is
-        // gone. The jump-back pill's fixed 70dp was 3dp clear of a 67dp bar, and floated 70dp down when
-        // there was no bar at all.
-        val topPad by animateDpAsState(
-            if (ui.bars) with(LocalDensity.current) { ui.topChromeBottomPx.toDp() } + 8.dp
-            else 8.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-            label = "topPad",
-        )
 
         AnimatedVisibility(ui.bars, Modifier.align(Alignment.TopCenter), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
             Column(Modifier.fillMaxWidth().background(colors.chrome).onGloballyPositioned {
@@ -221,14 +213,6 @@ internal fun ReaderScreen(
                     )
                 }
                 HorizontalDivider(color = colors.line)
-            }
-        }
-
-        ui.jumpBack?.let { j ->   // R-08: "Back to where you were"
-            LaunchedEffect(j) { delay(6000); ui.jumpBack = null }
-            Row(Modifier.align(Alignment.TopCenter).padding(top = topPad).heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
-                .clickable { act.goTo(j); ui.jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text(stringResource(R.string.s_back_to_where_you_were), color = K.mintInk, fontWeight = FontWeight.ExtraBold)
             }
         }
 
@@ -398,18 +382,34 @@ internal fun ReaderScreen(
             }
         }
         BackHandler(ui.sheet != ReaderSheet.NONE) { ui.sheet = ReaderSheet.NONE }
-        // Last in the Box, so the pill is legible over the bars, the footnote card and the jump-back pill
-        // instead of behind whichever of them happens to be up.
+        // Everything transient lives in one stack at the bottom edge, last in the Box so it is legible over
+        // the chrome: "back to where you were" above the toast, the pair clear of the bar and the footnote
+        // card. A jump-back pill parked at the top covered the first lines of the page it was offering to
+        // take you back to, and it was the one control a reader had to look up for.
         val noteLift by animateDpAsState(with(LocalDensity.current) { ui.footnoteHeightPx.toDp() } + 8.dp, label = "noteLift")
-        toast.Host(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPad + (if (ui.footnote == null) 0.dp else noteLift)).onGloballyPositioned { c ->
-                // Where it is, so the Activity can tell a swipe meant for the pill from a page turn.
-                val r = c.boundsInRoot()
-                val up = c.size.height > 0
-                ui.toastTopPx = if (up) r.top else -1f
-                ui.toastBottomPx = if (up) r.bottom else -1f
-            },
-        )
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .padding(bottom = bottomPad + (if (ui.footnote == null) 0.dp else noteLift)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ui.jumpBack?.let { j ->   // R-08: "Back to where you were"
+                LaunchedEffect(j) { delay(6000); ui.jumpBack = null }
+                Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
+                    .clickable { act.goTo(j); ui.jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text(stringResource(R.string.s_back_to_where_you_were), color = K.mintInk, fontWeight = FontWeight.ExtraBold)
+                }
+            }
+            toast.Host(
+                Modifier.onGloballyPositioned { c ->
+                    // Where it is, so the Activity can tell a swipe meant for the pill from a page turn.
+                    val r = c.boundsInRoot()
+                    val up = c.size.height > 0
+                    ui.toastTopPx = if (up) r.top else -1f
+                    ui.toastBottomPx = if (up) r.bottom else -1f
+                },
+            )
+        }
     }
 }
 

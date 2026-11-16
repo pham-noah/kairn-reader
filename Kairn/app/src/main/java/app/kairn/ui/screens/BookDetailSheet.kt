@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -87,7 +88,7 @@ fun BookDetailSheet(
     var detail by remember(book.id) { mutableStateOf(book) }
     var expanded by rememberSaveable(book.id) { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
-    var size by remember(book.id) { mutableStateOf(0L) }
+    var size by remember(book.id) { mutableLongStateOf(0L) }
 
     // An older record has no description or series yet: one read fills it in while the sheet is open.
     LaunchedEffect(book.id) {

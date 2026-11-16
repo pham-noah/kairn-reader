@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,8 +94,8 @@ fun CatalogScreen(
     var failed by remember { mutableStateOf(false) }
     var stack by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }  // url to title, for Up
     var downloading by remember { mutableStateOf<String?>(null) }
-    var progress by remember { mutableStateOf(0) }
-    var imported by remember { mutableStateOf(0) }
+    var progress by remember { mutableIntStateOf(0) }
+    var imported by remember { mutableIntStateOf(0) }
 
     val unreachable = stringResource(R.string.s_catalog_unreachable)
     val notOpds = stringResource(R.string.s_catalog_not_opds)

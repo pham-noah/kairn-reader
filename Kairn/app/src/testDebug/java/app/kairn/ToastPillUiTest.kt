@@ -169,22 +169,36 @@ class ToastPillUiTest {
         assertTrue("a hidden bottom bar still claimed to start at ${ui.chromeTopPx}", ui.chromeTopPx == Float.MAX_VALUE)
     }
 
-    @Test fun the_jump_back_pill_drops_when_the_bars_are_hidden() {
-        // A fixed 70dp left it floating under nothing in full screen; it follows the chrome now.
-        draw(bars = false)
-        compose.runOnIdle { ui.jumpBack = anywhere }
-        compose.waitForIdle()
-        val top = compose.onNodeWithText("Back to where you were").fetchSemanticsNode().boundsInRoot.top / 3f
-        assertTrue("the jump-back pill starts at ${top}dp with the bars hidden", top < 60f)
-    }
+    /** The jump-back pill, which now lives in the bottom stack rather than over the page. */
+    private fun jumpBackBounds() = compose.onNodeWithText("Back to where you were").fetchSemanticsNode().boundsInRoot
 
-    @Test fun the_jump_back_pill_clears_the_top_bar_while_the_bars_are_up() {
+    @Test fun the_jump_back_pill_sits_at_the_bottom_not_over_the_page() {
+        // It used to be pinned under the top bar, covering the first lines of the page it offered to return to.
         draw(bars = true)
         compose.runOnIdle { ui.jumpBack = anywhere }
         compose.waitForIdle()
-        val barBottom = ui.topChromeBottomPx / 3f
-        val top = compose.onNodeWithText("Back to where you were").fetchSemanticsNode().boundsInRoot.top / 3f
-        assertTrue("the pill starts at ${top}dp and the bar ends at ${barBottom}dp", top >= barBottom)
+        val pill = jumpBackBounds()
+        val barTop = ui.chromeTopPx / 3f
+        assertTrue("the pill starts at ${pill.top / 3f}dp, in the page", pill.top / 3f > 500f)
+        assertTrue("the pill ends at ${pill.bottom / 3f}dp, below the bar at ${barTop}dp", pill.bottom / 3f <= barTop)
+    }
+
+    @Test fun the_jump_back_pill_sits_near_the_corner_when_the_bars_are_hidden() {
+        draw(bars = false)
+        compose.runOnIdle { ui.jumpBack = anywhere }
+        compose.waitForIdle()
+        val pill = jumpBackBounds()
+        assertTrue("the pill ends at ${pill.bottom / 3f}dp with the bars hidden", pill.bottom / 3f > 700f)
+    }
+
+    @Test fun the_jump_back_pill_stacks_above_the_toast() {
+        // Both are transient and both live at the bottom edge now: the action sits above the message.
+        draw(bars = true)
+        compose.runOnIdle { ui.jumpBack = anywhere; toast.show("Bookmark added") }
+        compose.waitForIdle()
+        val pillBottom = jumpBackBounds().bottom / 3f
+        val toastTop = pill().fetchSemanticsNode().boundsInRoot.top / 3f
+        assertTrue("the pill ends at ${pillBottom}dp and the toast starts at ${toastTop}dp", pillBottom <= toastTop)
     }
 
     @Test fun the_pill_drops_to_the_corner_when_the_bars_are_hidden() {
