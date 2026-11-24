@@ -25,7 +25,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.R
@@ -88,6 +91,7 @@ private fun ColourDot(argb: Int, selected: Boolean, label: String, onClick: () -
 private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
 
 /** Reading aloud: the speed, the sleep timer, and the way out. Pause and resume stay on the bar. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TtsSheet(
     prefs: ReaderPrefs,
@@ -99,6 +103,7 @@ internal fun TtsSheet(
     speakers: List<String> = emptyList(),
     onCastEnabled: (Boolean) -> Unit = {},
     onCastVoice: (String, Int) -> Unit = { _, _ -> },
+    onPreview: (Int) -> Unit = {},
 ) {
     KControl(stringResource(R.string.s_speech_rate), stringResource(R.string.s_speech_rate_value, prefs.speechRate)) {
         KSlider(prefs.speechRate, onRate, 0.6f..2f)
@@ -109,9 +114,12 @@ internal fun TtsSheet(
     // sheet that is already open while it reads, not three screens away in Settings.
     Text(stringResource(R.string.s_sleep_timer), style = KType.small.copy(fontWeight = FontWeight.SemiBold),
         modifier = Modifier.padding(start = 4.dp))
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+    // Five choices, and the fifth was one scroll to the right that nothing announced. Wrapped, they are all
+    // visible: Off / 15 / 30 / 45 / End of chapter.
+    FlowRow(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KChip(stringResource(R.string.s_off), sleepChoice == 0, { onSleep(0) })
         listOf(15, 30, 45).forEach { m -> KChip(stringResource(R.string.s_minutes_short, m), sleepChoice == m, { onSleep(m) }) }
@@ -134,6 +142,10 @@ internal fun TtsSheet(
             }
             KSwitch(cast.enabled, onCastEnabled)
         }
+        // "Voice 2" is a recipe, not a taste, and the four chips below ask a reader to choose between four of
+        // them blind. The pads are the same sentence in each voice, so the choice is made by ear - and drawn
+        // above the rows they explain rather than in a settings screen three taps away.
+        if (cast.enabled) VoiceLegend(onPreview)
         if (cast.enabled && speakers.isNotEmpty()) {
             Text(stringResource(R.string.s_cast_hint), style = KType.small.copy(color = K.dim),
                 modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 4.dp))
@@ -144,20 +156,18 @@ internal fun TtsSheet(
             for (i in 0 until rows) {
                 val name = speakers[i]
                 val current = if (cast.voices[name] != null) cast.voices.getValue(name) else 1 + i % app.kairn.data.BookCast.SLOTS
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(name, style = KType.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                // The name was a weight(1f) column beside four chips, so it lost the fight for width and was
+                // drawn as a single ellipsis - a row of voices with nobody's name on it. Stacked, it fits.
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Text(name, style = KType.small.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (slot in 1..app.kairn.data.BookCast.SLOTS) {
                         KChip(
                             stringResource(R.string.s_voice_n, slot),
                             current == slot,
                             { onCastVoice(name, slot) },
                         )
+                    }
                     }
                 }
             }
@@ -205,26 +215,29 @@ private fun fontIndexOf(family: String?): Int = fontValues.indexOf(family).takeI
 }
 
 @Composable
-internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, showColumns: Boolean = true, onReset: (() -> Unit)? = null) = Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState())) {
+internal fun DisplaySheet(
+    prefs: ReaderPrefs,
+    onChange: (ReaderPrefs) -> Unit,
+    showColumns: Boolean = true,
+    onReset: (() -> Unit)? = null,
+    onApplyToAll: (() -> Unit)? = null,
+    // A bottom sheet clips, so the body scrolls inside a cap; the shots lift it to draw the sheet whole.
+    maxHeight: Dp = 620.dp,
+) = Column(Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState())) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         readerThemes.forEach { t -> KThemeSwatch(t, prefs.theme == t, { onChange(prefs.copy(theme = t)) }) }
     }
     // Sits on top of the theme: the swatch row still decides the chrome, these two decide the page.
-    Text(stringResource(R.string.s_custom_colours), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 14.dp, bottom = 2.dp))
-    Text(stringResource(R.string.s_custom_colours_hint), style = KType.small.copy(color = K.dim))
+    // Two rows of fourteen dots said nothing about which was paper and which was ink; the label is the whole
+    // difference between a palette and a wall of colour. "This book only" rides on the header line instead of
+    // taking a line of prose underneath it.
+    Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.s_custom_colours), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.s_custom_colours_hint), style = KType.small.copy(color = K.dim))
+    }
     // Scrollable: ten 48dp dots do not fit a 360dp sheet, and the last tone has to be reachable.
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-        pageTones.forEachIndexed { i, c ->
-            ColourDot(c, prefs.pageColor == c, stringResource(R.string.s_page_tone, i + 1),
-                { onChange(prefs.copy(pageColor = if (prefs.pageColor == c) null else c)) })
-        }
-    }
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-        inkTones.forEachIndexed { i, c ->
-            ColourDot(c, prefs.inkColor == c, stringResource(R.string.s_ink_tone, i + 1),
-                { onChange(prefs.copy(inkColor = if (prefs.inkColor == c) null else c)) })
-        }
-    }
+    ToneRow(stringResource(R.string.s_paper), pageTones, prefs.pageColor, R.string.s_page_tone) { onChange(prefs.copy(pageColor = it)) }
+    ToneRow(stringResource(R.string.s_ink), inkTones, prefs.inkColor, R.string.s_ink_tone) { onChange(prefs.copy(inkColor = it)) }
     if (prefs.pageColor != null || prefs.inkColor != null) {
         KButton(stringResource(R.string.s_theme_colours), { onChange(prefs.copy(pageColor = null, inkColor = null)) },
             style = KButtonStyle.Ghost, small = true)
@@ -269,6 +282,24 @@ internal fun DisplaySheet(prefs: ReaderPrefs, onChange: (ReaderPrefs) -> Unit, s
     Text(stringResource(R.string.s_these_settings_are_remembered_for_this_b), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, top = 12.dp))
     // Every slider here is sticky, so a book that has been fiddled with needs a way back to the app defaults.
     if (onReset != null) KButton(stringResource(R.string.s_reset_this_book_to_your_defaults), onReset, Modifier.padding(top = 10.dp), style = KButtonStyle.Ghost, small = true)
+    if (onApplyToAll != null) KButton(stringResource(R.string.s_apply_to_every_book), onApplyToAll, Modifier.padding(top = 2.dp), style = KButtonStyle.Ghost, small = true)
+}
+
+/**
+ * One palette with its name on the left. The label is a fixed-width gutter, so the paper dots and the ink dots
+ * start at the same x and the pair reads as two settings rather than one long shelf of colour. Tapping the tone
+ * that is already set clears it, which is the only way back to the theme's own page.
+ */
+@Composable
+private fun ToneRow(label: String, tones: List<Int>, selected: Int?, toneName: Int, onPick: (Int?) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = KType.small.copy(color = K.dim), modifier = Modifier.width(42.dp))
+        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
+            tones.forEachIndexed { i, c ->
+                ColourDot(c, selected == c, stringResource(toneName, i + 1), { onPick(if (selected == c) null else c) })
+            }
+        }
+    }
 }
 
 @Composable
@@ -337,7 +368,10 @@ internal fun SearchSheet(
             if (here != null) Text(here, style = KType.label.copy(color = K.dim), maxLines = 1)
             Text(buildAnnotatedString {
                 append("…" + l.text.before?.takeLast(30).orEmpty())
-                withStyle(SpanStyle(background = K.mint.copy(alpha = .3f))) { append(l.text.highlight.orEmpty()) }
+                // A SpanStyle background has no padding of its own, and the block butted straight against the
+                // words either side - "...came off the salt marsh and the bird" read as "thesalt marshand". Two
+                // thin spaces inside the span give the highlight the same breathing room a marker would.
+                withStyle(SpanStyle(background = K.mint.copy(alpha = .3f))) { append(" " + l.text.highlight.orEmpty() + " ") }
                 append(l.text.after?.take(40).orEmpty() + "…")
             }, color = K.txt)
             }
@@ -346,6 +380,65 @@ internal fun SearchSheet(
         if (canMore && !busy) item {
             KButton(stringResource(R.string.s_show_more_results), onMore, style = KButtonStyle.Secondary, small = true, modifier = Modifier.padding(top = 10.dp))
         }
+        }
+    }
+}
+
+/**
+ * The four slots, heard rather than numbered. Each pad says the same sentence in one slot voice, which is what
+ * makes the four comparable, and the chapter is given back where the sample interrupted it.
+ */
+@Composable
+private fun VoiceLegend(onPreview: (Int) -> Unit) {
+    val labels = listOf(
+        R.string.s_voice_slot_deep, R.string.s_voice_slot_second,
+        R.string.s_voice_slot_second_high, R.string.s_voice_slot_high,
+    )
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Text(
+            stringResource(R.string.s_voice_legend_title),
+            style = KType.small.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        for (pair in listOf(1 to 2, 3 to 4)) {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (slot in pair.first..pair.second) {
+                    VoicePad(slot, labels[slot - 1], onPreview, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoicePad(slot: Int, label: Int, onPreview: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(14.dp)
+    val interaction = remember { MutableInteractionSource() }
+    val name = stringResource(R.string.s_voice_n, slot)
+    Row(
+        modifier.heightIn(min = 52.dp).background(K.surf, shape).border(1.dp, K.line, shape)
+            .pressFeedback(interaction, pressedScale = 0.96f)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button) {
+                onPreview(slot)
+            }
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(28.dp).clip(RoundedCornerShape(999.dp)).background(K.txt),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(painterResource(R.drawable.ic_play), null, tint = K.surf, modifier = Modifier.size(14.dp))
+        }
+        Column(Modifier.padding(start = 8.dp)) {
+            Text(name, style = KType.small.copy(fontWeight = FontWeight.SemiBold), maxLines = 1)
+            Text(
+                stringResource(label),
+                style = KType.small.copy(color = K.dim), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

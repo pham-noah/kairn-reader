@@ -161,7 +161,12 @@ internal fun BookDetailContent(
     onRemove: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        KCover(book, store.thumbFile(book.id).path, Modifier.width(84.dp), fallbackPath = store.coverFile(book.id).path)
+        // No strip on the cover here: the bar and its percentage are 16dp below it, and two meters for one
+        // number is the kind of duplication that makes a sheet look unconsidered.
+        KCover(
+            book, store.thumbFile(book.id).path, Modifier.width(84.dp),
+            fallbackPath = store.coverFile(book.id).path, showProgress = false,
+        )
         Column(Modifier.weight(1f)) {
             Text(book.title, style = KType.h2, maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(
@@ -188,10 +193,12 @@ internal fun BookDetailContent(
     val marks = marksLine(book)
     if (marks != null) Text(marks, style = KType.small.copy(color = K.mut), modifier = Modifier.padding(top = 8.dp))
 
+    // A book with no blurb used to get a line saying so. Absence is the message: the sheet already shows a
+    // cover, an author, a progress bar and four buttons, and none of them needed that sentence underneath.
     val description = book.desc?.takeIf { it.isNotBlank() }
-    Text(
-        description ?: stringResource(R.string.s_no_description),
-        style = KType.body.copy(color = if (description == null) K.dim else K.txt),
+    if (description != null) Text(
+        description,
+        style = KType.body.copy(color = K.txt),
         maxLines = if (expanded) Int.MAX_VALUE else 4,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(top = 14.dp),
@@ -204,11 +211,16 @@ internal fun BookDetailContent(
         )
     }
 
-    Column(Modifier.padding(top = 10.dp)) {
-        InfoLine(stringResource(R.string.s_publisher), book.publisher)
-        InfoLine(stringResource(R.string.s_published), book.published)
-        InfoLine(stringResource(R.string.s_language), book.language)
-        InfoLine(stringResource(R.string.s_file_size), if (size > 0) sizeLabel(size) else null)
+    // Only the facts this file actually carries. Three rows reading "Not listed" are three lines of noise
+    // pretending to be information, and they pushed the buttons a third of a screen further down.
+    val facts = listOf(
+        stringResource(R.string.s_publisher) to book.publisher,
+        stringResource(R.string.s_published) to book.published,
+        stringResource(R.string.s_language) to book.language,
+        stringResource(R.string.s_file_size) to if (size > 0) sizeLabel(size) else null,
+    ).filter { !it.second.isNullOrBlank() }
+    if (facts.isNotEmpty()) Column(Modifier.padding(top = 10.dp)) {
+        facts.forEach { (label, value) -> InfoLine(label, value) }
     }
 
     Column(Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

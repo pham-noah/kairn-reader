@@ -120,7 +120,7 @@ fun AddBooksScreen(
                 }
             }
             KGroup(stringResource(R.string.s_group_folders_watched)) {
-                if (settings.folders.isEmpty()) Text(stringResource(R.string.s_no_folders_yet_new_epub_files_in_a_watch), style = KType.small, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+                if (settings.folders.isEmpty()) Unit
                 else KCard {
                     settings.folders.forEachIndexed { i, f ->
                         val n = books.count { it.folder == f.uri }
@@ -135,8 +135,20 @@ fun AddBooksScreen(
                         }
                     }
                 }
+                // The one control on this page that was a full-width pill while the catalog and the Kindle row
+                // beside it were rows with an icon and a chevron. Three ways in, one of them shaped like a
+                // different kind of thing. It is a row now, and the sentence about folders moved into its
+                // subtitle instead of floating loose above a button.
                 Spacer(Modifier.height(10.dp))
-                KButton(stringResource(R.string.s_add_folder_or_files), { chooser = true }, style = KButtonStyle.Secondary)
+                KCard {
+                    KRow(
+                        stringResource(R.string.s_add_folder_or_files),
+                        subtitle = stringResource(R.string.s_new_books_show_up_on_their_own),
+                        leading = Icons.Default.Folder,
+                        onClick = { chooser = true },
+                        divider = false,
+                    ) { KChevron() }
+                }
             }
             // The network, on purpose and on request: a catalog on this Wi-Fi, or anywhere the reader points.
             KGroup(stringResource(R.string.s_from_a_catalog)) {

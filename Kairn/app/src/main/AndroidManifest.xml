@@ -10,6 +10,8 @@
          process (and the voice) alive. No microphone, no media buttons, no audio focus changes. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Android 13+ drops the shade notification without this; the service alone would still run. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- DS-04 updates: the downloaded APK is handed to the SYSTEM installer. Kairn never installs anything
          itself, and without this permission Android would simply refuse the intent. -->

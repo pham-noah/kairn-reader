@@ -75,6 +75,12 @@ internal fun UpdateContent(ui: UpdateUi, onCheck: () -> Unit, onDownload: () -> 
             ui.release != null -> {
                 val r = ui.release!!
                 Text(stringResource(R.string.s_version_available, r.version), style = KType.h2)
+                // The size belongs with the version, not floating under the button where it read as a
+                // leftover caption for the download that was already finished.
+                if (r.size > 0) Text(
+                    stringResource(R.string.s_update_size, r.size / 1024 / 1024),
+                    style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 2.dp),
+                )
                 if (r.notes.isNotBlank()) {
                     // DS-04: the body is Markdown from the release page, drawn as the app's own type, in a
                     // bounded scroll area: a long body cannot push the buttons off the sheet.
@@ -110,10 +116,6 @@ internal fun UpdateContent(ui: UpdateUi, onCheck: () -> Unit, onDownload: () -> 
                         else -> KButton(stringResource(R.string.s_download), onDownload)
                     }
                 }
-                if (r.size > 0) Text(
-                    stringResource(R.string.s_update_size, r.size / 1024 / 1024),
-                    style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 10.dp),
-                )
             }
             else -> {
                 Text(ui.message ?: stringResource(R.string.s_up_to_date), style = KType.body.copy(color = K.mut))

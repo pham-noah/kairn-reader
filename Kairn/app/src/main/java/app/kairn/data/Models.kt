@@ -212,6 +212,9 @@ data class AppSettings(
     val glass: Boolean = true,                // glass surfaces (default); false = solid
     val ambient: Ambient = Ambient.MINT,      // ambient wash colour
     val autoSwitch: Boolean = false,          // R-05: follow system dark/light
+    val autoMode: String = AUTO_SYSTEM,       // SYSTEM or SCHEDULE - what decides night, once the switch is on
+    val nightFrom: Int = 21 * 60,             // minutes after midnight the pages go dark
+    val nightTo: Int = 8 * 60,                // and when they come back
     val keepScreenOn: Boolean = true,         // R-11
     val fullscreen: Boolean = false,          // R-11
     val volumeKeys: Boolean = true,           // R-07
@@ -228,7 +231,11 @@ data class AppSettings(
     val extraTags: List<String> = emptyList(),
     val lastBackup: Long = 0,                 // DS-01: shown on the Backup screen
     val lastNudge: Long = 0,                  // when the "you have not backed up" card was dismissed
+    val grid: Boolean = true,               // the shelf's view mode; a list stays a list after a relaunch
+    val sort: String = "RECENT",            // and so does the order, and which way round it runs
+    val sortFlipped: Boolean = false,
     val readingWpm: Int = 240,               // the reader's own pace, for "min left"
+    val dailyGoal: Int = 0,                 // minutes a day the reader means to read; 0 = no goal
     val lastBackupName: String = "",
     val checkUpdates: Boolean = true,       // DS-04: one request a day, off in Settings; see data/Update
     val lastUpdateCheck: Long = 0,          // when the last check ran, so it is at most once a day
@@ -239,6 +246,8 @@ data class AppSettings(
     val autoBackupKeep: Int = 3,            // how many of ours to keep in that folder
     val lastAutoBackup: Long = 0,           // when the last automatic one was written
     val lastSweep: Long = 0,                // the last full device sweep; see Library.scan
+    val haptics: Boolean = true,            // a tick on a control, a bump when a press becomes a gesture
+    val hideBars: Boolean = true,           // the bars fold themselves away after a few seconds of reading
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
@@ -252,6 +261,11 @@ data class AppSettings(
         .put("shareSelection", shareSelection).put("lookupSelection", lookupSelection)
         .put("autoBackupFolder", autoBackupFolder).put("autoBackupDays", autoBackupDays)
         .put("autoBackupKeep", autoBackupKeep).put("lastAutoBackup", lastAutoBackup).put("lastSweep", lastSweep)
+        .put("haptics", haptics)
+        .put("hideBars", hideBars)
+        .put("grid", grid).put("sort", sort).put("sortFlipped", sortFlipped)
+        .put("autoMode", autoMode).put("nightFrom", nightFrom).put("nightTo", nightTo)
+        .put("dailyGoal", dailyGoal)
         .put("folders", JSONArray(folders.map {
             JSONObject().put("uri", it.uri).put("name", it.name).put("enabled", it.enabled)
         }))
@@ -269,6 +283,11 @@ data class AppSettings(
                 glass = o.optBoolean("glass", d.glass),
                 ambient = runCatching { Ambient.valueOf(o.getString("ambient")) }.getOrDefault(d.ambient),
                 autoSwitch = o.optBoolean("autoSwitch", d.autoSwitch),
+                // A mode written by a newer version falls back to the system rather than to nothing.
+                autoMode = o.optString("autoMode", d.autoMode).takeIf { it == AUTO_SCHEDULE || it == AUTO_SYSTEM } ?: AUTO_SYSTEM,
+                nightFrom = o.optInt("nightFrom", d.nightFrom).coerceIn(0, 1439),
+                nightTo = o.optInt("nightTo", d.nightTo).coerceIn(0, 1439),
+                dailyGoal = o.optInt("dailyGoal", d.dailyGoal).coerceIn(0, 600),
                 keepScreenOn = o.optBoolean("keepScreenOn", d.keepScreenOn),
                 fullscreen = o.optBoolean("fullscreen", d.fullscreen),
                 volumeKeys = o.optBoolean("volumeKeys", d.volumeKeys),
@@ -288,6 +307,11 @@ data class AppSettings(
                     }.distinct()
                     saved + BarItem.entries.filterNot { it in saved }
                 } ?: BarItem.DEFAULT_ORDER,
+                grid = o.optBoolean("grid", d.grid),
+                // Kept as the name the shelf wrote: the order is the shelf's enum, and a name this version does
+                // not know falls back to recent where the shelf reads it, not here.
+                sort = o.optString("sort", d.sort),
+                sortFlipped = o.optBoolean("sortFlipped", d.sortFlipped),
                 autoDetect = o.optBoolean("autoDetect", d.autoDetect),
                 shareSelection = o.optBoolean("shareSelection", d.shareSelection),
                 lookupSelection = o.optBoolean("lookupSelection", d.lookupSelection),
@@ -296,6 +320,8 @@ data class AppSettings(
                 autoBackupKeep = o.optInt("autoBackupKeep", d.autoBackupKeep).coerceIn(1, 20),
                 lastAutoBackup = o.optLong("lastAutoBackup", d.lastAutoBackup),
                 lastSweep = o.optLong("lastSweep", d.lastSweep),
+                haptics = o.optBoolean("haptics", d.haptics),
+            hideBars = o.optBoolean("hideBars", d.hideBars),
                 // mapNotNull + optString: an entry with no usable uri is skipped, not a reason to discard
                 // every other setting.
                 folders = o.optJSONArray("folders")?.let { a ->

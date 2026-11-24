@@ -43,6 +43,8 @@ class ToastPillUiTest {
         override fun goTo(locator: org.readium.r2.shared.publication.Locator) {}
         override fun preload(locator: org.readium.r2.shared.publication.Locator) {}
         override fun setPrefs(p: ReaderPrefs) {}
+        override fun applyPrefsToAll() {}
+        override fun previewVoice(slot: Int) {}
         override fun resetPrefs() {}
         override fun toggleBookmark(bookmarked: Boolean) {}
         override fun saveNote(target: app.kairn.ui.NoteTarget, text: String) {}

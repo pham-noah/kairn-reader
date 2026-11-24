@@ -36,6 +36,7 @@ class ReaderScreenUiTest {
         override fun preload(locator: Locator) {}
         override fun setPrefs(p: ReaderPrefs) {}
         override fun resetPrefs() {}
+        override fun applyPrefsToAll() {}
         override fun toggleBookmark(bookmarked: Boolean) {}
         override fun saveNote(target: app.kairn.ui.NoteTarget, text: String) {}
         override fun updateNote(id: String, text: String) {}
@@ -47,6 +48,7 @@ class ReaderScreenUiTest {
         override fun stopTts() {}
         override fun setCastEnabled(on: Boolean) {}
         override fun setCastVoice(speaker: String, slot: Int) {}
+        override fun previewVoice(slot: Int) {}
         override fun setSpeechRate(rate: Float) {}
         override fun setSleepTimer(minutes: Int) {}
         override fun toggleAutoScroll() {}

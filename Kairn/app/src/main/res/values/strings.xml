@@ -126,6 +126,8 @@
     <string name="s_try_another_search_or_clear_the_filters">Try another search, or clear the filters to see the whole library.</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">Two pages suits a tablet or a wide screen.</string>
     <string name="s_volume_keys_turn_pages">Volume keys turn pages</string>
+    <string name="s_hide_bars">Hide the bars while reading</string>
+    <string name="s_haptics">Haptics</string>
     <string name="s_warm_light">Warm light</string>
     <string name="s_watched_folders">Watched folders</string>
     <string name="s_your_books_stay_usable_while_this_runs">Your books stay usable while this runs.</string>
@@ -256,7 +258,6 @@
     <string name="s_group_appearance">Appearance</string>
     <string name="s_group_reading">Reading</string>
     <string name="s_group_reader_bar">Reader bar</string>
-    <string name="s_reader_bar_hint">The first two in this list sit in the bar itself; the rest wait behind More. Hiding something takes it out of the bar entirely.</string>
     <string name="s_move_up">Move up</string>
     <string name="s_move_down">Move down</string>
     <string name="s_group_library">Library</string>
@@ -284,6 +285,8 @@
     <string name="s_no_collections_here">No collections yet. Make one here.</string>
     <string name="s_no_tags_yet">No tags yet.</string>
     <string name="s_search_library">Search library</string>
+    <string name="s_select_books">Select books</string>
+    <string name="s_tap_books_to_pick">Tap books to pick them</string>
     <string name="s_switch_to_list">Switch to list view</string>
     <string name="s_switch_to_grid">Switch to grid view</string>
     <string name="s_status_none">None</string>
@@ -333,7 +336,7 @@
     <string name="s_sort_by_position">By position</string>
     <string name="s_sort_by_date">By date</string>
     <string name="s_filter_marks">Filter notes and highlights</string>
-    <string name="s_backup_nudge">You have not backed up in a while.</string>
+    <string name="s_backup_nudge">No backup in a while</string>
     <string name="s_backup_nudge_body">One zip holds your places, notes and highlights.</string>
     <string name="s_later">Later</string>
     <string name="s_time_in_chapter">Chapter time left</string>
@@ -348,7 +351,7 @@
     </plurals>
     <string name="s_reading_progress">Reading progress</string>
     <string name="s_custom_colours">Custom colours</string>
-    <string name="s_custom_colours_hint">Overrides the page and ink for this book only.</string>
+    <string name="s_custom_colours_hint">This book only</string>
     <string name="s_theme_colours">Use the theme colours</string>
     <string name="s_page_tone">Page tone %1$d</string>
     <string name="s_ink_tone">Ink colour %1$d</string>
@@ -381,6 +384,7 @@
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Searching inside your books (%1$d of %2$d)</string>
     <plurals name="s_hits_in_books"><item quantity="one">%1$d hit inside your books</item><item quantity="other">%1$d hits inside your books</item></plurals>
+    <plurals name="s_more_hits"><item quantity="one">%1$d more, in the books you have opened</item><item quantity="other">%1$d more, in the books you have opened</item></plurals>
     <!-- 0.8.0: the selection menu gains Share and Look up -->
     <string name="s_menu_share">Share</string>
     <string name="s_menu_look_up">Look up</string>
@@ -406,9 +410,10 @@
     <string name="s_streak">Streak</string>
     <string name="s_days_value">%1$d d</string>
     <string name="s_minutes_value">%1$d min</string>
+    <string name="s_wpm_value">%1$d wpm</string>
     <string name="s_hours_value">%1$d h %2$d min</string>
     <plurals name="reading_total"><item quantity="one">All time: %1$d h %2$d min across %3$d finished book</item><item quantity="other">All time: %1$d h %2$d min across %3$d finished books</item></plurals>
-    <string name="s_stats_local_note">Kept in stats.json on this phone. Nothing is uploaded.</string>
+    <string name="s_stats_local_note">Kept on this phone. Nothing is uploaded.</string>
 
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Check for updates</string>
@@ -483,4 +488,25 @@
     <string name="s_start_reading">Start reading</string>
     <string name="s_voice_n">Voice %1$d</string>
     <string name="s_cast_narrator_note">Narration and anything unclear keeps the narrator’s voice.</string>
+    <string name="s_paper">Paper</string>
+    <string name="s_ink">Ink</string>
+    <string name="s_series">Series</string>
+    <string name="s_book_number">Book number</string>
+    <string name="s_auto_schedule">Schedule</string>
+    <string name="s_dark_from">Dark from</string>
+    <string name="s_dark_until">Until</string>
+    <string name="s_daily_goal">Daily goal</string>
+    <string name="s_goal_progress">%1$d of %2$d min today</string>
+    <string name="s_goal_met">Goal met</string>
+    <string name="s_min_value">%1$d min</string>
+    <string name="s_voice_slot_deep">Narrator, lower</string>
+    <string name="s_voice_slot_second">Second voice</string>
+    <string name="s_voice_slot_second_high">Second, higher</string>
+    <string name="s_voice_slot_high">Narrator, higher</string>
+    <string name="s_voice_sample">This is how I will read to you.</string>
+    <string name="s_previous_chapter">Previous chapter</string>
+    <string name="s_next_chapter">Next chapter</string>
+    <string name="s_apply_to_every_book">Apply to every book</string>
+    <string name="s_applied_to_every_book">Every book now uses these settings</string>
+    <string name="s_voice_legend_title">The four voices</string>
 </resources>

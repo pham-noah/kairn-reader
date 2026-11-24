@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,15 @@ fun KCard(modifier: Modifier = Modifier, padding: Int = 0, content: @Composable 
     Column(surface.padding(padding.dp), content = content)
 }
 
+/**
+ * A well: the recessed surface a card puts inside itself (a stat tile, a chart floor). Glass carves it with a dark
+ * translucent tint; Solid drops to the same base the app sits on, so the card reads as one panel with holes in it
+ * rather than a stack of slightly different greys.
+ */
+@Composable
+fun Modifier.insetWell(shape: Shape): Modifier =
+    if (glass) glassWell(shape) else clip(shape).background(K.bg).border(1.dp, K.line, shape)
+
 /** Group: a small bold label above a card or pill group. */
 @Composable
 fun KGroup(label: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
@@ -46,10 +56,13 @@ fun KRow(
     title: String, modifier: Modifier = Modifier, subtitle: String? = null, leading: ImageVector? = null,
     divider: Boolean = false, onClick: (() -> Unit)? = null, trailing: @Composable (() -> Unit)? = null,
 ) {
+    val haptics = rememberHaptics()
     Column(modifier) {
         if (divider) HorizontalDivider(color = K.line)
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 56.dp).then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).then(
+                if (onClick != null) Modifier.clickable(role = Role.Button) { haptics.tick(); onClick() } else Modifier,
+            )
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -68,7 +81,7 @@ fun KChevron() = Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint =
 
 /** Text input. */
 @Composable
-fun KField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", label: String? = null, singleLine: Boolean = true, leading: ImageVector? = null, minLines: Int = 1) {
+fun KField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", label: String? = null, singleLine: Boolean = true, leading: ImageVector? = null, minLines: Int = 1, keyboard: androidx.compose.ui.text.input.KeyboardType = androidx.compose.ui.text.input.KeyboardType.Text) {
     Column(modifier) {
         if (label != null) Text(label, style = KType.small.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
         OutlinedTextField(
@@ -76,6 +89,7 @@ fun KField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modif
             if (glass) Modifier.fillMaxWidth().glassWell(RoundedCornerShape(if (leading != null && singleLine) 999.dp else Dim.field.dp))
             else Modifier.fillMaxWidth().heightIn(min = 46.dp),
             singleLine = singleLine, minLines = minLines,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboard),
             placeholder = { Text(placeholder, color = K.dim) },
             leadingIcon = leading?.let { { Icon(it, null, tint = K.dim) } },
             shape = RoundedCornerShape(if (leading != null && singleLine) 999.dp else Dim.field.dp),

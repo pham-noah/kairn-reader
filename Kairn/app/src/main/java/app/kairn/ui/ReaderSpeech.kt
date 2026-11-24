@@ -106,6 +106,7 @@ internal class ReaderSpeech(
                 speak(loc)
             }
         }
+        publishState()
     }
 
     /** Stop everything, including the foreground service and any sleep timer. */
@@ -116,6 +117,7 @@ internal class ReaderSpeech(
         ui.sheet = ReaderSheet.NONE
         clearFollow()
         cancelSleepTimer()
+        publishState()
     }
 
     /** Stop the voice but leave the service and the timer alone: the sleep timer already decided about both. */
@@ -123,9 +125,21 @@ internal class ReaderSpeech(
         engine.stop()
         ui.speech.on = false; ui.speech.starting = false; ui.speech.paused = false
         clearFollow()
+        publishState()
     }
 
     fun setRate(rate: Float) = engine.setRate(rate)
+
+    /**
+     * One line in one voice slot. A cast chip labelled "Voice 2" describes a recipe; the only way to choose
+     * between four of them is to hear them, and the sheet is closed over a chapter nobody wants interrupted,
+     * so the sample flushes and the chapter is given back from the word it stopped on.
+     */
+    fun previewVoice(slot: Int) = engine.preview(slot, context.getString(R.string.s_voice_sample))
+
+    /** The notification is all a reader with the screen off can see: keep its two lines and its button honest. */
+    fun publishState() =
+        SpeechService.update(context, ui.bookTitle, ui.chapterTitle, ui.speech.on && !ui.speech.paused)
 
     /** A cast change while it speaks: same chapter, same word, new voices from here on. */
     fun setCast() {

@@ -122,6 +122,8 @@
     <string name="s_try_another_search_or_clear_the_filters">换个词搜索，或清除筛选以查看整个书架。</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">双页适合平板或宽屏。</string>
     <string name="s_volume_keys_turn_pages">音量键翻页</string>
+    <string name="s_hide_bars">阅读时隐藏工具栏</string>
+    <string name="s_haptics">触感反馈</string>
     <string name="s_warm_light">暖光</string>
     <string name="s_watched_folders">监视的文件夹</string>
     <string name="s_your_books_stay_usable_while_this_runs">运行期间书籍仍可正常使用。</string>
@@ -247,7 +249,6 @@
     <string name="s_group_appearance">外观</string>
     <string name="s_group_reading">阅读</string>
     <string name="s_group_reader_bar">阅读栏</string>
-    <string name="s_reader_bar_hint">列表中的前两项显示在栏上，其余收在“更多”里。隐藏某项会把它从栏中完全移除。</string>
     <string name="s_move_up">上移</string>
     <string name="s_move_down">下移</string>
     <string name="s_group_library">书架</string>
@@ -275,6 +276,8 @@
     <string name="s_no_collections_here">还没有合集。在这里新建一个。</string>
     <string name="s_no_tags_yet">还没有标签。</string>
     <string name="s_search_library">搜索书架</string>
+    <string name="s_select_books">选择图书</string>
+    <string name="s_tap_books_to_pick">轻点图书即可选择</string>
     <string name="s_switch_to_list">切换到列表视图</string>
     <string name="s_switch_to_grid">切换到网格视图</string>
     <string name="s_status_none">无</string>
@@ -320,7 +323,7 @@
     <string name="s_sort_by_position">按位置</string>
     <string name="s_sort_by_date">按日期</string>
     <string name="s_filter_marks">筛选笔记和标注</string>
-    <string name="s_backup_nudge">你有一段时间没有备份了。</string>
+    <string name="s_backup_nudge">很久没有备份了</string>
     <string name="s_backup_nudge_body">一个 zip 文件就装下你的阅读位置、笔记和标注。</string>
     <string name="s_later">稍后</string>
     <string name="s_time_in_chapter">本章剩余时间</string>
@@ -333,7 +336,7 @@
     </plurals>
     <string name="s_reading_progress">阅读进度</string>
     <string name="s_custom_colours">自定义颜色</string>
-    <string name="s_custom_colours_hint">仅覆盖本书的页面和文字颜色。</string>
+    <string name="s_custom_colours_hint">仅本书</string>
     <string name="s_theme_colours">使用主题颜色</string>
     <string name="s_page_tone">页面色调 %1$d</string>
     <string name="s_ink_tone">文字颜色 %1$d</string>
@@ -367,6 +370,7 @@
     <string name="s_searching_books">正在搜索书内内容（%1$d/%2$d）</string>
     <plurals name="s_hits_in_books"><item quantity="other">书中找到%1$d处</item>
     </plurals>
+    <plurals name="s_more_hits"><item quantity="one">另有 %1$d 处，位于已打开的书里</item><item quantity="other">另有 %1$d 处，位于已打开的书里</item></plurals>
     <string name="s_menu_share">分享</string>
     <string name="s_menu_look_up">查词</string>
     <string name="s_share_selection">分享这段文字</string>
@@ -391,11 +395,12 @@
     <string name="s_streak">连续天数</string>
     <string name="s_days_value">%1$d天</string>
     <string name="s_minutes_value">%1$d分钟</string>
+    <string name="s_wpm_value">%1$d字/分</string>
     <string name="s_hours_value">%1$d小时%2$d分钟</string>
     <plurals name="reading_total">
         <item quantity="other">累计%1$d小时%2$d分钟，读完%3$d本</item>
     </plurals>
-    <string name="s_stats_local_note">保存在这台手机上的 stats.json 中，不会上传任何内容。</string>
+    <string name="s_stats_local_note">保存在本机。不会上传任何内容。</string>
     <string name="s_check_for_updates">检查更新</string>
     <string name="s_check_now">立即检查更新</string>
     <string name="s_software_update">软件更新</string>
@@ -470,4 +475,25 @@
     <plurals name="s_bookmarks_n"><item quantity="other">%1$d 个书签</item></plurals>
     <plurals name="s_speakers_found"><item quantity="other">%1$d 位说话人</item></plurals>
     <plurals name="s_books_from_catalog"><item quantity="other">已添加 %1$d 本书</item></plurals>
+    <string name="s_paper">纸张</string>
+    <string name="s_ink">墨色</string>
+    <string name="s_series">系列</string>
+    <string name="s_book_number">册数</string>
+    <string name="s_auto_schedule">定时</string>
+    <string name="s_dark_from">夜间开始</string>
+    <string name="s_dark_until">结束</string>
+    <string name="s_daily_goal">每日目标</string>
+    <string name="s_goal_progress">今日 %1$d / %2$d 分钟</string>
+    <string name="s_goal_met">已达标</string>
+    <string name="s_min_value">%1$d 分钟</string>
+    <string name="s_voice_slot_deep">旁白（低沉）</string>
+    <string name="s_voice_slot_second">第二个声音</string>
+    <string name="s_voice_slot_second_high">第二个声音（偏高）</string>
+    <string name="s_voice_slot_high">旁白（偏高）</string>
+    <string name="s_voice_sample">我会用这个声音为你朗读。</string>
+    <string name="s_previous_chapter">上一章</string>
+    <string name="s_next_chapter">下一章</string>
+    <string name="s_apply_to_every_book">应用到所有书籍</string>
+    <string name="s_applied_to_every_book">所有书籍现已使用这些设置</string>
+    <string name="s_voice_legend_title">四个声音</string>
 </resources>

@@ -119,6 +119,8 @@
     <string name="s_try_another_search_or_clear_the_filters">Prueba otra búsqueda o quita los filtros para ver toda la biblioteca.</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">Dos páginas van bien en una tableta o una pantalla ancha.</string>
     <string name="s_volume_keys_turn_pages">Las teclas de volumen pasan página</string>
+    <string name="s_hide_bars">Ocultar las barras al leer</string>
+    <string name="s_haptics">Vibración</string>
     <string name="s_warm_light">Luz cálida</string>
     <string name="s_watched_folders">Carpetas vigiladas</string>
     <string name="s_your_books_stay_usable_while_this_runs">Puedes seguir usando tus libros mientras esto ocurre.</string>
@@ -232,7 +234,6 @@
     <string name="s_group_appearance">Aspecto</string>
     <string name="s_group_reading">Lectura</string>
     <string name="s_group_reader_bar">Barra del lector</string>
-    <string name="s_reader_bar_hint">Los dos primeros de esta lista están en la propia barra; el resto espera tras Más. Ocultar algo lo quita de la barra del todo.</string>
     <string name="s_move_up">Subir</string>
     <string name="s_move_down">Bajar</string>
     <string name="s_group_library">Biblioteca</string>
@@ -260,6 +261,8 @@
     <string name="s_no_collections_here">Aún no hay colecciones. Crea una aquí.</string>
     <string name="s_no_tags_yet">Aún no hay etiquetas.</string>
     <string name="s_search_library">Buscar en la biblioteca</string>
+    <string name="s_select_books">Elegir libros</string>
+    <string name="s_tap_books_to_pick">Toca libros para elegirlos</string>
     <string name="s_switch_to_list">Cambiar a vista de lista</string>
     <string name="s_switch_to_grid">Cambiar a vista de cuadrícula</string>
     <string name="s_status_none">Ninguno</string>
@@ -297,7 +300,7 @@
     <string name="s_sort_by_position">Por posición</string>
     <string name="s_sort_by_date">Por fecha</string>
     <string name="s_filter_marks">Filtrar notas y subrayados</string>
-    <string name="s_backup_nudge">Hace tiempo que no haces una copia.</string>
+    <string name="s_backup_nudge">Sin copia desde hace tiempo</string>
     <string name="s_backup_nudge_body">Un zip guarda tus posiciones, notas y subrayados.</string>
     <string name="s_later">Más tarde</string>
     <string name="s_time_in_chapter">Tiempo restante del capítulo</string>
@@ -306,7 +309,7 @@
     <plurals name="books_removed"><item quantity="one">¿Quitar %1$d libro de la biblioteca? Su archivo no se toca.</item><item quantity="other">¿Quitar %1$d libros de la biblioteca? Sus archivos no se tocan.</item><item quantity="many">¿Quitar %1$d libros de la biblioteca? Sus archivos no se tocan.</item></plurals>
     <string name="s_reading_progress">Progreso de lectura</string>
     <string name="s_custom_colours">Colores propios</string>
-    <string name="s_custom_colours_hint">Cambia la página y la tinta solo en este libro.</string>
+    <string name="s_custom_colours_hint">Solo este libro</string>
     <string name="s_theme_colours">Usar los colores del tema</string>
     <string name="s_page_tone">Tono de página %1$d</string>
     <string name="s_ink_tone">Color de la tinta %1$d</string>
@@ -339,6 +342,7 @@
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Buscando en tus libros (%1$d de %2$d)</string>
     <plurals name="s_hits_in_books"><item quantity="one">%1$d coincidencia en tus libros</item><item quantity="other">%1$d coincidencias en tus libros</item><item quantity="many">%1$d coincidencias en tus libros</item></plurals>
+    <plurals name="s_more_hits"><item quantity="one">%1$d más, en los libros que has abierto</item><item quantity="other">%1$d más, en los libros que has abierto</item></plurals>
     <!-- 0.8.0: el menú de selección gana Compartir y Buscar -->
     <string name="s_menu_share">Compartir</string>
     <string name="s_menu_look_up">Consultar</string>
@@ -364,9 +368,10 @@
     <string name="s_streak">Racha</string>
     <string name="s_days_value">%1$d d</string>
     <string name="s_minutes_value">%1$d min</string>
+    <string name="s_wpm_value">%1$d ppm</string>
     <string name="s_hours_value">%1$d h %2$d min</string>
     <plurals name="reading_total"><item quantity="one">En total: %1$d h %2$d min en %3$d libro terminado</item><item quantity="other">En total: %1$d h %2$d min en %3$d libros terminados</item><item quantity="many">En total: %1$d h %2$d min en %3$d libros terminados</item></plurals>
-    <string name="s_stats_local_note">Se guarda en stats.json en este teléfono. No se sube nada.</string>
+    <string name="s_stats_local_note">Guardado en este teléfono. No se sube nada.</string>
 
     <!-- 0.8.0: actualizaciones (DS-04) -->
     <string name="s_check_for_updates">Buscar actualizaciones</string>
@@ -441,4 +446,25 @@
     <plurals name="s_bookmarks_n"><item quantity="one">%1$d marcador</item><item quantity="other">%1$d marcadores</item><item quantity="many">%1$d marcadores</item></plurals>
     <plurals name="s_speakers_found"><item quantity="one">%1$d interlocutor</item><item quantity="other">%1$d interlocutores</item><item quantity="many">%1$d interlocutores</item></plurals>
     <plurals name="s_books_from_catalog"><item quantity="one">%1$d libro añadido</item><item quantity="other">%1$d libros añadidos</item><item quantity="many">%1$d libros añadidos</item></plurals>
+    <string name="s_paper">Papel</string>
+    <string name="s_ink">Tinta</string>
+    <string name="s_series">Serie</string>
+    <string name="s_book_number">Número</string>
+    <string name="s_auto_schedule">Horario</string>
+    <string name="s_dark_from">Oscuro desde</string>
+    <string name="s_dark_until">Hasta</string>
+    <string name="s_daily_goal">Meta diaria</string>
+    <string name="s_goal_progress">%1$d de %2$d min hoy</string>
+    <string name="s_goal_met">Meta cumplida</string>
+    <string name="s_min_value">%1$d min</string>
+    <string name="s_voice_slot_deep">Narrador, más grave</string>
+    <string name="s_voice_slot_second">Segunda voz</string>
+    <string name="s_voice_slot_second_high">Segunda, más aguda</string>
+    <string name="s_voice_slot_high">Narrador, más agudo</string>
+    <string name="s_voice_sample">Así te leeré.</string>
+    <string name="s_previous_chapter">Capítulo anterior</string>
+    <string name="s_next_chapter">Capítulo siguiente</string>
+    <string name="s_apply_to_every_book">Aplicar a todos los libros</string>
+    <string name="s_applied_to_every_book">Todos los libros usan ahora estos ajustes</string>
+    <string name="s_voice_legend_title">Las cuatro voces</string>
 </resources>

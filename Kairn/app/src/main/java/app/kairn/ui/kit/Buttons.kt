@@ -58,12 +58,13 @@ fun KButton(
             else -> base.clip(shape).background(bg).then(if (border != null) Modifier.border(BorderStroke(1.dp, border), shape) else Modifier)
         }
     val interaction = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
     Row(
         surface.alpha(if (enabled) 1f else .45f).pressFeedback(interaction)
             .clickable(
                 interactionSource = interaction,
                 indication = LocalIndication.current,
-                enabled = enabled, role = Role.Button, onClick = onClick,
+                enabled = enabled, role = Role.Button, onClick = { haptics.tick(); onClick() },
             )
             .padding(horizontal = if (small) 16.dp else 22.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
@@ -81,18 +82,26 @@ fun KIconButton(
     bordered: Boolean = false, tint: Color = K.txt, size: Int = Dim.tap,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    // The circle may be drawn smaller than the touch minimum (a dense row of reorder chevrons), but a 38dp circle
+    // must not be a 38dp target: the box around it keeps the tap area and the glyph stays the size the row wants.
     Box(
-        modifier.size(size.dp).pressFeedback(interaction, pressedScale = 0.90f).clip(CircleShape)
-            .then(
-                if (bordered && glass) Modifier.glassSurface(CircleShape, fill = Glass.fill, elevation = 5.dp)
-                else if (bordered) Modifier.background(K.surf).border(1.dp, K.line, CircleShape)
-                else Modifier
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = LocalIndication.current,
-                role = Role.Button, onClick = onClick,
-            ),
+        modifier.sizeIn(minWidth = Dim.tap.dp, minHeight = Dim.tap.dp),
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, description, tint = tint, modifier = Modifier.size(22.dp)) }
+    ) {
+        Box(
+            Modifier.size(size.dp).pressFeedback(interaction, pressedScale = 0.90f).clip(CircleShape)
+                .then(
+                    if (bordered && glass) Modifier.glassSurface(CircleShape, fill = Glass.fill, elevation = 5.dp)
+                    else if (bordered) Modifier.background(K.surf).border(1.dp, K.line, CircleShape)
+                    else Modifier
+                )
+                .clickable(
+                    interactionSource = interaction,
+                    indication = LocalIndication.current,
+                    role = Role.Button, onClick = { haptics.tick(); onClick() },
+                ),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, description, tint = tint, modifier = Modifier.size(22.dp)) }
+    }
 }

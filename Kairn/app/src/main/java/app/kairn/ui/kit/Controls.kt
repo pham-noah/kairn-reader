@@ -23,7 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.IntOffset
@@ -33,8 +35,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.data.Ambient
 import app.kairn.data.ThemeId
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.Glass
@@ -81,8 +86,87 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
                     .then(if (on) Modifier.background(if (glass) Color(0x33FFFFFF) else K.mint) else Modifier)
                     .clickable(role = Role.RadioButton) { onSelect(i) }.semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
-            ) { Text(o, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = when { on && glass -> K.txt; on -> K.mintInk; else -> K.mut }, maxLines = 1) }
+            ) { Text(o, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = when { on && glass -> K.txt; on -> K.mintInk; else -> K.mut }, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
+    }
+}
+
+/**
+ * Picking tile: a DRAWN preview with its name under it, and a mint ring when chosen.
+ *
+ * The settings this replaces are ones a word cannot carry: "Glass or Solid" is opaque unless you can see the
+ * panel, and "Glass"/"Solid" in a pill look identical either way. The preview is whatever the caller draws, so
+ * the tile shows the real recipe rather than a picture of it.
+ */
+@Composable
+fun KOptionTile(
+    label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    height: Int = 60, preview: @Composable BoxScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    val interaction = remember { MutableInteractionSource() }
+    val haptics = rememberHaptics()
+    Column(
+        modifier.heightIn(min = Dim.tap.dp).pressFeedback(interaction, pressedScale = 0.96f)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.RadioButton) {
+                if (!selected) haptics.tick()
+                onClick()
+            }
+            .semantics { this.selected = selected },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Box(
+            Modifier.fillMaxWidth().height(height.dp).clip(shape)
+                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else K.line, shape)
+                .padding(3.dp),
+            contentAlignment = Alignment.Center, content = preview,
+        )
+        // Two lines, not one: three tiles across a phone leaves "Schedule" and スケジュール no room on a single
+        // line at large type, and a clipped label is a tile with no name.
+        Text(
+            label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            color = if (selected) K.txt else K.mut, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center, lineHeight = 15.sp,
+        )
+    }
+}
+
+/**
+ * Ambient swatch: the wash ITSELF in a circle - the same four blooms the backdrop paints, over the app's base
+ * colour. PLAIN draws the bare base, which is exactly what it means.
+ */
+@Composable
+fun KAmbientSwatch(ambient: Ambient, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // 2.2x the backdrop's own alphas: 20% colour over 44dp of screen is a smudge, and the swatch has one job -
+    // telling four washes apart.
+    val blooms = remember(ambient) { Glass.blooms(ambient, 2.2f) }
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        modifier.heightIn(min = Dim.tap.dp).pressFeedback(interaction, pressedScale = 0.94f)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.RadioButton, onClick = onClick)
+            .semantics { this.selected = selected },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(CircleShape)
+                .drawBehind {
+                    drawRect(K.bg)
+                    val maxDim = maxOf(size.width, size.height)
+                    blooms.forEach { (f, color) ->
+                        drawRect(
+                            Brush.radialGradient(
+                                colors = listOf(color, Color.Transparent),
+                                center = androidx.compose.ui.geometry.Offset(f[0] * size.width, f[1] * size.height),
+                                radius = f[2] * maxDim * 0.75f,
+                            ),
+                        )
+                    }
+                }
+                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else Color(0x33FFFFFF), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { if (selected) Icon(Icons.Default.Check, null, tint = K.txt, modifier = Modifier.size(16.dp)) }
+        Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) K.txt else K.mut, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -93,8 +177,14 @@ fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = 
     val thumbX = animateDpAsState(if (checked) 24.dp else 4.dp, label = "thumb")
     // The 52x32 track is the LOOK; the tap target is the box around it, which must be the 48dp
     // minimum. The toggleable goes on the OUTER box, or the target is only the 32dp-tall track.
+    val haptics = rememberHaptics()
     Box(
-        modifier.heightIn(min = 48.dp).toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
+        modifier.heightIn(min = 48.dp).toggleable(
+            value = checked, role = Role.Switch,
+            // The tick belongs to the value changing, not to the finger arriving: a tap that lands on the same
+            // value again should not buzz as if something happened.
+            onValueChange = { v -> if (v != checked) haptics.toggle(); onChange(v) },
+        ),
         contentAlignment = Alignment.Center,
     ) {
     Box(
@@ -143,6 +233,12 @@ fun KSlider(
     value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float> = 0f..1f, modifier: Modifier = Modifier,
     accent: Color = K.mint, onFinished: (() -> Unit)? = null, trackColor: Color = K.track,
     description: String? = null, stateText: String? = null,
+    /**
+     * The knob. Defaults to the accent, because a knob is the one part of a slider that must be findable at a
+     * glance; it used to be a fixed near-white, which vanished on the light and sepia reader chrome the moment
+     * the slider stopped sitting on dark glass.
+     */
+    thumbColor: Color = accent,
 ) {
     Slider(
         value, onChange,
@@ -151,8 +247,18 @@ fun KSlider(
             else Modifier.semantics { contentDescription = description; stateDescription = stateText.orEmpty() },
         ),
         valueRange = range, onValueChangeFinished = onFinished,
-        colors = SliderDefaults.colors(thumbColor = Color(0xFFF1F4F5), activeTrackColor = accent, inactiveTrackColor = trackColor),
-        thumb = { Box(Modifier.size(24.dp).shadow(2.dp, CircleShape).background(Color(0xFFF1F4F5), CircleShape)) },
+        colors = SliderDefaults.colors(thumbColor = thumbColor, activeTrackColor = accent, inactiveTrackColor = trackColor),
+        thumb = { Box(Modifier.size(24.dp).shadow(2.dp, CircleShape).background(thumbColor, CircleShape)) },
+        // Material draws a stop indicator at the far end of the rail - a lone dot that, next to this 24dp knob,
+        // reads as a second thumb sitting at the maximum. The rail is drawn here instead: one capsule filled to
+        // the value, nothing else on it.
+        track = { st ->
+            val span = range.endInclusive - range.start
+            val f = if (span <= 0f) 0f else ((st.value - range.start) / span).coerceIn(0f, 1f)
+            Box(
+                Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(trackColor),
+            ) { Box(Modifier.fillMaxWidth(f).fillMaxHeight().background(accent)) }
+        },
     )
 }
 

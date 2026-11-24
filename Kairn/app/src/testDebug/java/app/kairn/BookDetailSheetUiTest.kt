@@ -78,15 +78,24 @@ class BookDetailSheetUiTest {
         compose.onNodeWithText("Discworld 8").assertExists()
     }
 
-    @Test fun a_book_with_no_description_says_so_instead_of_drawing_nothing() {
+    @Test fun a_bare_book_shows_only_the_facts_it_has() {
+        // A book with no blurb, no publisher, no date and no language used to fill the sheet with one sentence
+        // saying there was no description and four rows saying "Not listed", pushing the buttons off the fold.
+        // Absence is the message: what is left is the size, which this file does have.
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         val store = newStore()
         val book = Book(id = "g2", title = "Bare", author = "", uri = "file:///b.epub")
         store.put(book)
-        draw(store, book)
-        compose.onNodeWithText(ctx.getString(R.string.s_no_description)).assertExists()
-        // The author, the publisher, the date, the language and the size all say it: any of them will do.
-        assertTrue(compose.onAllNodesWithText(ctx.getString(R.string.s_not_listed)).fetchSemanticsNodes().size >= 4)
+        draw(store, book, size = 1_048_576L)
+        compose.onNodeWithText(ctx.getString(R.string.s_no_description)).assertDoesNotExist()
+        compose.onNodeWithText(ctx.getString(R.string.s_publisher)).assertDoesNotExist()
+        compose.onNodeWithText(ctx.getString(R.string.s_published)).assertDoesNotExist()
+        compose.onNodeWithText(ctx.getString(R.string.s_language)).assertDoesNotExist()
+        // One "Not listed" survives, under the title, standing in for the author: a book with no name above it
+        // looks like a rendering fault, where a missing publisher row is simply a fact the file does not carry.
+        assertEquals(1, compose.onAllNodesWithText(ctx.getString(R.string.s_not_listed)).fetchSemanticsNodes().size)
+        compose.onNodeWithText("1.0 MB").assertExists()
+        compose.onNodeWithText(ctx.getString(R.string.s_start_reading)).assertExists()
     }
 
     @Test fun the_description_is_drawn_and_can_be_expanded() {

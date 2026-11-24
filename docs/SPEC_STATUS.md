@@ -837,3 +837,45 @@ place. Tagged `v1.0.5` in both repositories. The asset was downloaded back after
 
 F-Droid remains deferred; `fdroid/app.kairn.yml` carries 1.0.5 / versionCode 25 with its commit still a
 placeholder, as at 1.0.0.
+
+## 1.1.0 — in development (prepared 2026-11-24)
+
+Not released and not bumped: `versionCode` is still 25 and `versionName` still `1.0.5`. The changelog
+(`changelogs/26.txt`) and the release notes (`kairn-release-notes-1.1.0.md`) are written so the release is one
+edit from starting; the edit is not made until it is asked for.
+
+Everything since `v1.0.5`, on top of it. The feature set: a reading goal with a streak, a night schedule that
+follows the clock, series editing and sorting, large type held up through every sheet, the first five sheets
+ever drawn, a tablet pass, and the shelf and backup fixes - including a grid-and-sort setting that a round trip
+through backup used to drop, caught by the round trip rather than by a screen.
+
+The last three, all defects with a seam a reader could point at:
+
+- **The cast asked a reader to choose four numbers.** `TtsSheet` drew four chips labelled Voice 1-4 per
+  speaker; nothing said what a slot sounded like, so the only way to find out was to hand a character a voice,
+  wait for it to speak and live with it. `ReaderTts.preview(slot, text)` speaks one line in one slot on the one
+  engine (a flush, not a second synthesizer), remembers the chapter as `(piece, offset)` and re-queues it when
+  the sample ends; the sample carries a non-numeric utterance id, which the progress listener already ignores,
+  so the page never jumps. The sheet now opens with four pads, each naming its slot ("Narrator, lower" ...
+  "Second, higher") and playing the same sentence, which is what makes them comparable. `VoiceLegend` /
+  `VoicePad` in `ReaderSheets.kt`, covered by `SheetAuditionTest`.
+- **The notification was a title and a Stop button.** No `MediaSession`, so no lock screen, no headset button,
+  no car, no chapter skip, and the two lines never said which book or which chapter. `SpeechService` now owns a
+  framework `MediaSession` (minSdk 26, nothing here needs the support shim), posts a media-style notification
+  with book, chapter and four actions, and `ReaderSpeech.publishState()` keeps it in step from every path that
+  changes speech or chapter. Pausing keeps the service running - a notification that vanishes on pause cannot
+  offer a Resume. `SpeechNotificationTest` draws it on the JVM.
+- **The page was per book and there was no way to say "all of them".** `Store.applyPrefsToAll` writes the
+  current settings to every record through the same coalescing queue as a single change, and `DisplaySheet`
+  ends with "Apply to every book" under the reset. `StoreTest` covers memory, disk and the no-op case.
+
+**Verified:** 342 JVM tests, 0 failures, 31 skipped (311 ran); `assembleDebug` builds; translations 455 keys in
+parity across six locales. New coverage: `SheetAuditionTest` (3), `SpeechNotificationTest` (5), `StoreTest` +2.
+Both sheet footers and the four pads are in the QA shots (`sheet-tts`, `sheet-display`), which needed the sheet
+cap lifted to `maxHeight` to be drawn whole.
+
+**Not measured:** no device pass yet - the pads' tap targets, the sample's gap before the chapter resumes, and
+the notification on a real lock screen, a headset and a car are geometry and Robolectric until a phone is
+attached. The 1.0.0 gate still stands: one chapter read aloud with `KairnPerf: tts gap` behind it.
+
+**Still open:** the AGP 9.1 / Readium 3.4 migration (the eight lint warnings), unchanged and still its own task.

@@ -151,4 +151,30 @@ class StoreTest {
 
         assertTrue(s.get("y") == null)
     }
+
+    /** R-10 keeps the settings per book until the reader says otherwise: one tap, every record, on disk too. */
+    @Test fun `applyPrefsToAll writes every book and a cold read agrees`() {
+        val s = store()
+        s.put(Book(id = "a", title = "A", author = "", uri = "ua"))
+        s.put(Book(id = "b", title = "B", author = "", uri = "ub"))
+        s.put(Book(id = "c", title = "C", author = "", uri = "uc", prefs = ReaderPrefs(theme = ThemeId.SEPIA)))
+        val mine = ReaderPrefs(theme = ThemeId.BLACK, fontScale = 1.3, scroll = true)
+        s.applyPrefsToAll(mine)
+        s.flush()
+        assertEquals("every book in memory", 3, s.books.value.count { it.prefs == mine })
+        s.reload()
+        assertEquals("and every record on disk", 3, s.books.value.count { it.prefs == mine })
+    }
+
+    /** A setting the book already has is not rewritten: the queue must not fire for three identical books. */
+    @Test fun `applyPrefsToAll leaves a book that already matches alone`() {
+        val s = store()
+        val mine = ReaderPrefs(theme = ThemeId.SEPIA)
+        s.put(Book(id = "a", title = "A", author = "", uri = "ua", prefs = mine))
+        s.flush()
+        val before = File(s.booksDir, "a.json").lastModified()
+        s.applyPrefsToAll(mine)
+        s.flush()
+        assertEquals(before, File(s.booksDir, "a.json").lastModified())
+    }
 }

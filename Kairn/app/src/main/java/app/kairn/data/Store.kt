@@ -266,6 +266,16 @@ class Store private constructor(val root: File, val copiesDir: File) {
         for (f in listOf(File(booksDir, "$id.json"), posFile(id), coverFile(id), thumbFile(id), castFile(id))) enqueue(f) { f.delete() }
     }
 
+    /**
+     * R-10 keeps the reading settings per book, and they stay per book: this is the reader saying so from the
+     * other end - one book, then every book. Each record goes through the same coalescing queue as a single
+     * set, so the library does not turn into a burst of writes.
+     */
+    @Synchronized
+    fun applyPrefsToAll(p: ReaderPrefs) {
+        for (b in books.value) if (b.prefs != p) update(b.id) { it.copy(prefs = p) }
+    }
+
     @Synchronized
     fun saveSettings(f: (AppSettings) -> AppSettings) {
         val s = f(settings.value)

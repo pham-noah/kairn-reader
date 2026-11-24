@@ -172,14 +172,16 @@ fun CatalogScreen(
             )
 
             browsing == null -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = Dim.screenPad.dp)) {
+                // With nothing added, the empty line is the whole explanation and the hint above it repeated
+                // it: "No catalog yet, add your Calibre server" twice in a row. The hint earns its place only
+                // once a catalog exists to explain.
                 item {
-                    Text(stringResource(R.string.s_catalog_hint), style = KType.small.copy(color = K.dim),
-                        modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
-                }
-                if (settings.catalogs.isEmpty()) {
-                    item {
+                    if (settings.catalogs.isEmpty()) {
                         Text(stringResource(R.string.s_catalog_empty), style = KType.body.copy(color = K.mut),
-                            modifier = Modifier.padding(vertical = 20.dp))
+                            modifier = Modifier.padding(top = 8.dp, bottom = 18.dp))
+                    } else {
+                        Text(stringResource(R.string.s_catalog_hint), style = KType.small.copy(color = K.dim),
+                            modifier = Modifier.padding(top = 8.dp, bottom = 14.dp))
                     }
                 }
                 items(settings.catalogs, key = { it.url + it.name }) { c ->

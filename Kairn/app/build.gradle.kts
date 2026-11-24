@@ -36,8 +36,8 @@ android {
         applicationId = "app.kairn"
         minSdk = 26            // DEC-10: Android 8.0
         targetSdk = 36
-        versionCode = 25
-        versionName = "1.0.5"
+        versionCode = 26
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -84,6 +84,11 @@ android {
     dependenciesInfo { includeInApk = false; includeInBundle = false }
 
     lint {
+        // A --profile run put the whole gate at 5m29 and lint at 5m27 of it: lintAnalyzeDebug 2m51,
+        // lintAnalyzeDebugUnitTest 1m34, lintAnalyzeDebugAndroidTest 1m02. The test sources are neither
+        // shipped nor seen by a user, and analysing them was 2m35 of every commit's wait. Lint now reads
+        // the app only.
+        checkTestSources = false
         // LogNotTimber only fires because a test dependency drags Timber onto the lint classpath. The app
         // has no Timber and plain Log is deliberate, so the check is meaningless here - disabling it keeps
         // the remaining warnings visible instead of burying them in 4 lines of noise.

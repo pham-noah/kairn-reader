@@ -43,6 +43,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -53,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.io.File
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
@@ -71,6 +74,17 @@ private enum class SortBy(@androidx.annotation.StringRes val label: Int) {
 }
 
 /** Row shapes for the grid, so Lazy can reuse slots when the library list changes. */
+/** Enums are not Bundle values; their names are, and a name survives the tab switch that reset the filter. */
+private val StatusSaver = Saver<Status?, String>(
+    save = { it?.name.orEmpty() },
+    restore = { it.takeIf(String::isNotEmpty)?.let(Status::valueOf) },
+)
+
+private val SortSaver = Saver<SortBy, String>(
+    save = { it.name },
+    restore = { SortBy.valueOf(it) },
+)
+
 private const val CT_GRID = 0
 private const val CT_LIST = 1
 
@@ -136,8 +150,23 @@ private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: B
                 PickMark(Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
         }
-        Text(b.title, style = KType.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 18.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp))
-        Text(b.author, fontSize = 14.sp, color = K.dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+        // A book with no artwork gets a cover the app draws, with its title and author already on it. Printing
+        // both again underneath said the same thing twice, in a lighter weight, one line lower.
+        val art = remember(b.id) { File(store.thumbFile(b.id).path).exists() || File(store.coverFile(b.id).path).exists() }
+        if (art) {
+            Text(b.title, style = KType.body.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 18.sp), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp))
+            Text(b.author, fontSize = 14.sp, color = K.dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+        }
+        // The strip says "somewhere in"; the number says where. It sits outside the artwork test on purpose: a
+        // book with no cover still knows how far you are into it, and the list rows and the Recent strip print
+        // this same line. The grid was the one view that made you open the book to find out.
+        if (b.progress > 0f && b.status != Status.FINISHED) {
+            Text(
+                stringResource(R.string.s_list_percent_read, (b.progress.coerceIn(0f, 1f) * 100).toInt()),
+                fontSize = 12.sp, color = K.dim, maxLines = 1,
+                modifier = Modifier.padding(top = if (art) 2.dp else 6.dp),
+            )
+        }
         // Only where there is one: a series line on every book would be a column of nothing.
         EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
             Text(label, fontSize = 12.sp, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
@@ -154,7 +183,7 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
         KCover(b, store.thumbFile(b.id).path, Modifier.width(46.dp), compact = true, fallbackPath = store.coverFile(b.id).path)
         Column(Modifier.weight(1f)) {
             Text(b.title, style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(b.author, style = KType.small, maxLines = 1)
+            Text(b.author, style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis)
             EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
                 Text(label, style = KType.small, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -170,7 +199,7 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryScreen(
     store: Store, shelf: String?, onShelf: (String?) -> Unit,
@@ -188,7 +217,9 @@ fun LibraryScreen(
     // Observable: an empty library emits nothing on `books`, so the first read finishing must be a state
     // change of its own or the empty state never replaces the placeholder.
     val loaded by store.loaded.collectAsStateWithLifecycle()
-    var query by remember { mutableStateOf("") }
+    // Saved rather than remembered: the tab host keeps this screen's state while another tab is up, so a
+    // search, a filter and a scroll position come back as they were instead of resetting to the top.
+    var query by rememberSaveable { mutableStateOf("") }
     // Full-text hits live beside the title filter: the same field searches the text once it has 3 characters.
     var hits by remember { mutableStateOf<List<BookSearch.Hit>>(emptyList()) }
     var scanned by remember { mutableStateOf(0 to 0) }
@@ -218,12 +249,23 @@ fun LibraryScreen(
         }
         scanBusy = false
     }
-    var searching by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<Status?>(null) }
-    var grid by remember { mutableStateOf(true) }
-    var sort by remember { mutableStateOf(SortBy.RECENT) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var status by rememberSaveable(stateSaver = StatusSaver) { mutableStateOf<Status?>(null) }
+    // rememberSaveable survives a tab switch and a rotation but not the process; someone who reads in list
+    // mode had to switch back on every launch, so the mode is a setting now.
+    val cfg by store.settings.collectAsStateWithLifecycle()
+    var grid by rememberSaveable { mutableStateOf(cfg.grid) }
+    // Seeded from the setting for the same reason as the view mode: sorted by author once and then relaunched
+    // is how somebody browses. The saved value still wins inside a session, so a tab switch keeps it.
+    var sort by rememberSaveable(stateSaver = SortSaver) {
+        mutableStateOf(SortBy.entries.firstOrNull { it.name == cfg.sort } ?: SortBy.RECENT)
+    }
     var sortMenu by remember { mutableStateOf(false) }
-    var sortFlipped by remember(sort) { mutableStateOf(false) }
+    // The reading record lives one tap from the shelf it describes: a chart in the header, not a row buried
+    // three screens deep in Settings.
+    var statsOpen by remember { mutableStateOf(false) }
+    val stats by store.stats.collectAsStateWithLifecycle()
+    var sortFlipped by rememberSaveable(sort) { mutableStateOf(cfg.sortFlipped) }
     var problem by remember { mutableStateOf<Book?>(null) }
     var actions by remember { mutableStateOf<Book?>(null) }
     var editing by remember { mutableStateOf<Book?>(null) }
@@ -286,18 +328,36 @@ fun LibraryScreen(
     // The LibActions holder is created once, so a captured callback would be frozen at its first value.
     // rememberUpdatedState reads the current one while keeping the holder stable.
     val currentOpen by rememberUpdatedState(onOpen)
+    val haptics = rememberHaptics()
     val actions_ = remember {
         // One pick-toggle, shared by taps and long presses while selection mode is on.
         fun pick(b: Book) { picked = if (b.id in picked) picked - b.id else picked + b.id }
         LibActions(
             open = { b -> if (selecting) pick(b) else if (b.missing || b.broken) problem = b else currentOpen(b) },
-            longPress = { b -> if (selecting) pick(b) else actions = b },
+            // A long press is the one gesture with no other feedback: the sheet arrives, but only after the
+            // finger has waited, so the wait itself gets the bump.
+            longPress = { b -> haptics.longPress(); if (selecting) pick(b) else actions = b },
         )
     }
 
     @Composable fun Header() = Column {
         KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(size = 30) }) {
-            KIconButton(Icons.Default.Search, stringResource(R.string.s_search_library), { searching = !searching; if (!searching) query = "" }, bordered = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Always here once there are books, even with no record yet: the sheet says "nothing yet",
+                // which is a truer answer than a button that only appears after the first week of reading.
+                if (books.isNotEmpty()) {
+                    KIconButton(Icons.Default.Insights, stringResource(R.string.s_your_reading), { statsOpen = true }, bordered = true)
+                }
+                // Selection used to start only on a long press, which nothing on screen announced. Same mode,
+                // now with a door: the bar opens empty and asks for a book, so the next tap is not a guess.
+                if (books.isNotEmpty() && !selecting) {
+                    KIconButton(
+                        Icons.Default.Checklist, stringResource(R.string.s_select_books),
+                        { selecting = true; actions = null }, bordered = true,
+                    )
+                }
+                KIconButton(Icons.Default.Search, stringResource(R.string.s_search_library), { searching = !searching; if (!searching) query = "" }, bordered = true)
+            }
         }
         if (searching) KField(query, { query = it }, Modifier.padding(top = 12.dp), placeholder = stringResource(R.string.search_hint), leading = Icons.Default.Search)
         if (searching && (hits.isNotEmpty() || scanBusy)) {
@@ -307,6 +367,8 @@ fun LibraryScreen(
                     else pluralStringResource(R.plurals.s_hits_in_books, hits.size, hits.size),
                     style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
                 )
+                // Twelve is a glance, not an answer: a phrase that appears forty times in one book would fill the
+                // shelf and hide the rest of the library, so the list says how many it is not showing.
                 hits.take(12).forEach { h ->
                     Row(
                         Modifier.fillMaxWidth().clickable {
@@ -324,45 +386,66 @@ fun LibraryScreen(
                 }
             }
         }
-        LazyRow(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (shelf != null) item { KChip(shelf, true, { onShelf(null) }) }
-            item { KChip(stringResource(R.string.s_all), status == null, { status = null }, count = books.size) }
+        // Four statuses and a count each: at 1.3x type they do not fit one line on a 411dp phone, and a sideways
+        // scroll hid "Finished" behind the screen edge where the fade over a near-black chip is invisible. The set
+        // is closed and small, so it wraps instead - nothing is ever half a word.
+        FlowRow(
+            Modifier.fillMaxWidth().padding(top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (shelf != null) KChip(shelf, true, { onShelf(null) })
+            // A number on every chip is four counts of four lists you are not looking at, and at 1.3x type it
+            // was the fourth chip that wrapped to a second row. The count now travels with the selection, and
+            // the shelf already says "12 books" about the set you are actually in.
+            KChip(stringResource(R.string.s_all), status == null, { status = null }, count = if (status == null) books.size else null)
             // Every status that can be set has a chip, so any new value is filterable instead of folding
             // into Finished.
-            items(Status.entries.filter { it != Status.NONE }) { s ->
-                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
+            Status.entries.filter { it != Status.NONE }.forEach { s ->
+                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = if (status == s) statusCounts[s] ?: 0 else null)
             }
         }
-        // Collections are one tap away instead of two screens: the same chips the sheets use. Add and the
-        // grid/list toggle ride at the end of this row, next to the collections they act on - and the row
-        // itself is always here, so they exist even when there is no collection yet.
-        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Collections are one tap away instead of two screens: the same chips the sheets use. This row only
+        // exists once there is a collection to show: it used to be here always, holding nothing but two buttons
+        // and 66dp of a phone screen.
+        if (knownCols.isNotEmpty()) Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(Modifier.weight(1f).scrollFade(K.bg), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(knownCols.size) { i ->
                     val name = knownCols[i]
                     KChip(name, shelf == name, { onShelf(if (shelf == name) null else name) })
                 }
             }
-            KIconButton(Icons.Default.Add, stringResource(R.string.s_add_books), onAdd, bordered = true)
-            KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid }, bordered = true)
+
         }
         // A backup is the one chore that costs you your notes if you skip it for long enough.
         val quiet = maxOf(shelves.lastBackup, shelves.lastNudge)
         if (books.isNotEmpty() && System.currentTimeMillis() - quiet > 30L * 24 * 60 * 60 * 1000) {
-            // padding: a KCard has none by default, so text sits flush against the rounded clip.
-            KCard(Modifier.padding(top = 14.dp), padding = 16) {
-                Text(stringResource(R.string.s_backup_nudge), style = KType.title)
-                Text(stringResource(R.string.s_backup_nudge_body), style = KType.small, modifier = Modifier.padding(top = 2.dp))
-                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // One line, not a card: this used to be a heading, two lines of explanation and two buttons, about
+            // 190dp of the first screen for a chore nobody came here to do. The icon and the button say the same
+            // thing in a quarter of the height, and the shelf gets the rest.
+            KCard(Modifier.padding(top = 12.dp), padding = 12) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.CloudOff, null, tint = K.amber, modifier = Modifier.size(18.dp))
+                    Text(
+                        stringResource(R.string.s_backup_nudge), style = KType.small,
+                        modifier = Modifier.padding(start = 10.dp).weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
                     KButton(stringResource(R.string.s_back_up_now), onBackup, small = true)
-                    KButton(stringResource(R.string.s_later), { store.saveSettings { it.copy(lastNudge = System.currentTimeMillis()) } },
-                        style = KButtonStyle.Secondary, small = true)
+                    KIconButton(Icons.Default.Close, stringResource(R.string.s_later), {
+                        store.saveSettings { it.copy(lastNudge = System.currentTimeMillis()) }
+                    })
                 }
             }
         }
         if (recent.isNotEmpty() && !filtering) ContinueShelf(recent, store, onOpen)
         Row(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 10.dp, start = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(pluralStringResource(R.plurals.books_count, shown.size, shown.size), style = KType.small)
+            // weight(1f): with the two icon buttons now on this row the count and the sort label ran together
+            // into "3 books Recently read".
+            Text(
+                pluralStringResource(R.plurals.books_count, shown.size, shown.size),
+                style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false,
+                modifier = Modifier.weight(1f),
+            )
             // A Box stacks its children: the reverse arrow is a sibling of the menu anchor, not inside it,
             // or it would overlay the sort label.
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -370,14 +453,25 @@ fun LibraryScreen(
                     Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
                     }
-                    val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) }
-                    KMenu(sortMenu, { sortMenu = false }, sortItems) { sort = SortBy.entries[it] }
+                    // Reverse used to be its own 48dp button, which left no room at 360dp for the count to be
+                    // told in words ("3 bo..."). It is the last line of this menu now, which is where sorting
+                    // already lives, and one whole control of width went back to the row.
+                    val sortItems = SortBy.entries.map { stringResource(it.label) to (it == sort) } +
+                        (stringResource(R.string.s_reverse_sort) to sortFlipped)
+                    KMenu(sortMenu, { sortMenu = false }, sortItems) {
+                        if (it < SortBy.entries.size) {
+                            sort = SortBy.entries[it]
+                            store.saveSettings { c -> c.copy(sort = sort.name, sortFlipped = sortFlipped) }
+                        } else {
+                            sortFlipped = !sortFlipped
+                            store.saveSettings { c -> c.copy(sortFlipped = sortFlipped) }
+                        }
+                    }
                 }
-                KIconButton(
-                    if (sortFlipped) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                    stringResource(R.string.s_reverse_sort),
-                    { sortFlipped = !sortFlipped },
-                )
+                // Add and the shelf/grid toggle live here, in the row that already owns the shelf's controls,
+                // instead of in a row of their own above it.
+                KIconButton(if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, stringResource(if (grid) R.string.s_switch_to_list else R.string.s_switch_to_grid), { grid = !grid; store.saveSettings { it.copy(grid = grid) } }, bordered = true)
+                KIconButton(Icons.Default.Add, stringResource(R.string.s_add_books), onAdd, bordered = true)
             }
         }
     }
@@ -425,8 +519,14 @@ fun LibraryScreen(
                 Modifier.align(Alignment.TopCenter).fillMaxWidth().background(K.surf).statusBarsPadding().padding(horizontal = Dim.screenPad.dp, vertical = 6.dp),
             ) {
                 // The count gets its own line: beside five 48dp icons it had ~40dp and read as "3 s" before Delete.
-                Text(pluralStringResource(R.plurals.selected_count, picked.size, picked.size), style = KType.body.copy(fontWeight = FontWeight.Bold), maxLines = 1)
-                Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    if (picked.isEmpty()) stringResource(R.string.s_tap_books_to_pick)
+                    else pluralStringResource(R.plurals.selected_count, picked.size, picked.size),
+                    style = KType.body.copy(fontWeight = if (picked.isEmpty()) FontWeight.Normal else FontWeight.Bold, color = if (picked.isEmpty()) K.mut else K.txt),
+                    maxLines = 1,
+                )
+                // Five actions on zero books are five buttons that do nothing; they appear with the first pick.
+                if (picked.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Picking several books is only worth it if the bar can also finish or remove them.
                 KIconButton(Icons.Default.CheckCircle, stringResource(R.string.s_mark_as_finished), {
                     val n = picked.size
@@ -529,6 +629,10 @@ fun LibraryScreen(
             onRemove = { store.remove(cur.id); details = null; toast.show(removedToast) },
         )
     }
+    if (statsOpen) {
+        val finished = books.count { it.status == Status.FINISHED }
+        StatsSheet(stats, finished, cfg.dailyGoal, { g -> store.saveSettings { it.copy(dailyGoal = g) } }) { statsOpen = false }
+    }
 }
 
 /** Shown when a filter or a search leaves nothing: a blank grid with "0 books" above it reads as a bug. */
@@ -589,9 +693,22 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
+private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) =
+    KSheet(onDone, stringResource(R.string.s_edit_details)) { EditBookContent(b, store, onDone) }
+
+/**
+ * The body, apart from its sheet, so it can be drawn without a Dialog - which is what the screenshot harness
+ * needs and what every other sheet in the app already does.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun EditBookContent(b: Book, store: Store, onDone: () -> Unit) {
     var title by remember { mutableStateOf(b.title) }
     var author by remember { mutableStateOf(b.author) }
+    // A catalog hands over whatever its OPF says, and the shelf sorts by series: a wrong one is visible for
+    // ever and there was no way to correct it.
+    var series by remember { mutableStateOf(b.series.orEmpty()) }
+    var seriesNo by remember { mutableStateOf(b.seriesIndex?.let { n -> if (n % 1.0 == 0.0) n.toInt().toString() else n.toString() }.orEmpty()) }
     var status by remember { mutableStateOf(b.status) }
     // Collections are picked from existing ones; a free-text field let a typo mint a near-identical shelf.
     var cols by remember { mutableStateOf(b.collections.toSet()) }
@@ -613,8 +730,18 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
     val known = remember(allBooks, settings.shelves, b.collections) { knownCollections(allBooks + b, settings.shelves) }
     // Existing tags as chips: typing them out again is how near-duplicates get made.
     val knownTags = remember(allBooks, settings.extraTags) { (settings.extraTags + allBooks.flatMap { it.tags }).distinct().sortedBy { it.lowercase() } }
-    KSheet(onDone, stringResource(R.string.s_edit_details)) {
+    Column {
         KField(title, { title = it }, label = stringResource(R.string.s_title)); KField(author, { author = it }, label = stringResource(R.string.s_author))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.weight(2f)) { KField(series, { series = it }, label = stringResource(R.string.s_series)) }
+            Box(Modifier.weight(1f)) {
+                KField(
+                    seriesNo, { seriesNo = it.filter { c -> c.isDigit() || c == '.' }.take(5) },
+                    label = stringResource(R.string.s_book_number), placeholder = "1",
+                    keyboard = androidx.compose.ui.text.input.KeyboardType.Number,
+                )
+            }
+        }
         Text(stringResource(R.string.s_status), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
         KSegmented(opts.map { stringResource(it.second) }, opts.indexOfFirst { it.first == status }, { status = opts[it].first })
         Text(stringResource(R.string.tab_collections), style = KType.small.copy(fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp))
@@ -634,7 +761,19 @@ private fun EditBookSheet(b: Book, store: Store, onDone: () -> Unit) {
         }
         KField(tags, { tags = it }, label = stringResource(R.string.s_tags_comma_separated))
         Spacer(Modifier.height(16.dp))
-        KButton(stringResource(R.string.s_save), { store.update(b.id) { it.copy(title = title.ifBlank { b.title }, author = author, status = status, collections = cols.sortedBy { c -> c.lowercase() }, tags = split(tags)) }; onDone() })
+        KButton(stringResource(R.string.s_save), {
+            store.update(b.id) {
+                val s = series.trim()
+                it.copy(
+                    title = title.ifBlank { b.title }, author = author, status = status,
+                    collections = cols.sortedBy { c -> c.lowercase() }, tags = split(tags),
+                    // No series means no number: an orphaned "3" would sort the book into a shelf of one.
+                    series = s.ifBlank { null },
+                    seriesIndex = if (s.isBlank()) null else seriesNo.toDoubleOrNull()?.takeIf { n -> n > 0 },
+                )
+            }
+            onDone()
+        })
     }
 }
 

@@ -45,6 +45,7 @@ class ReaderScreenTest {
         override fun preload(locator: Locator) { calls += "preload" }
         override fun setPrefs(p: ReaderPrefs) { lastPrefs = p; calls += "setPrefs" }
         override fun resetPrefs() { calls += "resetPrefs" }
+        override fun applyPrefsToAll() { calls += "applyPrefsToAll" }
         override fun toggleBookmark(bookmarked: Boolean) { bookmarkToggledTo = bookmarked; calls += "toggleBookmark" }
         override fun saveNote(target: NoteTarget, text: String) { calls += "saveNote" }
         override fun updateNote(id: String, text: String) { calls += "updateNote" }
@@ -57,6 +58,7 @@ class ReaderScreenTest {
         override fun stopTts() { calls += "stopTts" }
         override fun setCastEnabled(on: Boolean) { calls += "setCastEnabled" }
         override fun setCastVoice(speaker: String, slot: Int) { calls += "setCastVoice" }
+        override fun previewVoice(slot: Int) { calls += "previewVoice:$slot" }
         override fun setSpeechRate(rate: Float) { calls += "setSpeechRate" }
         override fun setSleepTimer(minutes: Int) { calls += "setSleepTimer" }
         override fun toggleAutoScroll() { calls += "toggleAutoScroll" }

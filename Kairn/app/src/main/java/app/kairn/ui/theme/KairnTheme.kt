@@ -21,9 +21,13 @@ private val KairnShapes = Shapes(
 
 /** App chrome is always the dark base with one mint accent; only the reader page changes theme. */
 @Composable
-fun KairnTheme(glass: Boolean = true, ambient: Ambient = Ambient.MINT, content: @Composable () -> Unit) = CompositionLocalProvider(
+fun KairnTheme(
+    glass: Boolean = true, ambient: Ambient = Ambient.MINT, haptics: Boolean = true,
+    content: @Composable () -> Unit,
+) = CompositionLocalProvider(
     LocalSurfaceStyle provides if (glass) SurfaceStyle.Glass else SurfaceStyle.Solid,
     LocalAmbient provides ambient,
+    LocalHaptics provides haptics,
 ) {
     MaterialTheme(
         colorScheme = KairnColors,

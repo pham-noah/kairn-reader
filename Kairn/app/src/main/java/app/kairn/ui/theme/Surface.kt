@@ -29,6 +29,12 @@ val LocalSurfaceStyle = staticCompositionLocalOf { SurfaceStyle.Glass }
 /** The ambient wash colour, provided once at the theme root from settings. */
 val LocalAmbient = staticCompositionLocalOf { Ambient.MINT }
 
+/**
+ * Whether a touch may be answered with a tick. Lives here beside the other shell-wide facts the kit reads, so a
+ * control deep in a row never has to be handed a flag to know whether it is allowed to buzz.
+ */
+val LocalHaptics = staticCompositionLocalOf { true }
+
 /** True when the app is drawing the Glass style. Reads a CompositionLocal, so it needs a composable scope. */
 val glass: Boolean @Composable get() = LocalSurfaceStyle.current == SurfaceStyle.Glass
 
@@ -57,24 +63,39 @@ object Glass {
         floatArrayOf(0.96f, 1.00f, 0.70f) to Color(0x21E8B45C),   // amber, bottom-right
     )
 
-    /** The blooms for a chosen wash. PLAIN returns none, so the base colour shows alone. */
-    fun blooms(ambient: Ambient): List<Pair<FloatArray, Color>> = when (ambient) {
-        Ambient.MINT -> mintBlooms
-        Ambient.OCEAN -> listOf(
-            floatArrayOf(0.10f, 0.05f, 0.90f) to Color(0x3380B5EA),
-            floatArrayOf(0.95f, 0.40f, 0.85f) to Color(0x2A62C9D6),
-            floatArrayOf(0.20f, 0.85f, 0.80f) to Color(0x227EE0C3),
-            floatArrayOf(1.00f, 1.00f, 0.70f) to Color(0x1E4F86C6),
-        )
-        Ambient.SUNSET -> listOf(
-            floatArrayOf(0.08f, 0.06f, 0.88f) to Color(0x33E8B45C),
-            floatArrayOf(0.98f, 0.30f, 0.82f) to Color(0x2FE68B9B),
-            floatArrayOf(0.16f, 0.82f, 0.86f) to Color(0x27C86A8A),
-            floatArrayOf(1.00f, 1.00f, 0.72f) to Color(0x1FD98A48),
-        )
-        Ambient.PLAIN -> emptyList()
+    /**
+     * The blooms for a chosen wash. PLAIN returns none, so the base colour shows alone.
+     *
+     * [strength] dims the wash without moving the blooms: Solid panels carry no sheen or translucency, so at full
+     * strength the same four blooms read as a lamp behind a flat card instead of a tint on a backdrop.
+     */
+    fun blooms(ambient: Ambient, strength: Float = 1f): List<Pair<FloatArray, Color>> {
+        val pick = when (ambient) {
+            Ambient.MINT -> mintBlooms
+            Ambient.OCEAN -> listOf(
+                floatArrayOf(0.10f, 0.05f, 0.90f) to Color(0x3380B5EA),
+                floatArrayOf(0.95f, 0.40f, 0.85f) to Color(0x2A62C9D6),
+                floatArrayOf(0.20f, 0.85f, 0.80f) to Color(0x227EE0C3),
+                floatArrayOf(1.00f, 1.00f, 0.70f) to Color(0x1E4F86C6),
+            )
+            Ambient.SUNSET -> listOf(
+                floatArrayOf(0.08f, 0.06f, 0.88f) to Color(0x33E8B45C),
+                floatArrayOf(0.98f, 0.30f, 0.82f) to Color(0x2FE68B9B),
+                floatArrayOf(0.16f, 0.82f, 0.86f) to Color(0x27C86A8A),
+                floatArrayOf(1.00f, 1.00f, 0.72f) to Color(0x1FD98A48),
+            )
+            Ambient.PLAIN -> emptyList()
+        }
+        return if (strength == 1f) pick else pick.map { (f, c) -> f to c.copy(alpha = (c.alpha * strength).coerceIn(0f, 1f)) }
     }
 }
+
+/**
+ * How much of the wash Solid keeps. Glass sits ON the wash (its panels are translucent, so the colour reaches them);
+ * a Solid panel is opaque and only the gaps between cards show it, so the same alphas would read as a lamp behind
+ * the UI. Measured against the base: at 0.55 the wash is a tint you notice at the edges, not a colour scheme.
+ */
+const val SOLID_WASH = 0.55f
 
 /**
  * Paints the ambient colour wash as the backdrop of this node. Uses drawWithCache so the four radial
@@ -82,12 +103,12 @@ object Glass {
  * called from a composable scope.
  */
 @Composable
-fun Modifier.ambientWash(): Modifier {
+fun Modifier.ambientWash(strength: Float = 1f): Modifier {
     val ambient = LocalAmbient.current
     return this.drawWithCache {
         val maxDim = maxOf(size.width, size.height)
         val base = K.bg
-        val brushes = Glass.blooms(ambient).map { (f, color) ->
+        val brushes = Glass.blooms(ambient, strength).map { (f, color) ->
             Brush.radialGradient(
                 colors = listOf(color, Color.Transparent),
                 center = androidx.compose.ui.geometry.Offset(f[0] * size.width, f[1] * size.height),

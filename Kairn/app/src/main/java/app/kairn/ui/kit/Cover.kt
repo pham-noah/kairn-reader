@@ -86,6 +86,8 @@ private suspend fun loadCover(key: String, cover: File, fallback: File?, hit: Ca
 fun KCover(
     book: Book, coverPath: String, modifier: Modifier = Modifier,
     compact: Boolean = false, showBadge: Boolean = true, fallbackPath: String? = null,
+    /** The bottom strip, for the shelf. A sheet that prints the percentage underneath does not need it too. */
+    showProgress: Boolean = true,
 ) {
     val shape = RoundedCornerShape(topStart = 8.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 8.dp)
     val coverFile = remember(coverPath) { File(coverPath) }
@@ -108,19 +110,33 @@ fun KCover(
             Box(Modifier.fillMaxSize().background(fallbackGrad))
             Column(Modifier.fillMaxSize().padding(if (compact) 5.dp else 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Text(book.title, fontFamily = KFonts.serif, fontWeight = FontWeight.SemiBold, fontSize = if (compact) 7.sp else 12.sp, lineHeight = if (compact) 9.sp else 14.sp,
-                    color = Color.White.copy(alpha = .94f), maxLines = 4, overflow = TextOverflow.Ellipsis)
-                if (!compact) Text(book.author, fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = .7f), maxLines = 1)
+                    color = Color.White.copy(alpha = .94f), maxLines = 4, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 0.dp))
+                // The badge shares this last line, so the author stops short of it instead of running under it.
+                if (!compact) Text(
+                    book.author, fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = .7f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(end = if (showBadge && (book.missing || book.broken || book.status == Status.FINISHED)) 26.dp else 0.dp),
+                )
             }
         }
         Canvas(Modifier.fillMaxSize()) { drawRect(Color.White.copy(alpha = .12f), Offset.Zero, Size(3.dp.toPx(), size.height)) }   // spine
-        if (book.progress > 0f && book.status != Status.FINISHED && !compact) {
-            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.Black.copy(alpha = .35f))) {
+        if (showProgress && book.progress > 0f && book.status != Status.FINISHED && !compact) {
+            // A black track was invisible twice over: at 35% it vanished into the artwork, and at 62% it matched
+            // the page behind the cover, so a half-read book still showed a mint stub of arbitrary length that
+            // looked clipped. The track is light instead - 28% white over whatever the cover is - so the meter
+            // reads as one strip with a filled end, on navy, brown, olive or a photographed cover alike.
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(5.dp).background(Color.White.copy(alpha = .28f))) {
                 Box(Modifier.fillMaxWidth(book.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
             }
         }
         if (showBadge && !compact) {
             val badge = when { book.missing || book.broken -> Icons.Default.ErrorOutline to K.amber; book.status == Status.FINISHED -> Icons.Default.Check to K.mint; else -> null }
-            if (badge != null) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(22.dp).clip(CircleShape).background(badge.second), contentAlignment = Alignment.Center) {
+            // Bottom-end, not top-end: the top corner is where the title starts, and a badge there either ate
+            // the end of the name or pushed the whole line down until no two covers in a row shared a baseline.
+            // The strip below owns the same corner only while a book is in progress, and a badge only appears on
+            // books that are not - so the two never want the space at once.
+            if (badge != null) Box(Modifier.align(Alignment.BottomEnd).padding(8.dp).size(22.dp).clip(CircleShape).background(badge.second), contentAlignment = Alignment.Center) {
                 Icon(badge.first, null, tint = if (badge.second == K.amber) Color(0xFF2B1C00) else K.mintInk, modifier = Modifier.size(14.dp))
             }
         }

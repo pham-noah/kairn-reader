@@ -125,6 +125,8 @@
     <string name="s_try_another_search_or_clear_the_filters">Kokeile toista hakua tai tyhjennä suodattimet, niin näet koko kirjaston.</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">Kaksi sivua sopii tabletille tai leveälle näytölle.</string>
     <string name="s_volume_keys_turn_pages">Äänenvoimakkuusnäppäimet kääntävät sivuja</string>
+    <string name="s_hide_bars">Piilota palkit lukemisen aikana</string>
+    <string name="s_haptics">Värinä</string>
     <string name="s_warm_light">Lämmin valo</string>
     <string name="s_watched_folders">Seuratut kansiot</string>
     <string name="s_your_books_stay_usable_while_this_runs">Kirjasi pysyvät käytettävissä tämän aikana.</string>
@@ -256,7 +258,6 @@
     <string name="s_group_appearance">Ulkoasu</string>
     <string name="s_group_reading">Lukeminen</string>
     <string name="s_group_reader_bar">Lukijan palkki</string>
-    <string name="s_reader_bar_hint">Kaksi ensimmäistä ovat itse palkissa; loput odottavat Lisää-painikkeen takana. Piilottaminen poistaa kohteen palkista kokonaan.</string>
     <string name="s_move_up">Siirrä ylös</string>
     <string name="s_move_down">Siirrä alas</string>
     <string name="s_group_library">Kirjasto</string>
@@ -284,6 +285,8 @@
     <string name="s_no_collections_here">Ei vielä kokoelmia. Tee sellainen tässä.</string>
     <string name="s_no_tags_yet">Ei vielä tunnisteita.</string>
     <string name="s_search_library">Hae kirjastosta</string>
+    <string name="s_select_books">Valitse kirjat</string>
+    <string name="s_tap_books_to_pick">Valitse kirjat napauttamalla</string>
     <string name="s_switch_to_list">Vaihda luettelonäkymään</string>
     <string name="s_switch_to_grid">Vaihda ruudukkonäkymään</string>
     <string name="s_status_none">Ei mitään</string>
@@ -333,7 +336,7 @@
     <string name="s_sort_by_position">Kohdan mukaan</string>
     <string name="s_sort_by_date">Päivämäärän mukaan</string>
     <string name="s_filter_marks">Suodata muistiinpanot ja korostukset</string>
-    <string name="s_backup_nudge">Et ole tehnyt varmuuskopiota vähään aikaan.</string>
+    <string name="s_backup_nudge">Ei varmuuskopiota vähään aikaan</string>
     <string name="s_backup_nudge_body">Yksi zip sisältää lukukohdat, muistiinpanot ja korostukset.</string>
     <string name="s_later">Myöhemmin</string>
     <string name="s_time_in_chapter">Luvun aikaa jäljellä</string>
@@ -348,7 +351,7 @@
     </plurals>
     <string name="s_reading_progress">Lukemisen edistyminen</string>
     <string name="s_custom_colours">Mukautetut värit</string>
-    <string name="s_custom_colours_hint">Ohittaa sivun ja tekstin värin vain tässä kirjassa.</string>
+    <string name="s_custom_colours_hint">Vain tämä kirja</string>
     <string name="s_theme_colours">Käytä teeman värejä</string>
     <string name="s_page_tone">Sivun sävy %1$d</string>
     <string name="s_ink_tone">Tekstin väri %1$d</string>
@@ -381,6 +384,7 @@
     <string name="s_dp_per_second">%1$d dp/s</string>
     <string name="s_searching_books">Haetaan kirjoistasi (%1$d / %2$d)</string>
     <plurals name="s_hits_in_books"><item quantity="one">%1$d osuma kirjoissasi</item><item quantity="other">%1$d osumaa kirjoissasi</item></plurals>
+    <plurals name="s_more_hits"><item quantity="one">%1$d lisää avaamissasi kirjoissa</item><item quantity="other">%1$d lisää avaamissasi kirjoissa</item></plurals>
     <!-- 0.8.0: the selection menu gains Share and Look up -->
     <string name="s_menu_share">Jaa</string>
     <string name="s_menu_look_up">Etsi sana</string>
@@ -406,9 +410,10 @@
     <string name="s_streak">Putki</string>
     <string name="s_days_value">%1$d pv</string>
     <string name="s_minutes_value">%1$d min</string>
+    <string name="s_wpm_value">%1$d sanaa/min</string>
     <string name="s_hours_value">%1$d h %2$d min</string>
     <plurals name="reading_total"><item quantity="one">Kaikkiaan: %1$d h %2$d min, %3$d luettu kirja</item><item quantity="other">Kaikkiaan: %1$d h %2$d min, %3$d luettua kirjaa</item></plurals>
-    <string name="s_stats_local_note">Säilytetään tiedostossa stats.json tässä puhelimessa. Mitään ei lähetetä.</string>
+    <string name="s_stats_local_note">Tallennettu tähän puhelimeen. Mitään ei lähetetä.</string>
 
     <!-- 0.8.0: updates (DS-04) -->
     <string name="s_check_for_updates">Tarkista päivitykset</string>
@@ -483,4 +488,25 @@
     <plurals name="s_bookmarks_n"><item quantity="one">%1$d kirjanmerkki</item><item quantity="other">%1$d kirjanmerkkiä</item></plurals>
     <plurals name="s_speakers_found"><item quantity="one">%1$d puhuja</item><item quantity="other">%1$d puhujaa</item></plurals>
     <plurals name="s_books_from_catalog"><item quantity="one">%1$d kirja lisätty</item><item quantity="other">%1$d kirjaa lisätty</item></plurals>
+    <string name="s_paper">Paperi</string>
+    <string name="s_ink">Muste</string>
+    <string name="s_series">Sarja</string>
+    <string name="s_book_number">Numerosi</string>
+    <string name="s_auto_schedule">Aikataulu</string>
+    <string name="s_dark_from">Tumma alkaen</string>
+    <string name="s_dark_until">Ast</string>
+    <string name="s_daily_goal">Päivätavoite</string>
+    <string name="s_goal_progress">%1$d / %2$d min tänään</string>
+    <string name="s_goal_met">Tavoite täyttyi</string>
+    <string name="s_min_value">%1$d min</string>
+    <string name="s_voice_slot_deep">Kertoja, matalampi</string>
+    <string name="s_voice_slot_second">Toinen ääni</string>
+    <string name="s_voice_slot_second_high">Toinen, korkeampi</string>
+    <string name="s_voice_slot_high">Kertoja, korkeampi</string>
+    <string name="s_voice_sample">Näin luen sinulle.</string>
+    <string name="s_previous_chapter">Edellinen luku</string>
+    <string name="s_next_chapter">Seuraava luku</string>
+    <string name="s_apply_to_every_book">Käytä kaikkiin kirjoihin</string>
+    <string name="s_applied_to_every_book">Kaikki kirjat käyttävät nyt näitä asetuksia</string>
+    <string name="s_voice_legend_title">Neljä ääntä</string>
 </resources>

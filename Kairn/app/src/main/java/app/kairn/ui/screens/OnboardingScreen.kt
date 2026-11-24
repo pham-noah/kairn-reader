@@ -2,6 +2,7 @@ package app.kairn.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,10 +34,21 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
     val current by store.settings.collectAsState()
 
     Column(Modifier.fillMaxSize().background(K.bg).statusBarsPadding().navigationBarsPadding().padding(start = 28.dp, end = 28.dp, top = 56.dp, bottom = 28.dp)) {
-        Row(Modifier.padding(bottom = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(3) { i -> Box(Modifier.height(8.dp).width(if (i == step) 26.dp else 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == step) K.mint else Color(0xFF313940))) }
+        // Skip lives up here with the page dots. Under the primary button it was a grey word 60dp from a
+        // thumb already on "Next", for an action that undoes the flow.
+        Row(Modifier.fillMaxWidth().padding(bottom = 22.dp), verticalAlignment = Alignment.CenterVertically) {
+            repeat(3) { i -> Box(Modifier.height(8.dp).width(if (i == step) 26.dp else 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == step) K.mint else Color(0xFF313940))) ; Spacer(Modifier.width(8.dp)) }
+            Spacer(Modifier.weight(1f))
+            Text(
+                stringResource(if (step < 2) R.string.s_skip else R.string.s_skip_for_now),
+                style = KType.small.copy(color = K.dim),
+                modifier = Modifier.clickable { onFinish(false) }.padding(horizontal = 10.dp, vertical = 12.dp),
+            )
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {   // scrolls at large font sizes instead of clipping
+        // Centred in the space the footer leaves: top-aligned, the three bullets ended 180dp above the button
+        // and the page read as a document that had run out rather than a page that had been composed.
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+        Column(Modifier.verticalScroll(rememberScrollState())) {   // scrolls at large font sizes instead of clipping
             when (step) {
                 0 -> {
                     CairnMark(size = 64)
@@ -75,9 +87,9 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
                 }
             }
         }
+        }   // Box
         Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             KButton(if (step < 2) stringResource(R.string.s_next) else stringResource(R.string.s_add_your_first_books), { if (step < 2) step++ else onFinish(true) })
-            KButton(if (step < 2) stringResource(R.string.s_skip) else stringResource(R.string.s_skip_for_now), { onFinish(false) }, style = KButtonStyle.Ghost)
         }
     }
 }

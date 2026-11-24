@@ -6,6 +6,10 @@
 package app.kairn.ui
 
 
+import androidx.core.content.ContextCompat
+import android.os.Build
+import android.content.pm.PackageManager
+import android.Manifest
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
@@ -104,6 +108,20 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     private val writer by lazy { ReaderWriter(app.store, bookId) }
     private val session by lazy { ReaderSession(this, app.readium, lifecycleScope, app.positionsCache) }
 
+    // Read aloud with the screen off is a media notification, and since Android 13 the shade drops it without
+    // this permission - the service still runs, so the silence is the confusing part. Asked once, at the first
+    // sentence, because that is the moment it is worth something.
+    private val notifyLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private var askedToNotify = false
+
+    private fun askToNotify() {
+        if (askedToNotify || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) return
+        askedToNotify = true
+        notifyLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     private val exportNotesLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { u ->
         val b = app.store.get(bookId)
         // This callback runs on the main thread: annotationsMarkdown() and the write are disk IO, so both run on IO.
@@ -130,19 +148,30 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             setContent {
                 // collectAsState, not .value: a StateFlow read in composition is not observed.
                 val s by app.store.settings.collectAsState()
+                // A schedule has to land while the book is open - 21:00 arrives without a configuration change, so
+                // a minute's tick is what makes "dark from 21:00" true rather than "dark next time you open it".
+                LaunchedEffect(s.autoSwitch, s.autoMode, s.nightFrom, s.nightTo) {
+                    if (!usesSchedule(s)) return@LaunchedEffect
+                    while (true) {
+                        ui.clockNight = isNightNow(from = s.nightFrom, to = s.nightTo)
+                        kotlinx.coroutines.delay(60_000)
+                    }
+                }
+                LaunchedEffect(ui.clockNight) { if (usesSchedule(s)) applyPrefs() }
                 // Hiding a mode while it runs would leave it running with no control on screen, so switching
                 // read aloud or auto scroll off in Settings stops them here.
                 LaunchedEffect(s.barHidden) {
                     if (BarItem.READ_ALOUD in s.barHidden && ui.speech.on) stopTts()
                     if (BarItem.AUTO_SCROLL in s.barHidden) autoScroll.stop()
                 }
-                KairnTheme(glass = s.glass, ambient = s.ambient) {
+                KairnTheme(glass = s.glass, ambient = s.ambient, haptics = s.haptics) {
                     ReaderScreen(
                         ui = ui,
                         colors = readerUi(prefsApplier.theme(ui.prefs), ui.prefs.pageColor, ui.prefs.inkColor),
                         isTablet = isTablet, toast = toast, act = this@ReaderActivity, wpm = s.readingWpm,
                         hidden = s.barHidden,
                         order = s.barOrder,
+                        autoHide = s.hideBars,
                     )
                 }
             }
@@ -253,6 +282,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
         n.addInputListener(object : InputListener {            // R-07: tap zones
             override fun onTap(event: TapEvent): Boolean {
+                ui.touches++                    // a tap is attention: the auto-hide count starts again
                 // Scroll mode has no pages: a tap only shows/hides the bars, unless the chapter is
                 // too short to scroll, in which case the edge zones stay live so it is not a dead end.
                 if (ui.prefs.scroll) {
@@ -291,7 +321,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 loc.locations.totalProgression?.let { ui.bookProgress = it.toFloat() }
                 loc.locations.progression?.let { ui.chapterProgress = it.toFloat() }
                 val title = loc.title ?: ""
-                if (title != ui.chapterTitle) ui.chapterTitle = title      // a page turn inside one chapter must not touch it
+                if (title != ui.chapterTitle) {
+                    ui.chapterTitle = title          // a page turn inside one chapter must not touch it
+                    speech.publishState()            // the notification names the chapter, so it moves with it
+                }
                 if (loc.href.toString() != ui.chapterHref) {
                     ui.chapterHref = loc.href.toString()
                     loadChapterWords(loc)
@@ -338,12 +371,19 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         super.onResume()
         sessionStart = SystemClock.elapsedRealtime()      // DS-02: a reading session starts when the book shows
         SpeechService.onStop = { runOnUiThread { stopTts() } }
+        // The other three roads into the reader that need no screen: the notification, the lock screen, and a
+        // headset or car button, which all arrive through the same media session.
+        SpeechService.onToggle = { runOnUiThread { toggleTts() } }
+        SpeechService.onChapter = { step -> runOnUiThread { chapterStep(step) } }
+        speech.publishState()
     }
 
     override fun onPause() {
         super.onPause()
         // Reading aloud continues in the background behind a foreground service; everything else stops here.
-        if (ui.speech.on && !ui.speech.paused) SpeechService.start(this) else SpeechService.stop(this)
+        // A paused chapter keeps the service too: the lock screen is the only way back into it from here, and a
+        // notification that vanishes on pause cannot offer a Resume.
+        if (ui.speech.on) SpeechService.start(this) else SpeechService.stop(this)
         if (!ui.speech.on) { ui.speech.on = false; ui.speech.starting = false; ui.speech.paused = false }
         speech.clearFollow()
         autoScroll.stop()
@@ -356,6 +396,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     override fun onDestroy() {
         closeSearch(); speech.shutdown(); pub?.close()
         SpeechService.onStop = null
+        SpeechService.onToggle = null
+        SpeechService.onChapter = null
         SpeechService.stop(this)
         super.onDestroy()
     }
@@ -427,7 +469,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
             window = window,
             navigator = { nav },
             autoSwitch = { app.store.settings.value.autoSwitch },
-            night = { ui.night },
+            // A schedule is the app's own clock deciding; with it off this is still the system's answer.
+            night = { if (usesSchedule(app.store.settings.value)) ui.clockNight else ui.night },
             isTablet = { isTablet },
             persist = { writer.savePrefs(it) },
             onLeavingScrollMode = { autoScroll.stop() },
@@ -467,7 +510,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     // ---- window (R-11) ----
 
-    override fun toggleBars() { ui.bars = !ui.bars; applyWindow() }
+    override fun toggleBars() { ui.touches++; ui.bars = !ui.bars; applyWindow() }
     private fun applyWindow() {
         val c = WindowInsetsControllerCompat(window, window.decorView)
         if (app.store.settings.value.fullscreen && !ui.bars) {
@@ -517,6 +560,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                 val dx = ev.x - downX; val dy = ev.y - downY
                 val wasArmed = armed; armed = false; val wasTracking = tracking; tracking = false
                 if (wasTracking && (wasArmed || flicks(dx, dy))) {
+                    ui.touches++
                     if (swipeOn) {
                         // Left drag shows the next chapter; right drag the previous one.
                         if (dx < 0) nav?.goForward(true) else nav?.goBackward(true)
@@ -674,7 +718,10 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         )
     }
 
-    override fun toggleTts() = speech.toggle()
+    override fun toggleTts() {
+        askToNotify()
+        speech.toggle()
+    }
 
     // The cast is this book's, saved beside its position. A change is heard at once if it is speaking.
     override fun setCastEnabled(on: Boolean) {
@@ -690,7 +737,14 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         speech.setCast()
     }
 
+    override fun previewVoice(slot: Int) = speech.previewVoice(slot)
+
     override fun stopTts() = speech.stop()
+
+    /** A lock-screen or headset "next": the page turn carries the voice with it, through the locator collector. */
+    private fun chapterStep(step: Int) {
+        if (step > 0) nav?.goForward(true) else nav?.goBackward(true)
+    }
 
     override fun setSpeechRate(rate: Float) {
         updatePrefs(ui.prefs.copy(speechRate = rate.coerceIn(0.6f, 2f)))
@@ -713,6 +767,17 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         ui.prefs = app.store.settings.value.defaults
         applyPrefs()
         writer.clearPrefs()
+    }
+
+    /**
+     * R-10 is per book, but taste is not: one button after the sliders that copies what this book looks like onto
+     * every other book, so a reader who has just got the page right does not have to do it nine more times.
+     */
+    override fun applyPrefsToAll() {
+        prefsTouched = true
+        writer.savePrefs(ui.prefs)
+        app.store.applyPrefsToAll(ui.prefs)
+        toast.show(getString(R.string.s_applied_to_every_book))
     }
 
     override fun exportNotes() { exportNotesLauncher.launch("${ui.bookTitle.take(40)}-notes.md") }

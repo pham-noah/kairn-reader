@@ -73,6 +73,11 @@ internal class ReaderTts(
     private var slots: List<VoiceSlot> = emptyList()
     private var appliedSlot = -1
     private var lastDoneAt = 0L
+    private var previewSlot = -1
+    private var previewText: String? = null
+    private var previewResume: Pair<Int, Int>? = null
+
+    private companion object { const val PREVIEW_ID = "preview" }
 
     /** One way of sounding: a voice the engine has, and a pitch to tell it apart from its neighbours. */
     private data class VoiceSlot(val voice: Voice?, val pitch: Float)
@@ -89,6 +94,7 @@ internal class ReaderTts(
             Log.i("KairnPerf", "tts init ${initMs}ms ok=$ready")
             if (!ready) { waitingText = null; main.post(onFailed); return@TextToSpeech }
             chooseVoice()
+            if (previewText != null) playPreview()
             waitingText?.let { text ->
                 val from = waitingFrom; val r = waitingRate; val p = waitingPlan
                 waitingText = null
@@ -120,6 +126,19 @@ internal class ReaderTts(
 
             override fun onDone(utteranceId: String?) {
                 lastDoneAt = SystemClock.elapsedRealtime()
+                // A sample is not the chapter: give the chapter back from the word it stopped on, and never
+                // report it as "the chapter ended" - that would turn the page for a voice preview.
+                if (utteranceId == PREVIEW_ID) {
+                    val back = previewResume
+                    previewResume = null
+                    appliedSlot = -1
+                    if (back != null) {
+                        playing = true
+                        paused = false
+                        queueFrom(back.first, back.second)
+                    }
+                    return
+                }
                 if (utteranceId?.substringBefore('/') == (pieces.size - 1).toString()) {
                     playing = false
                     main.post(onEnded)
@@ -128,7 +147,7 @@ internal class ReaderTts(
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
-                if (quiet) return
+                if (quiet || utteranceId == PREVIEW_ID) return
                 playing = false
                 main.post(onFailed)
             }
@@ -212,7 +231,43 @@ internal class ReaderTts(
         playing = false
         paused = false
         waitingText = null
+        previewSlot = -1
+        previewText = null
         silentStop()
+    }
+
+    /**
+     * One line in one slot's voice, then the chapter back where it was. The cast sheet asks this: four chips
+     * labelled "Voice 1-4" describe a recipe, and the only way to choose between them is to hear them.
+     *
+     * A preview is not a second engine - it is a flush on the one there is - so a chapter in progress is
+     * remembered as (piece, offset) and re-queued when the sample finishes. The preview utterance carries a
+     * non-numeric id, which the progress listener already ignores, so the page never jumps to a sample.
+     */
+    fun preview(slot: Int, text: String) {
+        ensureEngine()
+        previewSlot = slot
+        previewText = text
+        if (ready) playPreview()          // a cold bind plays it from the init callback instead of dropping the tap
+    }
+
+    private fun playPreview() {
+        val e = engine ?: return
+        val slot = previewSlot
+        val text = previewText
+        if (slot < 0 || text.isNullOrBlank()) return
+        previewSlot = -1
+        previewText = null
+        previewResume = if (playing && !paused) index to offset else null
+        playing = false                   // the chapter is silent from here until the sample ends
+        paused = false
+        waitingText = null
+        silentStop()
+        quiet = false
+        appliedSlot = -1
+        applySlot(slot)
+        runCatching { e.setSpeechRate(rate) }
+        e.speak(text, TextToSpeech.QUEUE_FLUSH, null, PREVIEW_ID)
     }
 
     fun shutdown() {

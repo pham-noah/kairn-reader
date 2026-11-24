@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +35,7 @@ import app.kairn.data.Update
 import app.kairn.ui.kit.*
 import app.kairn.ui.screens.*
 import app.kairn.ui.theme.K
+import app.kairn.ui.theme.SOLID_WASH
 import app.kairn.ui.theme.ambientWash
 import app.kairn.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
@@ -161,7 +163,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
     }
 
     CompositionLocalProvider(LocalToast provides toast) {
-        Box(Modifier.fillMaxSize().then(if (glass) Modifier.ambientWash() else Modifier.background(K.bg))) {
+        Box(Modifier.fillMaxSize().ambientWash(if (glass) 1f else SOLID_WASH)) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f).then(if (overlay == null) Modifier.tabSwipe(tab) { tab = it } else Modifier)) {
                     when (overlay) {
@@ -188,7 +190,12 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                             autoFolderName = backupFlow.autoFolderName(),
                             onPickAutoFolder = { backupFlow.pickAutoFolder() },
                             onAutoBackupOff = { deps.store.saveSettings { it.copy(autoBackupFolder = "") } })
-                        null -> AnimatedContent(
+                        // Each tab's own state - the library's scroll, the mode it is in, the chip it had picked -
+                        // has to outlive the composition, or coming back from Notes lands at the top of the shelf
+                        // with the filters reset. The holder is keyed by tab name, so each tab remembers itself.
+                        null -> {
+                        val keep = rememberSaveableStateHolder()
+                        AnimatedContent(
                             targetState = tab,
                             transitionSpec = {
                                 // A tenth of the width and 85 ms: a change of tab, not a page turn.
@@ -197,7 +204,7 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                                     .togetherWith(slideOutHorizontally(tween(85)) { w -> -shift * w / 10 } + fadeOut(tween(60)))
                             },
                             label = "tab",
-                        ) { shown -> when (shown) {
+                        ) { shown -> keep.SaveableStateProvider(shown.name) { when (shown) {
                             Tab.Library -> LibraryScreen(deps.store, shelf, { shelf = it }, openBook, { overlay = Overlay.Add }, launchPickFolder, launchPickBook,
                                 onBackup = { overlay = Overlay.Backup },
                                 onOpenAt = { b, locator ->
@@ -222,6 +229,8 @@ internal fun AppShell(deps: ShellDeps, openBook: (Book) -> Unit) {
                                 },
                                 onCheckUpdates = { checkUpdates(openSheet = true) },
                                 showUpdates = selfUpdate)
+                        }
+                        }
                         }
                         }
                     }

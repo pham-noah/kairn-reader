@@ -1,41 +1,79 @@
 package app.kairn.ui.screens
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.net.toUri
-import androidx.core.os.LocaleListCompat
 
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TextFormat
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
+import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
+import app.kairn.data.AUTO_SCHEDULE
 import app.kairn.data.Ambient
 import app.kairn.data.BarItem
 import app.kairn.data.ReaderPrefs
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.data.Status
 import app.kairn.data.Store
 import app.kairn.data.ThemeId
+import app.kairn.data.formatMinutes
+import app.kairn.data.minutesOfDay
+import app.kairn.data.usesSchedule
 import app.kairn.ui.kit.*
 import app.kairn.ui.theme.Dim
+import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
+import app.kairn.ui.theme.ReaderUi
+import app.kairn.ui.theme.SOLID_WASH
+import app.kairn.ui.theme.ambientWash
+import app.kairn.ui.theme.glass
+import app.kairn.ui.theme.glassSurface
+import app.kairn.ui.theme.readerUi
 import java.text.DateFormat
 import java.util.Date
+import kotlin.math.roundToInt
 
 // Built once: .copy() at the call sites re-created these on every recomposition (every toggle).
 private val SectionTitle = KType.title.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
 private val SmallDim = KType.small.copy(color = K.dim)
+// A reorder arrow that cannot move this row: visible enough to read as "there is a control here, it is just spent",
+// rather than at K.line which vanishes into the card and reads as a missing glyph.
 
 /** null is "follow the system". The names are the languages' own names, deliberately not translated. */
 private val languageTags: List<String?> = listOf(null, "en", "es", "fi", "ja", "vi", "zh-CN")
@@ -58,6 +96,197 @@ private fun barLabel(item: BarItem): Int = when (item) {
     BarItem.SEARCH -> R.string.s_tool_search
     BarItem.NOTES -> R.string.s_tool_notes
     BarItem.DISPLAY -> R.string.s_tool_display
+}
+
+/** The same glyphs the reader bar draws, so a row and its pill cannot disagree. */
+private fun barIcon(item: BarItem): ImageVector = when (item) {
+    BarItem.READ_ALOUD -> Icons.AutoMirrored.Filled.VolumeUp
+    BarItem.AUTO_SCROLL -> Icons.Default.ArrowDownward
+    BarItem.CONTENTS -> Icons.AutoMirrored.Filled.List
+    BarItem.SEARCH -> Icons.Default.Search
+    BarItem.NOTES -> Icons.AutoMirrored.Filled.StickyNote2
+    BarItem.DISPLAY -> Icons.Default.TextFormat
+}
+
+/** One row of the bar list. Fixed, because a drag that changes the row's height under the finger is a lie. */
+private val BarRowHeight = 56.dp
+
+/**
+ * The reader bar's items, in order, moved by long-pressing a row and dragging it.
+ *
+ * Twelve chevrons went away for this: reordering six rows with two buttons each is eighteen taps to put one
+ * item first, and every one of those taps is a place the list can be left half-sorted. A drag is one gesture
+ * with no intermediate states to save.
+ *
+ * Screen readers cannot drag, so each row keeps the two moves as accessibility actions - the gesture is an
+ * addition to the old way, not a replacement for anyone who cannot perform it.
+ */
+@Composable
+private fun BarRows(
+    order: List<BarItem>, hidden: Set<BarItem>,
+    onOrder: (List<BarItem>) -> Unit, onShow: (BarItem, Boolean) -> Unit,
+) {
+    val haptics = rememberHaptics()
+    var list by remember(order) { mutableStateOf(order) }
+    var dragging by remember { mutableIntStateOf(-1) }
+    var lifted by remember { mutableFloatStateOf(0f) }
+    val rowPx = with(LocalDensity.current) { BarRowHeight.toPx() }
+    val moveUp = stringResource(R.string.s_move_up)
+    val moveDown = stringResource(R.string.s_move_down)
+
+    fun move(item: BarItem, delta: Int) {
+        val from = list.indexOf(item)
+        val to = (from + delta).coerceIn(0, list.lastIndex)
+        if (from == to || from < 0) return
+        list = list.toMutableList().also { it[from] = list[to]; it[to] = list[from] }
+        onOrder(list)
+    }
+
+    Column {
+        list.forEachIndexed { i, item ->
+            val held = i == dragging
+            Box(
+                Modifier.fillMaxWidth().height(BarRowHeight)
+                    .zIndex(if (held) 1f else 0f)
+                    .graphicsLayer { translationY = if (held) lifted else 0f }
+                    .pointerInput(item, list) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                dragging = i
+                                lifted = 0f
+                                haptics.longPress()
+                            },
+                            onDragEnd = {
+                                if (dragging >= 0) onOrder(list)
+                                dragging = -1
+                                lifted = 0f
+                            },
+                            onDragCancel = {
+                                list = order
+                                dragging = -1
+                                lifted = 0f
+                            },
+                            onDrag = { change, delta ->
+                                change.consume()
+                                if (dragging < 0) return@detectDragGesturesAfterLongPress
+                                lifted += delta.y
+                                // Past most of a row, the row trades places and the lift shrinks by the same
+                                // distance - so the finger keeps hold of the same row instead of it running away.
+                                val step = if (lifted > rowPx * 0.55f) 1 else if (lifted < -rowPx * 0.55f) -1 else 0
+                                val to = dragging + step
+                                if (step != 0 && to in list.indices) {
+                                    val from = dragging
+                                    list = list.toMutableList().also { it[from] = list[to]; it[to] = list[from] }
+                                    lifted -= (to - from) * rowPx
+                                    dragging = to
+                                    haptics.tick()
+                                }
+                            },
+                        )
+                    },
+            ) {
+                KRow(
+                    title = stringResource(barLabel(item)),
+                    leading = barIcon(item),
+                    divider = i > 0,
+                    modifier = Modifier.semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(moveUp) { move(item, -1); true },
+                            CustomAccessibilityAction(moveDown) { move(item, +1); true },
+                        )
+                    },
+                    trailing = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            KSwitch(item !in hidden, onChange = { on -> onShow(item, on) })
+                            Icon(
+                                Icons.Default.DragHandle, null,
+                                tint = if (held) K.mint else K.dim, modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A swipe as one line: a thumb at the start, a trail, and an arrowhead where the drag has to end. `reach` is where
+ * the head lands, so the three tiles differ by the only thing the setting changes.
+ */
+@Composable
+private fun SwipePreview(reach: Float, selected: Boolean) {
+    val ink = if (selected) K.mint else K.mut
+    Canvas(Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(20.dp)) {
+        val cy = size.height / 2f
+        val r = 3.5.dp.toPx()
+        val tip = (size.width - 4.dp.toPx()) * reach
+        val head = 4.dp.toPx()
+        drawCircle(ink, r, Offset(r, cy))
+        drawLine(ink.copy(alpha = 0.5f), Offset(r * 2.4f, cy), Offset(tip - head, cy), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(ink, Offset(tip - head, cy - head), Offset(tip, cy), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(ink, Offset(tip - head, cy + head), Offset(tip, cy), 2.dp.toPx(), StrokeCap.Round)
+    }
+}
+
+/**
+ * The reader bar, drawn: the two slots in the arranged order, then the More door for the rest. Hiding an item
+ * simply removes it from the strip - that is what hiding means - so this row answers "what did I just do" without
+ * a sentence explaining the rule.
+ */
+@Composable
+private fun BarPreview(order: List<BarItem>, hidden: Set<BarItem>) {
+    val visible = remember(order, hidden) { order.filter { it !in hidden } }
+    val main = visible.take(BarItem.MAIN_SLOTS)
+    val overflow = visible.drop(BarItem.MAIN_SLOTS)
+    Row(
+        Modifier.fillMaxWidth().insetWell(RoundedCornerShape(18.dp)).padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (visible.isEmpty()) {
+            // An empty bar is a real state, and it should look empty rather than look broken.
+            Text("—", style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 6.dp, top = 8.dp, bottom = 8.dp))
+        }
+        main.forEach { item ->
+            // Equal shares only when there is no More door to leave room for: a 0 weight is a crash, and a fixed
+            // width would clip a long label.
+            BarPill(
+                barIcon(item), stringResource(barLabel(item)),
+                if (overflow.isEmpty()) Modifier.weight(1f) else Modifier,
+            )
+        }
+        if (overflow.isNotEmpty()) {
+            Row(
+                Modifier.height(36.dp).clip(RoundedCornerShape(12.dp)).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.s_more), style = KType.small.copy(color = K.dim), maxLines = 1)
+                Icon(Icons.Default.ExpandMore, null, tint = K.dim, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+/** One slot of the previewed bar: the same shape as the reader's pill, in the app's own colours. */
+@Composable
+private fun BarPill(icon: ImageVector, label: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier.height(36.dp).clip(RoundedCornerShape(12.dp))
+            .then(
+                if (glass) Modifier.background(Glass.fill).border(1.dp, Glass.hairline, RoundedCornerShape(12.dp))
+                else Modifier.background(K.surf2),
+            )
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(icon, null, tint = K.mut, modifier = Modifier.size(15.dp))
+        Text(
+            label, style = KType.small.copy(color = K.txt), maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @Composable
@@ -86,16 +315,15 @@ fun SettingsScreen(
     // Hoisted: an inline listOf() is a new instance every recomposition, an unstable argument that blocks
     val themes = remember { listOf(ThemeId.LIGHT, ThemeId.SEPIA, ThemeId.GRAY, ThemeId.DARK, ThemeId.BLACK) }
     val ambients = remember { listOf(Ambient.MINT, Ambient.OCEAN, Ambient.SUNSET, Ambient.PLAIN) }
-    val surfaceOpts = listOf(R.string.s_surface_glass, R.string.s_surface_solid)
-    // Derived, not a parallel literal list: names and values feed one KSegmented, so they cannot drift
+    // Derived, not a parallel literal list: names and values feed the same swatch row, so they cannot drift
     // out of order.
     val ambientNames = remember(ambients) { ambients.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
-    val themeNames = remember(themes) { themes.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
-    val autoOpts = listOf(R.string.s_auto_off, R.string.s_auto_system)
     val swipeNames = listOf(R.string.s_swipe_short, R.string.s_swipe_medium, R.string.s_swipe_long)
     val swipeVals = remember { listOf(28, 48, 80) }
-    val speeds = remember { listOf(180, 240, 300, 360) }
-    val speedNames = listOf(R.string.s_speed_slow, R.string.s_speed_normal, R.string.s_speed_fast, R.string.s_speed_vfast)
+    // Where the arrow in each swipe tile ends, as a share of the tile: 28 / 48 / 80 dp of a 100dp track.
+    val swipeReach = remember { listOf(0.30f, 0.55f, 0.88f) }
+    // The slider's own position while the thumb is down: the stored number only moves when it is let go.
+    var speedDraft by remember(s.readingWpm) { mutableFloatStateOf(s.readingWpm.toFloat()) }
     val lastDate = remember(s.lastBackup) { if (s.lastBackup > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(s.lastBackup)) else null }
     val last = if (lastDate != null) stringResource(R.string.s_last_backup_on, lastDate) else stringResource(R.string.s_no_backup_yet)
     val folders = s.folders.count { it.enabled }
@@ -104,17 +332,60 @@ fun SettingsScreen(
         Text(stringResource(R.string.tab_settings), style = KType.h1, modifier = Modifier.padding(top = 16.dp))
         KGroup(stringResource(R.string.s_group_appearance)) {
             KCard(padding = 16) {
+                // Drawn, not named: each tile is the real recipe over the wash you actually chose, so the
+                // choice is legible before it is made.
                 Text(stringResource(R.string.s_surface), style = SectionTitle, modifier = Modifier.padding(bottom = 10.dp))
-                KSegmented(surfaceOpts.map { stringResource(it) }, if (s.glass) 0 else 1, { i -> store.saveSettings { it.copy(glass = i == 0) } })
-                if (s.glass) {
-                    Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
-                    KSegmented(ambientNames, ambients.indexOf(s.ambient), { i -> store.saveSettings { it.copy(ambient = ambients[i]) } })
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    KOptionTile(stringResource(R.string.s_surface_glass), s.glass, { store.saveSettings { it.copy(glass = true) } }, Modifier.weight(1f), height = 66) {
+                        SurfacePreview(glassStyle = true)
+                    }
+                    KOptionTile(stringResource(R.string.s_surface_solid), !s.glass, { store.saveSettings { it.copy(glass = false) } }, Modifier.weight(1f), height = 66) {
+                        SurfacePreview(glassStyle = false)
+                    }
                 }
-                Text(stringResource(R.string.s_reading_theme), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
-                KSegmented(themeNames, themes.indexOf(s.theme), { i -> store.saveSettings { it.copy(theme = themes[i], defaults = it.defaults.copy(theme = themes[i])) } })
-                Text(stringResource(R.string.s_switch_automatically), style = SectionTitle, modifier = Modifier.padding(top = 18.dp, bottom = 10.dp))
-                // A "Schedule" mode (light/dark from times) is not built; only Off and System are real.
-                KSegmented(autoOpts.map { stringResource(it) }, if (s.autoSwitch) 1 else 0, { i -> store.saveSettings { it.copy(autoSwitch = i == 1) } })
+                // Shown for BOTH styles: Solid keeps the wash at a lower strength, so a flat panel still sits on
+                // colour instead of on flat black.
+                Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    ambients.forEachIndexed { i, a ->
+                        KAmbientSwatch(a, ambientNames[i], s.ambient == a, onClick = { store.saveSettings { it.copy(ambient = a) } })
+                    }
+                }
+                // The same swatches the Display sheet and onboarding use: one control for one choice, app-wide.
+                Text(stringResource(R.string.s_reading_theme), style = SectionTitle, modifier = Modifier.padding(top = 20.dp, bottom = 10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    themes.forEach { t ->
+                        KThemeSwatch(t, s.theme == t, { store.saveSettings { it.copy(theme = t, defaults = it.defaults.copy(theme = t)) } })
+                    }
+                }
+                Text(stringResource(R.string.s_switch_automatically), style = SectionTitle, modifier = Modifier.padding(top = 20.dp, bottom = 10.dp))
+                // Three answers, not two: off, the phone's own day/night flag, or a window the reader picks. The
+                // phone's is a guess about sunset in a city the app has never been to.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    KOptionTile(stringResource(R.string.s_auto_off), !s.autoSwitch, { store.saveSettings { it.copy(autoSwitch = false) } }, Modifier.weight(1f), height = 66) {
+                        AutoPreview(system = false, theme = s.theme)
+                    }
+                    KOptionTile(
+                        stringResource(R.string.s_auto_system), s.autoSwitch && s.autoMode != AUTO_SCHEDULE,
+                        { store.saveSettings { it.copy(autoSwitch = true, autoMode = app.kairn.data.AUTO_SYSTEM) } },
+                        Modifier.weight(1f), height = 66,
+                    ) { AutoPreview(system = true, theme = s.theme) }
+                    KOptionTile(
+                        stringResource(R.string.s_auto_schedule), usesSchedule(s),
+                        { store.saveSettings { it.copy(autoSwitch = true, autoMode = AUTO_SCHEDULE) } },
+                        Modifier.weight(1f), height = 66,
+                    ) { AutoPreview(system = true, theme = s.theme) }
+                }
+                if (usesSchedule(s)) {
+                    Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TimeChip(stringResource(R.string.s_dark_from), s.nightFrom, Modifier.weight(1f)) { m ->
+                            store.saveSettings { it.copy(nightFrom = m) }
+                        }
+                        TimeChip(stringResource(R.string.s_dark_until), s.nightTo, Modifier.weight(1f)) { m ->
+                            store.saveSettings { it.copy(nightTo = m) }
+                        }
+                    }
+                }
             }
         }
         KGroup(stringResource(R.string.s_group_reading)) {
@@ -122,34 +393,46 @@ fun SettingsScreen(
                 KRow(stringResource(R.string.s_keep_screen_on)) { KSwitch(s.keepScreenOn, { v -> store.saveSettings { it.copy(keepScreenOn = v) } }) }
                 KRow(stringResource(R.string.s_full_screen), divider = true) { KSwitch(s.fullscreen, { v -> store.saveSettings { it.copy(fullscreen = v) } }) }
                 KRow(stringResource(R.string.s_volume_keys_turn_pages), divider = true) { KSwitch(s.volumeKeys, { v -> store.saveSettings { it.copy(volumeKeys = v) } }) }
-                // The time left is a guess about how fast YOU read; this is that guess.
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(stringResource(R.string.s_reading_speed), style = KType.title)
-                    KSegmented(
-                        speedNames.map { stringResource(it) },
-                        speeds.indexOf(s.readingWpm).coerceAtLeast(0),
-                        { i -> store.saveSettings { it.copy(readingWpm = speeds[i]) } },
-                        modifier = Modifier.width(240.dp),
+                // The tick is the app's own voice: some readers want the phone silent in a quiet room, and a
+                // setting is cheaper than an argument about it.
+                KRow(stringResource(R.string.s_hide_bars)) { KSwitch(s.hideBars, { v -> store.saveSettings { it.copy(hideBars = v) } }) }
+            KRow(stringResource(R.string.s_haptics), divider = true) { KSwitch(s.haptics, { v -> store.saveSettings { it.copy(haptics = v) } }) }
+                // The time left is a guess about how fast YOU read; this is that guess. Four words were never a
+                // measure of anything - "Normal" is not a number - so the slider states the number and the row
+                // says what it is used for.
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.s_reading_speed), style = KType.title)
+                        Text(
+                            stringResource(R.string.s_wpm_value, speedDraft.roundToInt()),
+                            style = KType.small.copy(color = K.mint),
+                        )
+                    }
+                    KSlider(
+                        speedDraft, { speedDraft = it }, 120f..400f,
+                        description = stringResource(R.string.s_reading_speed),
+                        stateText = stringResource(R.string.s_wpm_value, speedDraft.roundToInt()),
+                        // Written when the thumb is let go: dragging a store write through every frame is work
+                        // nobody asked for, and the value on screen comes from the draft anyway.
+                        onFinished = { store.saveSettings { it.copy(readingWpm = speedDraft.roundToInt()) } },
                     )
                 }
                 KRow(stringResource(R.string.s_swipe_to_change_chapter), divider = true) { KSwitch(s.swipeChapters, { v -> store.saveSettings { it.copy(swipeChapters = v) } }) }
                 if (s.swipeChapters) {
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                         Text(stringResource(R.string.s_swipe_distance), style = KType.title)
-                        KSegmented(
-                            swipeNames.map { stringResource(it) },
-                            when { s.swipeThreshold <= 34 -> 0; s.swipeThreshold <= 62 -> 1; else -> 2 },
-                            { i -> store.saveSettings { it.copy(swipeThreshold = swipeVals[i]) } },
-                            modifier = Modifier.width(180.dp),
-                        )
+                        // Drawn: the arrow's length IS the swipe distance, so the three tiles are told apart by
+                        // the thing they change rather than by three adjectives that mean nothing until tried.
+                        Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val picked = when { s.swipeThreshold <= 34 -> 0; s.swipeThreshold <= 62 -> 1; else -> 2 }
+                            swipeNames.forEachIndexed { i, name ->
+                                KOptionTile(
+                                    stringResource(name), picked == i,
+                                    { store.saveSettings { it.copy(swipeThreshold = swipeVals[i]) } },
+                                    Modifier.weight(1f), height = 44,
+                                ) { SwipePreview(swipeReach[i], picked == i) }
+                            }
+                        }
                     }
                 }
                 // The selection menu's two optional actions. Off means the item is not built at all - a
@@ -168,49 +451,14 @@ fun SettingsScreen(
         // What the reader's bar shows, and in what order. Stored as what is HIDDEN plus the arrangement,
         // so a bar item added later still appears for anyone who never touched this.
         KGroup(stringResource(R.string.s_group_reader_bar)) {
-            Text(
-                stringResource(R.string.s_reader_bar_hint),
-                style = KType.small.copy(color = K.dim),
-                modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
-            )
-            KCard {
-                fun move(item: BarItem, up: Boolean) {
-                    val list = s.barOrder.toMutableList()
-                    // Swapped with the neighbouring row you can SEE: a hidden item still holds its place in the
-                    // list, and stepping into it would look like the arrow did nothing.
-                    val siblings = list.filter { it !in s.barHidden }
-                    val at = siblings.indexOf(item)
-                    val other = siblings.getOrNull(if (up) at - 1 else at + 1) ?: return
-                    val a = list.indexOf(item)
-                    val b = list.indexOf(other)
-                    list[a] = other
-                    list[b] = item
-                    store.saveSettings { it.copy(barOrder = list) }
-                }
-
-                // Straight down the arrangement now: any item can hold either of the two places in the bar.
-                val rows = s.barOrder
-                rows.forEachIndexed { i, item ->
-                    val siblings = s.barOrder.filter { it !in s.barHidden }
-                    val at = siblings.indexOf(item)
-                    KRow(stringResource(barLabel(item)), divider = i > 0) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            KIconButton(
-                                Icons.Default.KeyboardArrowUp, stringResource(R.string.s_move_up),
-                                onClick = { move(item, up = true) },
-                                tint = if (at > 0) K.txt else K.dim, size = 40,
-                            )
-                            KIconButton(
-                                Icons.Default.KeyboardArrowDown, stringResource(R.string.s_move_down),
-                                onClick = { move(item, up = false) },
-                                tint = if (at < siblings.lastIndex) K.txt else K.dim, size = 40,
-                            )
-                            KSwitch(item !in s.barHidden, onChange = { on ->
-                                store.saveSettings { it.copy(barHidden = if (on) it.barHidden - item else it.barHidden + item) }
-                            })
-                        }
-                    }
-                }
+            // Drawn, so the hint paragraph is gone: the strip IS the sentence "the first two sit in the bar, the
+            // rest wait behind More", and it moves as the list moves.
+            BarPreview(s.barOrder, s.barHidden)
+            KCard(modifier = Modifier.padding(top = 10.dp)) {
+                BarRows(s.barOrder, s.barHidden, onOrder = { list -> store.saveSettings { it.copy(barOrder = list) } },
+                    onShow = { item, on ->
+                        store.saveSettings { it.copy(barHidden = if (on) it.barHidden - item else it.barHidden + item) }
+                    })
             }
         }
 
@@ -267,7 +515,7 @@ fun SettingsScreen(
         Text(stringResource(R.string.s_footer_tagline), style = KType.small.copy(color = K.dim, textAlign = TextAlign.Center), modifier = Modifier.fillMaxWidth().padding(top = 14.dp, start = 6.dp, end = 6.dp))
     }
 
-    if (statsOpen) StatsSheet(stats, finishedCount) { statsOpen = false }
+    if (statsOpen) StatsSheet(stats, finishedCount, s.dailyGoal, { g -> store.saveSettings { it.copy(dailyGoal = g) } }) { statsOpen = false }
     if (licences) KSheet({ licences = false }, stringResource(R.string.s_open_source_licences)) {
         KCard {
             KRow(stringResource(R.string.s_readium_kotlin_toolkit), subtitle = stringResource(R.string.s_bsd_3_clause_renders_your_books))
@@ -315,6 +563,84 @@ internal fun ReadingDefaults(defaults: ReaderPrefs, onChange: (ReaderPrefs) -> U
         }
         Text(stringResource(R.string.s_new_books_open_with_these), style = SmallDim, modifier = Modifier.padding(start = 4.dp, top = 12.dp))
     }
+
+/**
+ * The two surface styles DRAWN, side by side, over the ambient wash currently chosen: Glass lets the wash and its
+ * sheen through a translucent panel; Solid covers it with an opaque bordered card. Both previews call the real
+ * recipes, so a change to `glassSurface` or to the Solid card changes the tile with it.
+ */
+@Composable
+private fun SurfacePreview(glassStyle: Boolean) {
+    // Full-strength wash inside the Glass tile: 150dp of screen would show the wash at its edges only, and then the
+    // one thing that separates the two tiles - colour behind and around the panel - would be invisible at this size.
+    Box(Modifier.fillMaxSize().ambientWash(if (glassStyle) 1.4f else SOLID_WASH)) {
+        val shape = RoundedCornerShape(13.dp)
+        // One card, inset from the tile's edges, because the difference is not the fill - it is that a Glass card
+        // floats on colour with a shadow under it and a Solid card sits flat inside a hairline.
+        Box(
+            Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 12.dp).height(42.dp).then(
+                if (glassStyle) Modifier.glassSurface(shape, elevation = 8.dp)
+                else Modifier.clip(shape).background(K.surf).border(1.dp, K.line, shape),
+            ),
+        )
+    }
+}
+
+/**
+ * Off: the reading theme you picked, unchanged. System: light by day and dark by night, drawn as the two pages you
+ * actually get. The tile states the rule; the wording under it only names the choice.
+ */
+@Composable
+private fun AutoPreview(system: Boolean, theme: ThemeId) {
+    if (system) {
+        Row(Modifier.fillMaxSize()) {
+            MiniPage(readerUi(ThemeId.LIGHT), Modifier.weight(1f))
+            MiniPage(readerUi(ThemeId.DARK), Modifier.weight(1f))
+        }
+    } else {
+        MiniPage(readerUi(theme), Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * A time of day as a button, because a schedule needs a start and an end and nothing else about it is worth a
+ * screen: the system picker knows the reader's clock format, and this row only shows the two choices.
+ */
+@Composable
+private fun TimeChip(label: String, minutes: Int, modifier: Modifier = Modifier, onPick: (Int) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Column(modifier) {
+        Text(label, style = KType.small.copy(color = K.dim), modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+        KButton(
+            formatMinutes(minutes),
+            {
+                android.app.TimePickerDialog(
+                    ctx,
+                    { _, h, m -> onPick(minutesOfDay(h, m)) },
+                    minutes / 60, minutes % 60, true,
+                ).show()
+            },
+            Modifier.fillMaxWidth(), style = KButtonStyle.Secondary, small = true,
+        )
+    }
+}
+
+/** A page with three lines of its own ink. */
+@Composable
+private fun MiniPage(ui: ReaderUi, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxHeight().background(ui.page).padding(horizontal = 7.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        repeat(3) { i ->
+            Box(
+                Modifier.fillMaxWidth(if (i == 2) 0.55f else 1f).height(2.dp)
+                    .clip(RoundedCornerShape(2.dp)).background(ui.text.copy(alpha = 0.45f)),
+            )
+            if (i < 2) Spacer(Modifier.height(3.dp))
+        }
+    }
+}
 
 /** Opens a link; when no browser handles it, the tap says so instead of doing nothing. */
 private fun openRow(ctx: android.content.Context, url: String) {

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign as ComposeTextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.ui.kit.pressFeedback
@@ -73,6 +75,8 @@ internal class ReaderUiState {
     /** Book-wide words/positions measured so far; the time-left label reads this. */
     var pace by mutableStateOf(ReaderLogic.Pace())
     var bars by mutableStateOf(true)
+    /** Bumped by every tap and every flick: the auto-hide timer starts again from here. */
+    var touches by mutableIntStateOf(0)
     var sheet by mutableStateOf(ReaderSheet.NONE)
     var prefs by mutableStateOf(ReaderPrefs())
     var error by mutableStateOf<String?>(null)
@@ -98,6 +102,7 @@ internal class ReaderUiState {
     /** The book's own word count, counted once after open. 0 until it lands. */
     var bookWords by mutableIntStateOf(0)
     var night by mutableStateOf(false)                      // follow-system, held as state so it can change live
+    var clockNight by mutableStateOf(false)                 // the schedule's answer, ticked while the reader is open
     // Top edge of the reader's bottom bar in window coordinates. A scroll-mode swipe may only start above
     // it: the bar's slider is Compose content in this same window, and intercepting its drag paged a chapter.
     var chromeTopPx by mutableFloatStateOf(Float.MAX_VALUE)
@@ -145,6 +150,7 @@ internal interface ReaderActions {
     fun preload(locator: Locator)
     fun setPrefs(p: ReaderPrefs)
     fun resetPrefs()
+    fun applyPrefsToAll()
     fun toggleBookmark(bookmarked: Boolean)
     fun saveNote(target: NoteTarget, text: String)
     fun updateNote(id: String, text: String)
@@ -156,6 +162,7 @@ internal interface ReaderActions {
     fun stopTts()
     fun setCastEnabled(on: Boolean)
     fun setCastVoice(speaker: String, slot: Int)
+    fun previewVoice(slot: Int)
     fun setSpeechRate(rate: Float)
     fun setSleepTimer(minutes: Int)
     fun toggleAutoScroll()
@@ -182,7 +189,18 @@ internal fun ReaderScreen(
     hidden: Set<BarItem> = emptySet(),
     /** The order they arranged, modes and tools each drawn in it. */
     order: List<BarItem> = BarItem.DEFAULT_ORDER,
+    /** Settings > Reading: bars that fold themselves away once the reading has gone undisturbed a while. */
+    autoHide: Boolean = true,
 ) {
+    // A bar that never leaves sits on the last two lines for the whole chapter. Four seconds after the last
+    // touch it folds away; a tap, a flick or a page turn bumps ui.touches and the count starts over. A sheet
+    // being up means someone is using the chrome, so nothing folds under their finger.
+    LaunchedEffect(ui.bars, ui.sheet, ui.touches, autoHide) {
+        if (autoHide && ui.bars && ui.sheet == ReaderSheet.NONE) {
+            delay(4000)
+            act.toggleBars()
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
         if (ui.prefs.warmth > 0f) Box(Modifier.fillMaxSize().background(CColor(0xFFFF9A2E).copy(alpha = ui.prefs.warmth * 0.30f)))
@@ -198,7 +216,7 @@ internal fun ReaderScreen(
             }) {
                 Row(Modifier.statusBarsPadding().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     KIconButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.s_back_to_library), { act.close() }, tint = colors.chromeText)
-                    Text(ui.bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, textAlign = ComposeTextAlign.Center, color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(ui.bookTitle, Modifier.weight(1f).padding(horizontal = 4.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = ComposeTextAlign.Center, color = colors.chromeText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     // Highlighting lives in the long-press selection menu; the top bar only carries the
                     // bookmark toggle, whose icon and label flip when this chapter has one.
                     val bookmarkHere = remember(ui.marks, ui.chapterHref) {
@@ -358,8 +376,12 @@ internal fun ReaderScreen(
                     ui.prefs, ui.speech.sleepChoice, act::setSpeechRate, act::setSleepTimer, act::stopTts,
                     cast = ui.speech.cast, speakers = ui.speech.castSpeakers,
                     onCastEnabled = act::setCastEnabled, onCastVoice = act::setCastVoice,
+                    onPreview = act::previewVoice,
                 )
-                ReaderSheet.DISPLAY -> DisplaySheet(ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs)
+                ReaderSheet.DISPLAY -> DisplaySheet(
+                    ui.prefs, act::setPrefs, showColumns = isTablet, onReset = act::resetPrefs,
+                    onApplyToAll = act::applyPrefsToAll,
+                )
                 ReaderSheet.CONTENTS -> ContentsSheet(ui.pub, ui.chapterHref, act::goTo)
                 ReaderSheet.SEARCH -> {
                     val here = ui.chapterHref
@@ -478,7 +500,7 @@ private fun ModePill(
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         if (icon != null) Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-        Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+        Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -520,7 +542,14 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
         else -> stringResource(R.string.time_left_hours, minsLeft / 60, minsLeft % 60)
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(preview ?: ui.chapterTitle, color = if (preview != null) colors.accent else colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
+        Text(preview ?: ui.chapterTitle, color = if (preview != null) colors.accent else colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        // Where you are in the book, beside how long is left. The bar answers "where" only while a thumb is on
+        // it, and the percentage is the number a reader quotes to themselves when they say how far in they are.
+        Text(
+            stringResource(R.string.value_percent, (ui.bookProgress.coerceIn(0f, 1f) * 100).toInt()),
+            color = colors.muted.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+            modifier = Modifier.padding(end = 6.dp),
+        )
         // 48dp of touch, and the value stays the spoken text: the mode is the state, not a replacement for it.
         Row(
             Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
@@ -530,9 +559,19 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(timeLeft, color = colors.muted, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            // The label flips between the book and the chapter, and nothing said so: a pair of arrows, teal
+            // while the chapter is showing, is the whole instruction. Nothing to read, nothing to remember.
+            if (minsLeft != null) {
+                Icon(
+                    Icons.Default.SwapVert, null, tint = if (chapterTime) colors.accent else colors.muted.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(start = 3.dp).size(15.dp),
+                )
+            }
         }
     }
+    // The knob follows the book's own accent: mint on the dark chrome, deep teal on the light and sepia ones.
     KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
+        thumbColor = colors.accent,
         description = stringResource(R.string.s_reading_progress), stateText = timeLeft, onFinished = {   // R-07: seek by position
             drag?.let { v ->
                 val l = ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())

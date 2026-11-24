@@ -122,6 +122,8 @@
     <string name="s_try_another_search_or_clear_the_filters">Thử tìm từ khóa khác, hoặc xóa bộ lọc để xem toàn bộ thư viện.</string>
     <string name="s_two_pages_suits_a_tablet_or_a_wide_scree">Hai trang hợp với máy tính bảng hoặc màn hình rộng.</string>
     <string name="s_volume_keys_turn_pages">Phím âm lượng lật trang</string>
+    <string name="s_hide_bars">Ẩn thanh khi đọc</string>
+    <string name="s_haptics">Rung</string>
     <string name="s_warm_light">Ánh sáng ấm</string>
     <string name="s_watched_folders">Thư mục đang theo dõi</string>
     <string name="s_your_books_stay_usable_while_this_runs">Sách của bạn vẫn dùng được trong lúc chạy.</string>
@@ -247,7 +249,6 @@
     <string name="s_group_appearance">Giao diện</string>
     <string name="s_group_reading">Đọc</string>
     <string name="s_group_reader_bar">Thanh trình đọc</string>
-    <string name="s_reader_bar_hint">Hai mục đầu tiên nằm ngay trên thanh; phần còn lại nằm sau Thêm nữa. Ẩn một mục sẽ bỏ hẳn mục đó khỏi thanh.</string>
     <string name="s_move_up">Di chuyển lên</string>
     <string name="s_move_down">Di chuyển xuống</string>
     <string name="s_group_library">Thư viện</string>
@@ -275,6 +276,8 @@
     <string name="s_no_collections_here">Chưa có bộ sưu tập. Tạo một bộ ở đây.</string>
     <string name="s_no_tags_yet">Chưa có thẻ nào.</string>
     <string name="s_search_library">Tìm trong thư viện</string>
+    <string name="s_select_books">Chọn sách</string>
+    <string name="s_tap_books_to_pick">Chạm vào sách để chọn</string>
     <string name="s_switch_to_list">Chuyển sang dạng danh sách</string>
     <string name="s_switch_to_grid">Chuyển sang dạng lưới</string>
     <string name="s_status_none">Không có</string>
@@ -320,7 +323,7 @@
     <string name="s_sort_by_position">Theo vị trí</string>
     <string name="s_sort_by_date">Theo ngày</string>
     <string name="s_filter_marks">Lọc ghi chú và đánh dấu</string>
-    <string name="s_backup_nudge">Đã lâu bạn chưa sao lưu.</string>
+    <string name="s_backup_nudge">Lâu rồi chưa sao lưu</string>
     <string name="s_backup_nudge_body">Một tệp zip chứa vị trí đọc, ghi chú và đánh dấu của bạn.</string>
     <string name="s_later">Để sau</string>
     <string name="s_time_in_chapter">Còn lại trong chương</string>
@@ -333,7 +336,7 @@
     </plurals>
     <string name="s_reading_progress">Tiến độ đọc</string>
     <string name="s_custom_colours">Màu tùy chỉnh</string>
-    <string name="s_custom_colours_hint">Ghi đè màu trang và màu chữ, chỉ cho sách này.</string>
+    <string name="s_custom_colours_hint">Chỉ sách này</string>
     <string name="s_theme_colours">Dùng màu của chủ đề</string>
     <string name="s_page_tone">Tông trang %1$d</string>
     <string name="s_ink_tone">Màu chữ %1$d</string>
@@ -367,6 +370,7 @@
     <string name="s_searching_books">Đang tìm trong sách của bạn (%1$d trên %2$d)</string>
     <plurals name="s_hits_in_books"><item quantity="other">%1$d kết quả trong sách của bạn</item>
     </plurals>
+    <plurals name="s_more_hits"><item quantity="one">%1$d kết quả nữa trong các sách đã mở</item><item quantity="other">%1$d kết quả nữa trong các sách đã mở</item></plurals>
     <string name="s_menu_share">Chia sẻ</string>
     <string name="s_menu_look_up">Tra từ</string>
     <string name="s_share_selection">Chia sẻ đoạn này</string>
@@ -391,11 +395,12 @@
     <string name="s_streak">Chuỗi ngày</string>
     <string name="s_days_value">%1$d ngày</string>
     <string name="s_minutes_value">%1$d phút</string>
+    <string name="s_wpm_value">%1$d từ/phút</string>
     <string name="s_hours_value">%1$d giờ %2$d phút</string>
     <plurals name="reading_total">
         <item quantity="other">Tổng cộng: %1$d giờ %2$d phút qua %3$d sách đã đọc xong</item>
     </plurals>
-    <string name="s_stats_local_note">Lưu trong stats.json trên máy này. Không có gì được tải lên.</string>
+    <string name="s_stats_local_note">Lưu trên điện thoại này. Không có gì được tải lên.</string>
     <string name="s_check_for_updates">Kiểm tra cập nhật</string>
     <string name="s_check_now">Kiểm tra cập nhật ngay</string>
     <string name="s_software_update">Cập nhật phần mềm</string>
@@ -470,4 +475,25 @@
     <plurals name="s_bookmarks_n"><item quantity="other">%1$d dấu trang</item></plurals>
     <plurals name="s_speakers_found"><item quantity="other">%1$d người nói</item></plurals>
     <plurals name="s_books_from_catalog"><item quantity="other">Đã thêm %1$d cuốn sách</item></plurals>
+    <string name="s_paper">Giấy</string>
+    <string name="s_ink">Mực</string>
+    <string name="s_series">Bộ sách</string>
+    <string name="s_book_number">Số tập</string>
+    <string name="s_auto_schedule">Lịch</string>
+    <string name="s_dark_from">Tối từ</string>
+    <string name="s_dark_until">Đến</string>
+    <string name="s_daily_goal">Mục tiêu ngày</string>
+    <string name="s_goal_progress">Hôm nay %1$d/%2$d phút</string>
+    <string name="s_goal_met">Đã đạt mục tiêu</string>
+    <string name="s_min_value">%1$d phút</string>
+    <string name="s_voice_slot_deep">Người kể, trầm hơn</string>
+    <string name="s_voice_slot_second">Giọng thứ hai</string>
+    <string name="s_voice_slot_second_high">Giọng hai, cao hơn</string>
+    <string name="s_voice_slot_high">Người kể, cao hơn</string>
+    <string name="s_voice_sample">Tôi sẽ đọc cho bạn bằng giọng này.</string>
+    <string name="s_previous_chapter">Chương trước</string>
+    <string name="s_next_chapter">Chương sau</string>
+    <string name="s_apply_to_every_book">Áp dụng cho mọi sách</string>
+    <string name="s_applied_to_every_book">Mọi sách giờ dùng các thiết lập này</string>
+    <string name="s_voice_legend_title">Bốn giọng đọc</string>
 </resources>

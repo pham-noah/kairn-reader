@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
                     positionsCache = app.positionsCache, readium = app.readium,
                 )
             }
-            KairnTheme(glass = s.glass, ambient = s.ambient) { AppShell(deps, ::openBook) }
+            KairnTheme(glass = s.glass, ambient = s.ambient, haptics = s.haptics) { AppShell(deps, ::openBook) }
         }
     }
 

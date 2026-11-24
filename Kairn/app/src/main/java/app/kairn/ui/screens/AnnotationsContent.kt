@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.kairn.R
 import app.kairn.data.Mark
@@ -55,9 +56,13 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
     }
     val counts = remember(marks) { markKinds.map { (k, _) -> marks.count { k == null || it.kind == k } } }
 
-    Column(Modifier.heightIn(max = 560.dp)) {
-        Text(bookTitle, style = KType.small, maxLines = 1)
-        LazyRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Fill the sheet: wrapped to its widest child, the chip row ended where the chips ended and the last
+    // chip was always half cut, with no way to scroll to it.
+    Column(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
+        Text(bookTitle, style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // fillMaxWidth before the fade: wrapped to its content the row was a few dp wider than the sheet, so the
+        // gradient was drawn past the clipped edge and never seen - the last chip still read as cut.
+        LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp).scrollFade(K.bg), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(markKinds.size) { i -> KChip(stringResource(markKinds[i].second), filter == i, { filter = i }, count = counts[i]) }
         }
         KField(query, { query = it }, placeholder = stringResource(R.string.s_filter_marks), leading = Icons.Default.Search)

@@ -1,0 +1,4 @@
+Four voices you can hear before you pick one, and read-aloud that keeps its controls on the lock screen: pause, previous chapter, next chapter, stop.
+Display settings can now be handed to every book at once instead of one book at a time.
+A reading goal with a streak, a night schedule that changes the theme by the clock, series editing and sorting, and larger type that fits.
+Tablet layouts, and fixes to the shelf and the backup screen.
