@@ -41,6 +41,7 @@ class ReaderScreenTest {
 
         override fun close() { closed = true; calls += "close" }
         override fun toggleBars() { calls += "toggleBars" }
+        override fun touched() { calls += "touched" }
         override fun goTo(locator: Locator) { calls += "goTo" }
         override fun preload(locator: Locator) { calls += "preload" }
         override fun setPrefs(p: ReaderPrefs) { lastPrefs = p; calls += "setPrefs" }
