@@ -14,7 +14,10 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          # 21, not 17: Robolectric 4.18 refuses to build an Android 36 sandbox under 17 - "Android SDK 36
+          # requires Java 21 (have Java 17)" - and it only says so in the test XML, as one class failing at
+          # classMethod in three seconds. Compiling still targets 17; this is the JVM the tests run on.
+          java-version: '21'
 
       - name: Gradle cache
         uses: actions/cache@v6
