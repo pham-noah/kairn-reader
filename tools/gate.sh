@@ -10,7 +10,7 @@
 #   tools/gate.sh test EpubMetaTest   one test class, ~10-60 s   (while iterating)
 #   tools/gate.sh quick           tests only, ~1 min             (the loop; `full` packages the APK)
 #   tools/gate.sh lint            lint alone, ~2 min            (iterate on findings without the suite)
-#   tools/gate.sh full            tests + lint + assemble, ~3-4 min (before committing)
+#   tools/gate.sh full            tests + lint + assembles (app and its androidTest), ~3-4 min (before committing)
 #   tools/gate.sh reset           stop every Gradle daemon and drop the lint cache by hand
 #
 #   A --profile run of the full gate: 5m29 total, of which lintAnalyzeDebug 2m51, the unit-test and
@@ -70,7 +70,11 @@ case "$mode" in
   # `full` still packages one per commit, so a buildable artifact is never more than the next commit away.
   quick) tasks=(:app:testDebugUnitTest) ;;
   lint) tasks=(:app:lintDebug) ;;
-  full) tasks=(:app:testDebugUnitTest :app:lintDebug :app:assembleDebug) ;;
+  # assembleDebugAndroidTest is in here because CI's first task is compileDebugAndroidTestKotlin: when
+  # ReaderActions gained a method, the androidTest fake stopped implementing the interface and `full` said
+  # nothing - neither `test` nor `lintDebug` compiles androidTest sources, so the red build arrived from CI
+  # after the tag was pushed. The task costs ~20s warm and closes that gap.
+  full) tasks=(:app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest) ;;
   reset) kill_daemons; rm -rf "$LINT_CACHE"; toolchain_sig > "$STAMP"
          echo "daemons stopped, lint cache dropped"; exit 0 ;;
   *) echo "usage: tools/gate.sh [fast | test <Class> | shots [name ...] | quick | lint | full | reset]" >&2; exit 2 ;;
