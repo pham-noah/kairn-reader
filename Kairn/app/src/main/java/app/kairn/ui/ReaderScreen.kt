@@ -147,6 +147,8 @@ internal class ReaderSpeechState {
 internal interface ReaderActions {
     fun close()
     fun toggleBars()
+    /** Restarts the bar's fold-away clock. A drag on the bar is use, and it used to count as none. */
+    fun touched()
     fun goTo(locator: Locator)
     fun preload(locator: Locator)
     fun setPrefs(p: ReaderPrefs)
@@ -196,8 +198,14 @@ internal fun ReaderScreen(
     // A bar that never leaves sits on the last two lines for the whole chapter. Four seconds after the last
     // touch it folds away; a tap, a flick or a page turn bumps ui.touches and the count starts over. A sheet
     // being up means someone is using the chrome, so nothing folds under their finger.
-    LaunchedEffect(ui.bars, ui.sheet, ui.touches, autoHide) {
-        if (autoHide && ui.bars && ui.sheet == ReaderSheet.NONE) {
+    // A thumb on the seek bar is use. It used to count as none, so a slow seek - or one begun just before the
+    // clock ran out - had the bar slide out from under the finger: the gesture was cancelled and the seek thrown
+    // away mid-drag. While a seek is in flight the fold is off entirely, and any hide clears the flag so a
+    // cancelled gesture cannot leave the bar pinned open for good.
+    var seeking by remember { mutableStateOf(false) }
+    LaunchedEffect(ui.bars) { if (!ui.bars) seeking = false }
+    LaunchedEffect(ui.bars, ui.sheet, ui.touches, autoHide, seeking) {
+        if (autoHide && ui.bars && ui.sheet == ReaderSheet.NONE && !seeking) {
             delay(4000)
             act.toggleBars()
         }
@@ -254,7 +262,7 @@ internal fun ReaderScreen(
                 HorizontalDivider(color = colors.line)
                 Column(Modifier.navigationBarsPadding().padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp)) {
                     var expanded by remember { mutableStateOf(false) }
-                    SeekBar(ui, colors, act, wpm)
+                    SeekBar(ui, colors, act, wpm, onSeeking = { seeking = it })
                     // The order is the arrangement, and the first two of it are the bar itself - whatever
                     // they are. A tool placed there becomes a pill like read aloud; a mode pushed past the
                     // second slot waits behind "More" and stays a toggle there.
@@ -510,9 +518,18 @@ private fun ModePill(
  * read in ReaderScreen's own scope that re-executed the whole chrome on every page turn.
  */
 @Composable
-private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm: Int) {
+private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm: Int, onSeeking: (Boolean) -> Unit = {}) {
     val ro = ui.pub?.readingOrder.orEmpty()
     var drag by remember { mutableStateOf<Float?>(null) }
+    // A seek that has been let go but has not landed yet. The reader writes bookProgress only when the new locator
+    // arrives, so dropping the dragged value on release snapped the knob back to the old position and then jumped
+    // it forward a beat later - once per drag, which is what "the bar bugs out when I drag" looks like. The value
+    // let go of is shown until progress moves off the one it started from, or until a seek that never lands gives up.
+    var released by remember { mutableStateOf<Float?>(null) }
+    var releasedFrom by remember { mutableStateOf(0f) }
+    val shown = ReaderLogic.seekValue(drag, released, ui.bookProgress)
+    LaunchedEffect(ui.bookProgress) { if (!ReaderLogic.seekHeld(released, releasedFrom, ui.bookProgress)) released = null }
+    LaunchedEffect(released) { if (released != null) { delay(1500); released = null } }
     // Preload the chapter under the slider while dragging, so releasing it feels instant.
     val preloadJob = remember { arrayOfNulls<kotlinx.coroutines.Job>(1) }
     val scope = rememberCoroutineScope()
@@ -523,7 +540,7 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
             ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())?.let(act::preload)
         }
     }
-    val preview = drag?.let { v ->
+    val preview = (drag ?: released)?.let { v ->        // the chapter name stays with the seek until it lands
         val idx = (v * (ui.positions.size - 1)).toInt()
         val loc = ui.positions.getOrNull(idx)
         val title = loc?.let { ui.chapterTitles[it.href.toString()] ?: ui.chapterTitles[it.href.toString().substringAfterLast('/')] ?: it.title }
@@ -533,8 +550,8 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
     // Tap the label to switch between the whole book and the chapter you are in.
     var chapterTime by remember { mutableStateOf(false) }
     val minsLeft = if (chapterTime) ReaderLogic.minutesLeftInChapter(ui.chapterWords, ui.chapterProgress, wpm)
-        else ReaderLogic.minutesLeftInBook(ui.bookWords, ui.bookProgress, wpm)
-            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, ui.bookProgress, wpm)
+        else ReaderLogic.minutesLeftInBook(ui.bookWords, shown, wpm)
+            ?: ReaderLogic.minutesLeft(ui.pace, ui.positions.size, shown, wpm)
     val timeHint = stringResource(if (chapterTime) R.string.s_time_in_chapter else R.string.s_time_in_book)
     val timeLeft = when {
         minsLeft == null -> ""
@@ -547,7 +564,7 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
         // Where you are in the book, beside how long is left. The bar answers "where" only while a thumb is on
         // it, and the percentage is the number a reader quotes to themselves when they say how far in they are.
         Text(
-            stringResource(R.string.value_percent, (ui.bookProgress.coerceIn(0f, 1f) * 100).toInt()),
+            stringResource(R.string.value_percent, (shown.coerceIn(0f, 1f) * 100).toInt()),
             color = colors.muted.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
             modifier = Modifier.padding(end = 6.dp),
         )
@@ -571,14 +588,20 @@ private fun SeekBar(ui: ReaderUiState, colors: ReaderUi, act: ReaderActions, wpm
         }
     }
     // The knob follows the book's own accent: mint on the dark chrome, deep teal on the light and sepia ones.
-    KSlider(drag ?: ui.bookProgress, { v -> drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
+    KSlider(shown, { v -> onSeeking(true); drag = v; previewSeek(v) }, accent = colors.accent, trackColor = colors.line,
         thumbColor = colors.accent,
         description = stringResource(R.string.s_reading_progress), stateText = timeLeft, onFinished = {   // R-07: seek by position
-            drag?.let { v ->
+            val v = drag
+            drag = null
+            onSeeking(false)
+            act.touched()                  // the fold-away clock starts again from the release, not from the press
+            preloadJob[0]?.cancel()                 // the thumb is off the bar; a debounced preview is no longer one
+            if (v != null) {
+                releasedFrom = ui.bookProgress
+                released = v
                 val l = ui.positions.getOrNull((v * (ui.positions.size - 1)).toInt())
                 if (l != null) act.goTo(l)
                 else ui.pub?.let { p -> ro.getOrNull((v * (ro.size - 1)).toInt())?.let { lk -> p.locatorFromLink(lk)?.let(act::goTo) } }
             }
-            drag = null
         })
 }

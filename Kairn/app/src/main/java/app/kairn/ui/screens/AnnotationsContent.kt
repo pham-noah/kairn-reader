@@ -63,7 +63,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
         Text(bookTitle, style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis)
         // fillMaxWidth before the fade: wrapped to its content the row was a few dp wider than the sheet, so the
         // gradient was drawn past the clipped edge and never seen - the last chip still read as cut.
-        LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp).scrollFade(K.bg), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyRow(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(markKinds.size) { i -> KChip(stringResource(markKinds[i].second), filter == i, { filter = i }, count = counts[i]) }
         }
         KField(query, { query = it }, placeholder = stringResource(R.string.s_filter_marks), leading = Icons.Default.Search)

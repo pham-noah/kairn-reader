@@ -1,0 +1,4 @@
+Want, Reading and Finished now share one row, with the counts kept.
+A black band no longer sits beside the filter chips.
+Haptics are real vibrations now, and the filter chips tick.
+The progress bar no longer folds away mid-drag or snaps back when released.

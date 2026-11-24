@@ -40,6 +40,7 @@ class ToastPillUiTest {
     private class NoActions : ReaderActions {
         override fun close() {}
         override fun toggleBars() {}
+        override fun touched() {}
         override fun goTo(locator: org.readium.r2.shared.publication.Locator) {}
         override fun preload(locator: org.readium.r2.shared.publication.Locator) {}
         override fun setPrefs(p: ReaderPrefs) {}

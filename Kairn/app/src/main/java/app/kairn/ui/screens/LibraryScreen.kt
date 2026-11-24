@@ -50,11 +50,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.io.File
 import androidx.compose.ui.unit.sp
@@ -396,28 +401,77 @@ fun LibraryScreen(
                 }
             }
         }
-        // Four statuses and a count each: at 1.3x type they do not fit one line on a 411dp phone, and a sideways
-        // scroll hid "Finished" behind the screen edge where the fade over a near-black chip is invisible. The set
-        // is closed and small, so it wraps instead - nothing is ever half a word.
-        FlowRow(
-            Modifier.fillMaxWidth().padding(top = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (shelf != null) KChip(shelf, true, { onShelf(null) })
-            // No "All" chip: the library already opens showing everything, so the only thing a fourth chip could
-            // add was a way back to the state you started in. Tapping the chip that is on turns it off - the row
-            // filters, and it unfilters. With the row down to three chips every one can carry its count again,
-            // which they could not when a fourth pushed them onto a second line at 1.3x type.
-            Status.entries.filter { it != Status.NONE }.forEach { s ->
-                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
+        // Want, Reading and Finished share one line, and whether they can is measured before the row is laid out
+        // rather than discovered by the row wrapping. Three naturally sized pills came to 390dp on a 411dp phone
+        // and dropped "Finished" onto a second row - the reported defect.
+        //
+        // The first attempt at this was a hard third of the screen each, which holds on 411dp and ellipsised
+        // "Readi... 1" and "Finish... 1" on 360dp. So the widths are measured with the text measurer in the same
+        // styles the chips draw with: counts if three cells hold them, the same three cells without counts if they
+        // do not (a filter still filters; its total is the luxury), and the wrapping row above 1.5x type, where a
+        // third of any phone cannot hold the word. Nothing is ellipsised on the way down.
+        //
+        // No "All" chip: the library opens showing everything, so a fourth chip could only offer a way back to
+        // where you started. Tapping the chip that is on turns it off - the row filters, and it unfilters.
+        val chips = listOf(
+            Status.WANT to stringResource(R.string.s_want),
+            Status.READING to stringResource(R.string.s_reading),
+            Status.FINISHED to stringResource(R.string.s_finished),
+        )
+        val toggle = { s: Status -> status = if (status == s) null else s }
+        val measurer = rememberTextMeasurer()
+        val density = LocalDensity.current
+        val available = (LocalConfiguration.current.screenWidthDp - 2 * Dim.screenPad).toFloat()
+        val chipLabel = KType.title.copy(fontWeight = FontWeight.SemiBold)
+        val chipCount = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        // 10dp padding a side when centred (see KChip), 7dp between label and count.
+        fun widthOf(text: String, count: Int?): Float {
+            val l = measurer.measure(AnnotatedString(text), chipLabel, density = density).size.width
+            val c = if (count == null) 0 else measurer.measure(AnnotatedString("$count"), chipCount, density = density).size.width + with(density) { 7.dp.roundToPx() }
+            return with(density) { (l + c + 20.dp.roundToPx()).toFloat() }
+        }
+        val cells = chips.size + (if (shelf != null) 1 else 0)
+        val gapsPx = with(density) { 8.dp.roundToPx() } * (cells - 1)
+        val shelfWidth = if (shelf == null) 0f else with(density) { measurer.measure(AnnotatedString(shelf!!), chipLabel, density = density).size.width + 20.dp.roundToPx() }.toFloat()
+        val withCounts = chips.sumOf { widthOf(it.second, statusCounts[it.first] ?: 0).toDouble() }.toFloat() + shelfWidth
+        val plain = chips.sumOf { widthOf(it.second, null).toDouble() }.toFloat() + shelfWidth
+        val room = with(density) { available.dp.toPx() } - gapsPx
+        val oneRow = room >= plain
+        val oneRowWithCounts = room >= withCounts
+        if (bigType || !oneRow) {
+            FlowRow(
+                Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (shelf != null) KChip(shelf!!, true, { onShelf(null) })
+                chips.forEach { (s, text) -> KChip(text, status == s, { toggle(s) }, count = statusCounts[s] ?: 0) }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (shelf != null) KChip(shelf!!, true, { onShelf(null) }, Modifier.weight(1f), centered = true)
+                chips.forEach { (s, text) ->
+                    KChip(
+                        text, status == s, { toggle(s) }, Modifier.weight(1f),
+                        count = if (oneRowWithCounts) statusCounts[s] ?: 0 else null, centered = true,
+                    )
+                }
             }
         }
         // Collections are one tap away instead of two screens: the same chips the sheets use. This row only
         // exists once there is a collection to show: it used to be here always, holding nothing but two buttons
         // and 66dp of a phone screen.
         if (knownCols.isNotEmpty()) Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LazyRow(Modifier.weight(1f).scrollFade(K.bg), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Collections scroll sideways and the last one is cut by the edge of the row, which is the only
+            // affordance needed: a chip with no right edge says there are more. It used to fade instead, over a
+            // 28dp band painted in K.bg - on the app's wash that band is a black rectangle, and that rectangle is
+            // the "random black mark" reported off a phone screenshot. Removing the paint removes the mark; a
+            // mask that faded the chips themselves could not be checked here (the shot renderer ignores DstIn),
+            // and an edge fade nobody can look at is how the paint got shipped in the first place.
+            LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(knownCols.size) { i ->
                     val name = knownCols[i]
                     KChip(name, shelf == name, { onShelf(if (shelf == name) null else name) })

@@ -58,24 +58,43 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
 
-/** Chip: 44dp pill; selected = light fill with dark ink. */
+/**
+ * Chip: 44dp pill; selected = light fill with dark ink.
+ *
+ * [centered] is for chips that share a row by weight rather than by their own width, where a naturally sized pill
+ * would leave the label hanging at its left edge. It centres the label and count as one group and drops the
+ * padding to 10dp, which is what lets three of them hold Want / Reading / Finished on one 411dp line.
+ */
 @Composable
-fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, count: Int? = null) {
+fun KChip(
+    label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, count: Int? = null,
+    centered: Boolean = false,
+) {
     val shape = RoundedCornerShape(999.dp)
     val surface =
         if (glass && selected) Modifier.glassSurface(shape, fill = Color(0xEBF0F4F6), elevation = 5.dp, hairline = Color(0x40FFFFFF))
         else if (glass) Modifier.glassSurface(shape, fill = Glass.fill, elevation = 4.dp)
         else Modifier.solidSurface(shape, fill = if (selected) K.txt else K.surf, elevation = 3.dp)
     val interaction = remember { MutableInteractionSource() }
+    // Chips had no haptics at all: nine call sites fired and this one, the control the library is made of, was
+    // silent. A filter chip that changes what the shelf holds is at least the event a button's tick is for.
+    val haptics = rememberHaptics()
     Row(
         modifier.heightIn(min = 48.dp).then(surface).pressFeedback(interaction, pressedScale = 0.95f)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = { haptics.tick(); onClick() })
             .semantics { this.selected = selected }
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
+            .padding(horizontal = if (centered) 10.dp else 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (centered) Arrangement.Center else Arrangement.Start,
     ) {
-        Text(label, style = KType.title.copy(fontWeight = FontWeight.SemiBold), color = if (selected) Color(0xFF101316) else K.mut)
-        if (count != null) Text("$count", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color(0xFF4A5258) else K.dim)
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label, style = KType.title.copy(fontWeight = FontWeight.SemiBold),
+                color = if (selected) Color(0xFF101316) else K.mut,
+                maxLines = if (centered) 1 else Int.MAX_VALUE, softWrap = !centered,                overflow = if (centered) TextOverflow.Ellipsis else TextOverflow.Clip,
+            )
+            if (count != null) Text("$count", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) Color(0xFF4A5258) else K.dim)
+        }
     }
 }
 

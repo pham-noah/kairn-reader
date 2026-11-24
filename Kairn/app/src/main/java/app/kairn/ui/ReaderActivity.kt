@@ -525,6 +525,8 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
     // ---- window (R-11) ----
 
     override fun toggleBars() { ui.touches++; ui.bars = !ui.bars; applyWindow() }
+
+    override fun touched() { ui.touches++ }
     private fun applyWindow() {
         val c = WindowInsetsControllerCompat(window, window.decorView)
         if (app.store.settings.value.fullscreen && !ui.bars) {

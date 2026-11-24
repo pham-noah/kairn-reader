@@ -59,6 +59,7 @@ import app.kairn.ui.screens.UpdateContent
 import app.kairn.ui.screens.UpdateUi
 import app.kairn.ui.screens.StatsContent
 import app.kairn.ui.theme.KairnTheme
+import app.kairn.ui.theme.ambientWash
 import app.kairn.ui.theme.readerUi
 import java.io.File
 import java.nio.file.Files
@@ -119,6 +120,18 @@ class Shots {
         return st
     }
 
+    /** Books that carry collections, for the row under the status chips: one (nothing to scroll) and five. */
+    private fun storeCols(count: Int): Store {
+        val st = Store.forTesting(Files.createTempDirectory("kairn-shots").toFile())
+        runBlocking { st.load() }
+        val names = listOf("Shadow Slave", "Book club", "Reread slowly", "Night shift", "Borrowed")
+        st.put(Book("b1", "Shadow Slave Vol. 9", "Guiltythree", "file:///ss9.epub", status = Status.READING, progress = 0.05f, collections = listOf(names[0])))
+        st.put(Book("b2", "Anna Karenina", "Leo Tolstoy", "file:///ak.epub", status = Status.FINISHED, progress = 1f, collections = listOf(names[0])))
+        st.put(Book("b3", "Solenoid", "Mircea Cărtărescu", "file:///sol.epub", progress = 0.1f))
+        for (i in 0 until count) st.put(Book("c$i", "Book ${i + 1}", "Author", "file:///c$i.epub", collections = listOf(names[i % names.size])))
+        return st
+    }
+
     private fun shoot(
         name: String, width: Int = 822, height: Int = 1782, fontScale: Float = 1f,
         accent: Accent = Accent.MINT,
@@ -137,7 +150,11 @@ class Shots {
                 // text (K.txt is #EEF1F3) onto the harness's own white canvas. The Library and Settings titles
                 // measured 1.36:1 in the resulting files and read as missing, which is a defect in the review
                 // copy, not in the app. One fill, and a shot is the screen.
-                Box(Modifier.fillMaxSize().background(K.bg)) { content() }
+                //
+                // And the fill is the shell's actual backdrop, not flat K.bg. The app paints an ambient wash
+                // over the base; the harness painted only the base, which is why the library's 28dp fade band
+                // - a rectangle of flat K.bg - could never show up in a review copy. It showed up on a phone.
+                Box(Modifier.fillMaxSize().ambientWash()) { content() }
             }
         }
         shadowOf(Looper.getMainLooper()).idle()
@@ -290,6 +307,28 @@ class Shots {
     @Test fun library_books() = shoot("library-books", 822, 1400) {
         LibraryScreen(store(true), null, {}, {}, {}, {}, {})
     }
+
+    // Two defects off the same phone screenshot of 1.1.1, both drawn: the three status chips wrapped to two rows
+    // ("Finished 8" alone on the second), and a 28dp black band sat beside the collection chips - the row's fade,
+    // painted in the background colour over a background that is a wash. One collection is the case where there
+    // is nothing to scroll to, so the mark must be gone; five is the case where the fade must appear but the chips
+    // must fade out of the wash rather than into a rectangle.
+    @Test fun library_chips() = shoot("library-chips", 822, 1300) {
+        LibraryScreen(storeCols(1), null, {}, {}, {}, {}, {})
+    }
+
+    @Test fun library_chips_many() = shoot("library-chips-many", 822, 1300) {
+        LibraryScreen(storeCols(5), null, {}, {}, {}, {}, {})
+    }
+
+
+    // A 360dp phone with five collections: the third chip is cut by the screen edge, which is the case the fade
+    // exists for. It must fade to the wash - a mask, not a band - and a chip that ends before the edge in the shot
+    // above proves the other half: nothing to scroll to, nothing drawn.
+    @Test fun library_chips_narrow() = shoot("library-chips-narrow", 720, 1300) {
+        LibraryScreen(storeCols(5), null, {}, {}, {}, {}, {})
+    }
+
 
     // The accent is one setting that repaints every control, so it has to be seen on a screen full of controls and
     // not only on the row of dots that sets it: same library, Ocean instead of Mint.
@@ -485,6 +524,7 @@ class Shots {
 private object NoReader : ReaderActions {
     override fun close() {}
     override fun toggleBars() {}
+    override fun touched() {}
     override fun goTo(locator: Locator) {}
     override fun preload(locator: Locator) {}
     override fun setPrefs(p: ReaderPrefs) {}

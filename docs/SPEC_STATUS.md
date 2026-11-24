@@ -642,8 +642,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v1.1.1**, published 2026-11-24, asset `Kairn-1.1.1.apk`,
-6,473,479 bytes, sha256 `5648bb3f…`, signer `69086f40…` (1.1.0 was 6,451,927, 1.0.5 6,404,119, 1.0.0 6,385,628,
+needed an uninstall and a rescan). Latest: **v1.1.11**, published 2026-11-24, asset `Kairn-1.1.11.apk`,
+6,473,319 bytes, sha256 `63ee1d26…`, signer `69086f40…` (1.1.1 was 6,473,479, 1.1.0 6,451,927, 1.0.5 6,404,119, 1.0.0 6,385,628,
 0.9.6 6,325,512, 0.9.4 6,325,388, 0.9.3 6,309,004). `data/Update.kt` compares the tag against `versionName`
 numerically, so 1.1.0 sorts above 0.9.6 - a string compare would put 0.10.0 first.
 
@@ -921,3 +921,44 @@ a dex-literal grep finds nothing on a minified release.
 warm-up still has no stopwatch, `CoverAccent`'s single thumbnail decode on the composition thread is a
 reasoned-small cost rather than a timed one, and the presets' real-phone feel is geometry and Robolectric
 until a phone is attached.
+
+## 1.1.11 - released 2026-11-24
+
+Version 28, asset `Kairn-1.1.11.apk`, 6,473,319 bytes, md5 `2c87a3d466ce04fd5261eb27da7594d8`, sha256
+`63ee1d264e8d497e…`, signer `69086f40…` - the same certificate as 1.1.1, so it installs over it in place.
+Tagged `v1.1.11` in both repositories. The number is 1.1.11 because it was asked for by name; nothing shipped
+between 1.1.1 and 1.1.10, and `data/Update.kt` compares tags part by part as numbers, so 1.1.11 reads above
+1.1.1 either way.
+
+Four defects off a phone running 1.1.1, three of them things six review rounds of screenshots had passed.
+
+- **The black mark beside the chips** was `ui/kit/ScrollFade.kt`: a 28dp band painted in `K.bg` over a row whose
+  backdrop is a wash of `K.bg`. Measured `(5,16,20)` against `(31,48,56)`. The file is deleted and the collections
+  row is a plain `LazyRow` whose last chip the screen edge cuts. A DstIn mask over an offscreen layer was written
+  first and taken back out: Robolectric's renderer ignores the blend, so no shot could tell the mask from the band,
+  and anything a shot cannot show will be wrong on a phone. The shot harness painted flat `K.bg`, which is exactly
+  the one backdrop where a `K.bg` band is invisible - that is why the defect survived the review rounds.
+- **Three chips on one line.** The natural pills were 390dp on a 411dp phone and Finished wrapped; equal thirds
+  ellipsised to "Readi... 1" at 360dp. The row now measures its own labels with `rememberTextMeasurer` in the
+  styles it draws them, keeps the counts when they fit, drops them when they do not, and goes to a wrapping
+  `FlowRow` above 1.5x type. `LibraryScreenUiTest.the_three_status_chips_share_one_row` asserts equal label tops.
+- **Haptics.** `View.performHapticFeedback` is a request the system may drop; `Haptics` now drives
+  `Vibrator`/`VibratorManager` directly - `tick` 12ms @47%, `toggle` 20ms @74%, `longPress` 32ms @255 - with
+  `VIBRATE` declared and `USAGE_TOUCH`. The filter chips had none at all; they tick now.
+- **The seek bar.** Two faults in one gesture: the bar folded away four seconds after the last *tap* while a
+  thumb was on the slider (a drag counted as no touch, so the gesture was cancelled mid-seek), and a release
+  snapped the knob back to `bookProgress`, which is only written when the next locator lands. A `seeking` flag
+  suspends the fold and clears on any hide; `ReaderLogic.seekValue`/`seekHeld` hold the released value until
+  progress moves off it, with a 1.5s timeout.
+
+**Verified:** 372 JVM tests on debug (331 ran, 41 skipped, 0 failures) and 257 on release (0 skipped, 0 failures);
+`lintDebug` clean; `test lintDebug assembleRelease` 6m24s from a deleted `outputs/apk/release/`. The artifact
+carries its own proof: `aapt2 dump badging` reads `versionCode='28' versionName='1.1.11'` and lists
+`android.permission.VIBRATE`, which **1.1.1's badging does not contain** (count 0) - the one change in this
+release that is visible from outside the dex; the R8 mapping lists `app.kairn.ui.kit.Haptics` and no longer
+contains `ScrollFade`.
+
+**Not measured:** no device pass - the drag fix is proven against the real composable with the Compose clock
+stopped (`the_bar_does_not_fold_away_under_a_thumb_on_the_seek_bar` holds a thumb for 4.6s and asserts the bar
+stayed; `a_released_seek_does_not_snap_back_before_the_reader_lands` asserts the knob stays above 0.6 while
+`bookProgress` is still 0.42), and haptics are `ShadowVibrator`, not a motor. No `adb` on this machine.

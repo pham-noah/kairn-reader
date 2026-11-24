@@ -248,6 +248,19 @@ object ReaderLogic {
     }
 
     /**
+     * What the seek bar shows while a thumb is on it, and just after it lets go.
+     *
+     * Releasing used to drop the dragged value immediately and fall back to `bookProgress`, which is only written
+     * when the *new* locator arrives - so every seek snapped the knob back to where it started and then jumped
+     * forward a moment later, once per drag. The release value is held until progress moves off the value it had
+     * when the thumb went down, or until the caller's timeout, whichever comes first.
+     */
+    fun seekValue(dragging: Float?, released: Float?, progress: Float): Float = dragging ?: released ?: progress
+
+    /** True while a released seek is still waiting for the reader to land: no new locator has been written yet. */
+    fun seekHeld(released: Float?, base: Float, progress: Float): Boolean = released != null && progress == base
+
+    /**
      * Last path segment with any fragment dropped. A TOC href is relative to its own entry ("ch03.xhtml")
      * while a locator href is not ("OEBPS/ch03.xhtml"), so the two never compare equal as strings.
      */

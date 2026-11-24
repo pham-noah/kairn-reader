@@ -190,4 +190,26 @@ class ReaderLogicTest {
         assertEquals(800L, ReaderLogic.saveDelay(now = 1_004_999, lastSaved = 1_000_000))  // 1 ms short
         assertEquals(0L, ReaderLogic.saveDelay(now = 1_005_000, lastSaved = 1_000_000))    // exactly the floor
     }
+
+    /**
+     * The seek bar's one gesture bug, as arithmetic. Release used to fall straight back to bookProgress, which the
+     * reader only writes when the next locator lands - so the knob went back to where the drag started and then
+     * jumped to the target, once per drag.
+     */
+    @Test fun a_released_seek_keeps_its_value_until_the_reader_lands() {
+        // Nothing touched: the bar follows the book.
+        assertEquals(0.20f, ReaderLogic.seekValue(null, null, 0.20f), 0f)
+        // A thumb on the bar wins over both.
+        assertEquals(0.70f, ReaderLogic.seekValue(0.70f, 0.40f, 0.20f), 0f)
+        // Let go, not landed: still 0.70, not back to 0.20.
+        assertEquals(0.70f, ReaderLogic.seekValue(null, 0.70f, 0.20f), 0f)
+        // Landed: progress takes over again.
+        assertEquals(0.70f, ReaderLogic.seekValue(null, null, 0.70f), 0f)
+    }
+
+    @Test fun a_released_seek_is_held_only_while_progress_has_not_moved() {
+        assertTrue(ReaderLogic.seekHeld(0.70f, base = 0.20f, progress = 0.20f))    // nothing landed yet
+        assertFalse(ReaderLogic.seekHeld(0.70f, base = 0.20f, progress = 0.69f))   // the locator arrived
+        assertFalse(ReaderLogic.seekHeld(null, base = 0.20f, progress = 0.20f))    // no seek in flight
+    }
 }
