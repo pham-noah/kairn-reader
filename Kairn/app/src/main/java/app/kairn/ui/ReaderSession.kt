@@ -22,6 +22,8 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.publication.services.positions
+import app.kairn.data.OpenPrefetch
+import android.util.Log
 
 /**
  * The open sequence, minus the parts that are lifecycle: parse the publication, measure it, name its
@@ -55,24 +57,27 @@ internal class ReaderSession(
         highlightCallback: HighlightActionModeCallback,
         onPositions: suspend (Publication, List<Locator>, Long, Boolean) -> Unit,
     ): Prepared? {
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        // The tap on the cover already started this open (OpenPrefetch), so by the time the reader exists the parse
+        // is usually done and this is a hand-over instead of a zip walk.
+        val warm = OpenPrefetch.take(book.uri)
         // Readium's AssetRetriever/PublicationOpener reference no dispatcher, so parsing must hop to IO.
-        val p = withContext(Dispatchers.IO) { readium.open(book.uri.toUri()) } ?: return null
+        val p = warm ?: withContext(Dispatchers.IO) { readium.open(book.uri.toUri()) } ?: return null
+        Log.i("KairnPerf", "open ${android.os.SystemClock.elapsedRealtime() - t0}ms prefetched=${warm != null}")
 
-        // The cache is gzip + one Locator parse per position (plus a provider stat): the same reason the parse
-        // above is on IO, and this is the path every open after the first takes.
-        val cached = withContext(Dispatchers.IO) { positionsCache.load(book) }
-        if (cached != null) {
-            onPositions(p, cached, 0L, true)
-        } else {
+        // The cache is gzip plus one Locator parse per position - thousands of them for a long book - and awaiting
+        // it here is why the reader that should have been instant was not: the cached path, the one every open
+        // after the first takes, was the one that waited for it. Both paths now report when they are ready and the
+        // text goes up without them, so the footer's percentage lands a beat later instead of holding the page.
+        // It rides the reader's own scope on purpose - leaving the book cancels both, so a book that was only
+        // glanced at is never measured or cached afterwards.
+        scope.launch {
             val tp = android.os.SystemClock.elapsedRealtime()
-            // positions() scans the whole publication: the slow part of opening, so IO, never the main thread.
-            // This rides the reader's own scope on purpose - leaving the book before it finishes cancels the
-            // measurement, so a book that was only glanced at is never measured or cached in the background.
-            scope.launch {
-                val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
-                positionsCache.save(book, computed)
-                onPositions(p, computed, android.os.SystemClock.elapsedRealtime() - tp, false)
-            }
+            val cached = withContext(Dispatchers.IO) { positionsCache.load(book) }
+            if (cached != null) { onPositions(p, cached, 0L, true); return@launch }
+            val computed = withContext(Dispatchers.IO) { runCatching { p.positions() }.getOrDefault(emptyList()) }
+            positionsCache.save(book, computed)
+            onPositions(p, computed, android.os.SystemClock.elapsedRealtime() - tp, false)
         }
 
         return Prepared(

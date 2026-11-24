@@ -21,6 +21,7 @@
     <string name="s_add_folder_or_files">添加文件夹或文件</string>
     <string name="s_add_to_a_collection">加入合集</string>
     <string name="s_add_to_collection">加入合集</string>
+    <string name="s_accent">强调色</string>
     <string name="s_ambient_colour">氛围色</string>
     <string name="s_author">作者</string>
     <string name="s_back_up_now">立即备份</string>
@@ -251,6 +252,7 @@
     <string name="s_group_reader_bar">阅读栏</string>
     <string name="s_move_up">上移</string>
     <string name="s_move_down">下移</string>
+    <string name="s_drag_to_reorder">拖动以重新排序</string>
     <string name="s_group_library">书架</string>
     <string name="s_group_your_data">你的数据</string>
     <string name="s_group_about">关于</string>
@@ -496,4 +498,11 @@
     <string name="s_apply_to_every_book">应用到所有书籍</string>
     <string name="s_applied_to_every_book">所有书籍现已使用这些设置</string>
     <string name="s_voice_legend_title">四个声音</string>
+    <string name="s_preset_compact">紧凑</string>
+    <string name="s_preset_comfortable">舒适</string>
+    <string name="s_preset_large">大字号</string>
+    <string name="s_preset_minimal">极简</string>
+    <string name="s_preset_standard">标准</string>
+    <string name="s_preset_voice">朗读</string>
+    <string name="s_preset_from_cover">取自封面</string>
 </resources>

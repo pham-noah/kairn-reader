@@ -55,6 +55,7 @@ import app.kairn.ui.kit.KField
 import app.kairn.ui.kit.KRow
 import app.kairn.ui.kit.KSubHeader
 import app.kairn.ui.kit.LocalToast
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -202,7 +203,7 @@ fun CatalogScreen(
             else -> {
                 val catalog = browsing!!
                 Column(Modifier.fillMaxSize()) {
-                    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 6.dp), color = K.mint)
+                    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 6.dp), color = A.accent)
                     if (stack.isNotEmpty()) {
                         KRow(stringResource(R.string.s_catalog_up), leading = Icons.AutoMirrored.Filled.ArrowBack, onClick = {
                             val prev = stack.last()
@@ -217,7 +218,7 @@ fun CatalogScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Text(stringResource(R.string.s_catalog_downloading, t), style = KType.small, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("$progress%", style = KType.small.copy(color = K.mint))
+                            Text("$progress%", style = KType.small.copy(color = A.accent))
                         }
                     }
                     LazyColumn(Modifier.fillMaxSize().padding(horizontal = Dim.screenPad.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -242,7 +243,7 @@ fun CatalogScreen(
                             ) {
                                 Icon(
                                     if (e.navigation) Icons.Default.Folder else Icons.Default.Description,
-                                    null, tint = if (e.navigation) K.mut else K.mint,
+                                    null, tint = if (e.navigation) K.mut else A.accent,
                                 )
                                 Column(Modifier.weight(1f)) {
                                     Text(e.title, style = KType.title.copy(fontWeight = FontWeight.SemiBold), maxLines = 2, overflow = TextOverflow.Ellipsis)

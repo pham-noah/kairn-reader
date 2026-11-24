@@ -17,9 +17,22 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.io.File
 import java.security.MessageDigest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.readium.r2.shared.publication.services.positions
 
 /** Import + folder watching (L-01, L-02, L-03, L-05, L-06). */
 class Library(private val ctx: Context, private val store: Store, private val readium: ReadiumHelper) {
+
+    private val positions = PositionsCache(ctx)
+
+    /**
+     * Warming runs one book at a time on purpose. A folder sweep can hand over two hundred books at once, and two
+     * hundred concurrent zip walks is how a background nicety becomes a phone that is busy for a minute. Serial
+     * also means the book just picked is measured behind at most one other, not behind a queue of threads.
+     */
+    private val warm = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
     // Discovery lives in its own class (§3.7): this one imports, identifies and watches folders.
     private val sweeper = EpubSweeper(
@@ -107,7 +120,30 @@ class Library(private val ctx: Context, private val store: Store, private val re
             runCatching { pub.close() }
         }
         store.put(book)
+        if (!book.broken) measurePositionsLater(book)
         book
+    }
+
+    /**
+     * Measures a book's positions straight after import, while nobody is waiting for a page.
+     *
+     * This is the last of the open cost. The reader no longer waits for the measurement, but the first open of a
+     * book that has never been measured still had to run it afterwards, behind the page - so the footer's
+     * percentage arrived late on exactly the books a reader is most likely to open next: the ones just added. The
+     * import already opens the zip to count words; this opens it once more, in the background, and the first open
+     * then takes the same cached path as every other. Failure is silent: the reader still measures on demand.
+     */
+    private fun measurePositionsLater(book: Book) {
+        warm.launch {
+            if (positions.load(book) != null) return@launch
+            val pub = runCatching { readium.open(book.uri.toUri()) }.getOrNull() ?: return@launch
+            try {
+                val list = runCatching { pub.positions() }.getOrDefault(emptyList())
+                positions.save(book, list)
+            } finally {
+                runCatching { pub.close() }
+            }
+        }
     }
 
     /** L-02: picker import. Keeps the grant so the book can be reopened later. */

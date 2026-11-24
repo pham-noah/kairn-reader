@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import app.kairn.ui.kit.KChip
 import app.kairn.ui.kit.KSheet
 import app.kairn.ui.kit.insetWell
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import java.time.LocalDate
@@ -66,14 +67,14 @@ internal fun StatsContent(stats: ReadingStats, finishedBooks: Int, goal: Int = 0
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     if (met) stringResource(R.string.s_goal_met) else stringResource(R.string.s_goal_progress, today, goal),
-                    style = KType.small.copy(color = if (met) K.mint else K.mut),
+                    style = KType.small.copy(color = if (met) A.accent else K.mut),
                 )
                 // "47 of 30 min" reads like arithmetic nobody asked for: once the goal is behind you, the number
                 // stands on its own.
                 if (met) Text(stringResource(R.string.s_min_value, today), style = KType.small.copy(color = K.dim))
             }
             Box(Modifier.fillMaxWidth().padding(top = 8.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(K.surf2)) {
-                Box(Modifier.fillMaxWidth((today.toFloat() / goal).coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
+                Box(Modifier.fillMaxWidth((today.toFloat() / goal).coerceIn(0f, 1f)).fillMaxHeight().background(A.accent))
             }
         }
         Text(
@@ -139,8 +140,8 @@ private fun WeekChart(week: List<Pair<LocalDate, Int>>, best: Int, modifier: Mod
                             .background(
                                 when {
                                     mins <= 0 -> K.line.copy(alpha = 0.55f)
-                                    day == today -> K.mint
-                                    else -> K.mint.copy(alpha = 0.42f)
+                                    day == today -> A.accent
+                                    else -> A.accent.copy(alpha = 0.42f)
                                 },
                             ),
                     )

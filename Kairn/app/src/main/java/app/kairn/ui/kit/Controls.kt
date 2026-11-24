@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.data.Ambient
 import app.kairn.data.ThemeId
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.K
@@ -48,6 +49,14 @@ import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
 import app.kairn.ui.theme.readerUi
+import app.kairn.ui.theme.solidSurface
+import app.kairn.data.Accent
+import app.kairn.ui.theme.accentPalette
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 
 /** Chip: 44dp pill; selected = light fill with dark ink. */
 @Composable
@@ -56,7 +65,7 @@ fun KChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modif
     val surface =
         if (glass && selected) Modifier.glassSurface(shape, fill = Color(0xEBF0F4F6), elevation = 5.dp, hairline = Color(0x40FFFFFF))
         else if (glass) Modifier.glassSurface(shape, fill = Glass.fill, elevation = 4.dp)
-        else Modifier.background(if (selected) K.txt else K.surf).border(1.dp, if (selected) K.txt else K.line, shape)
+        else Modifier.solidSurface(shape, fill = if (selected) K.txt else K.surf, elevation = 3.dp)
     val interaction = remember { MutableInteractionSource() }
     Row(
         modifier.heightIn(min = 48.dp).then(surface).pressFeedback(interaction, pressedScale = 0.95f)
@@ -83,10 +92,10 @@ fun KSegmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mo
             Box(
                 Modifier.weight(1f).heightIn(min = Dim.tap.dp).clip(shape)
                     .pressFeedback(segInteraction, pressedScale = 0.97f)
-                    .then(if (on) Modifier.background(if (glass) Color(0x33FFFFFF) else K.mint) else Modifier)
+                    .then(if (on) Modifier.background(if (glass) Color(0x33FFFFFF) else A.accent) else Modifier)
                     .clickable(role = Role.RadioButton) { onSelect(i) }.semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
-            ) { Text(o, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = when { on && glass -> K.txt; on -> K.mintInk; else -> K.mut }, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            ) { Text(o, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = when { on && glass -> K.txt; on -> A.ink; else -> K.mut }, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
     }
 }
@@ -117,7 +126,7 @@ fun KOptionTile(
     ) {
         Box(
             Modifier.fillMaxWidth().height(height.dp).clip(shape)
-                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else K.line, shape)
+                .border(if (selected) 2.dp else 1.dp, if (selected) A.accent else K.line, shape)
                 .padding(3.dp),
             contentAlignment = Alignment.Center, content = preview,
         )
@@ -162,7 +171,7 @@ fun KAmbientSwatch(ambient: Ambient, label: String, selected: Boolean, onClick: 
                         )
                     }
                 }
-                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else Color(0x33FFFFFF), CircleShape),
+                .border(if (selected) 2.dp else 1.dp, if (selected) A.accent else Color(0x33FFFFFF), CircleShape),
             contentAlignment = Alignment.Center,
         ) { if (selected) Icon(Icons.Default.Check, null, tint = K.txt, modifier = Modifier.size(16.dp)) }
         Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
@@ -173,7 +182,7 @@ fun KAmbientSwatch(ambient: Ambient, label: String, selected: Boolean, onClick: 
 /** Switch: 52x32 track, 24dp thumb. */
 @Composable
 fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
-    val track = animateColorAsState(if (checked) K.mint else if (glass) Color(0x29FFFFFF) else K.switchOff, label = "track")
+    val track = animateColorAsState(if (checked) A.accent else if (glass) Color(0x29FFFFFF) else K.switchOff, label = "track")
     val thumbX = animateDpAsState(if (checked) 24.dp else 4.dp, label = "thumb")
     // The 52x32 track is the LOOK; the tap target is the box around it, which must be the 48dp
     // minimum. The toggleable goes on the OUTER box, or the target is only the 32dp-tall track.
@@ -191,7 +200,7 @@ fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = 
         Modifier.size(52.dp, 32.dp).clip(CircleShape).background(track.value),
     ) {
         // No Modifier.shadow on the thumb: it allocates a RenderNode, and there is one per switch. The
-        Box(Modifier.offset { IntOffset(thumbX.value.roundToPx(), 4.dp.roundToPx()) }.size(24.dp).clip(CircleShape).background(if (checked) K.mintInk else Color(0xFFE8ECEE)))
+        Box(Modifier.offset { IntOffset(thumbX.value.roundToPx(), 4.dp.roundToPx()) }.size(24.dp).clip(CircleShape).background(if (checked) A.ink else Color(0xFFE8ECEE)))
     }
     }
 }
@@ -200,14 +209,49 @@ fun KSwitch(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = 
 @Composable
 fun KRadioRow(title: String, subtitle: String, selected: Boolean, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.padding(top = 1.dp).size(22.dp).border(2.dp, if (selected) K.mint else Color(0xFF4A535B), CircleShape), contentAlignment = Alignment.Center) {
-            if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(K.mint))
+        Box(Modifier.padding(top = 1.dp).size(22.dp).border(2.dp, if (selected) A.accent else Color(0xFF4A535B), CircleShape), contentAlignment = Alignment.Center) {
+            if (selected) Box(Modifier.size(10.dp).clip(CircleShape).background(A.accent))
         }
         Column { Text(title, style = KType.title.copy(fontWeight = FontWeight.Bold)); Text(subtitle, style = KType.small) }
     }
 }
 
 /** Reading-theme swatch (onboarding and the reader's Display sheet). */
+/**
+ * One accent, as the colour itself. The dot is filled with the accent rather than outlined in it, because the choice
+ * here is a fill - and the check sits in the accent's own ink, which is the pair the app will actually use.
+ */
+@Composable
+fun KAccentSwatch(
+    accent: Accent, label: String, selected: Boolean, onClick: () -> Unit,
+    showLabel: Boolean = true, modifier: Modifier = Modifier,
+) {
+    val haptics = rememberHaptics()
+    val palette = remember(accent) { accentPalette(accent) }
+    // "From the cover" has no colour of its own to draw, so the dot is a sweep of the five - the same wheel a cover
+    // is sampled from. A solid dot would claim a colour the setting does not have.
+    val fill: androidx.compose.ui.graphics.Brush = if (accent == Accent.MATCH) {
+        Brush.sweepGradient(listOf(Color(0xFF7EE0C3), Color(0xFF80B5EA), Color(0xFFC3A6F0), Color(0xFFE68B9B), Color(0xFFE8B45C), Color(0xFF7EE0C3)))
+    } else {
+        androidx.compose.ui.graphics.SolidColor(palette.color)
+    }
+    val ink = if (accent == Accent.MATCH) Color(0xFF0B0E10) else palette.ink
+    Column(
+        modifier.heightIn(min = Dim.tap.dp)
+            .clickable(role = Role.RadioButton) { haptics.tick(); onClick() }
+            .semantics { this.selected = selected },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).background(fill),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) Icon(Icons.Default.Check, null, tint = ink, modifier = Modifier.size(22.dp))
+        }
+        if (showLabel) Text(label, style = KType.small, color = if (selected) K.txt else K.dim)
+    }
+}
+
 @Composable
 fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val ui = readerUi(theme)
@@ -219,7 +263,7 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
             Modifier.size(52.dp).clip(CircleShape).background(ui.page)
                 // A near-black page on a near-black sheet has no edge of its own: the unselected ring has to
                 // carry the shape, so a dark swatch gets a lighter one than a light swatch does.
-                .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else if (ui.light) K.grab else Color(0xFF5B646C), CircleShape),
+                .border(if (selected) 2.dp else 1.dp, if (selected) A.accent else if (ui.light) K.grab else Color(0xFF5B646C), CircleShape),
             contentAlignment = Alignment.Center,
         ) { if (selected) Icon(Icons.Default.Check, null, tint = ui.accent) }
         Text(theme.name.lowercase().replaceFirstChar(Char::uppercase), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = if (selected) K.txt else K.mut)
@@ -231,7 +275,7 @@ fun KThemeSwatch(theme: ThemeId, selected: Boolean, onClick: () -> Unit, modifie
 @Composable
 fun KSlider(
     value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float> = 0f..1f, modifier: Modifier = Modifier,
-    accent: Color = K.mint, onFinished: (() -> Unit)? = null, trackColor: Color = K.track,
+    accent: Color = A.accent, onFinished: (() -> Unit)? = null, trackColor: Color = K.track,
     description: String? = null, stateText: String? = null,
     /**
      * The knob. Defaults to the accent, because a knob is the one part of a slider that must be findable at a
@@ -270,5 +314,199 @@ fun KControl(label: String, valueText: String, content: @Composable () -> Unit) 
             Text(label, style = KType.label.copy(color = K.txt)); Text(valueText, style = KType.small)
         }
         content()
+    }
+}
+
+/**
+ * One preset, drawn: a glyph that shows the thing itself beside its name.
+ *
+ * The reading presets put four numbers on four sliders; this is the same choice as a page whose lines are the size
+ * and spacing it will give you. The bar presets draw the bar. A tile that has to be read out of a caption is the
+ * defect this replaces.
+ *
+ * [wide] is for large type: three across a phone cannot hold "Comfortable" at 2.0x - it ellipsised to "Comfor..." in
+ * the shot - so past 1.5x the row becomes a column of full-width tiles with the glyph on the left and the name with
+ * room to wrap.
+ */
+@Composable
+fun KPresetTile(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    wide: Boolean = false,
+    glyph: @Composable () -> Unit,
+) {
+    val haptics = rememberHaptics()
+    val accent = A.accent
+    val fill = if (selected) lerp(K.surf2, accent, 0.10f) else K.surf
+    Column(
+        modifier
+            .clip(RoundedCornerShape(Dim.card.dp))
+            .solidSurface(RoundedCornerShape(Dim.card.dp), fill = fill, elevation = if (selected) 2.dp else 4.dp)
+            .then(
+                if (selected) Modifier.border(1.dp, accent, RoundedCornerShape(Dim.card.dp)) else Modifier
+            )
+            .clickable(role = Role.RadioButton) { haptics.tick(); onClick() }
+            .semantics { this.selected = selected }
+            .padding(
+                start = if (wide) 14.dp else 6.dp,
+                end = if (wide) 14.dp else 6.dp,
+                top = if (wide) 8.dp else 10.dp,
+                bottom = if (wide) 8.dp else 10.dp,
+            ),
+        horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally,
+    ) {
+        if (wide) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(width = 52.dp, height = 44.dp), contentAlignment = Alignment.Center) { glyph() }
+                Text(
+                    label, style = KType.body, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = if (selected) K.txt else K.mut, modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        } else {
+            Box(Modifier.height(56.dp).fillMaxWidth(), contentAlignment = Alignment.Center) { glyph() }
+            Text(
+                label, style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center, color = if (selected) K.txt else K.mut,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+    }
+}
+
+/** A page at the size, leading and margin the preset gives: the glyph is the setting. */
+@Composable
+fun PageGlyph(fontScale: Double, lineHeight: Double, margins: Double, modifier: Modifier = Modifier) {
+    val ink = K.mut
+    val edge = K.line
+    Canvas(modifier.size(width = 40.dp, height = 52.dp)) {
+        val unit = size.height / 52f
+        val margin = margins.coerceIn(0.5, 2.5).toFloat()
+        val pad = size.width * (0.30f - (margin - 0.5f) / 2f * 0.16f)
+        val scale = fontScale.coerceIn(0.7, 2.5).toFloat()
+        val stroke = (2.2f + (scale - 0.7f) / 1.8f * 3.4f) * unit
+        val gap = stroke * (0.75f + lineHeight.toFloat() * 0.55f)
+        // The page, then four lines: thickness is the type size, gap is the leading, and the inset is the margin.
+        drawRoundRect(
+            color = edge, topLeft = Offset(0f, 0f), size = size,
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.5f * unit, 3.5f * unit),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.4f * unit),
+        )
+        var y = pad * 0.9f + stroke
+        var i = 0
+        while (y < size.height - pad * 0.5f) {
+            // The last line of a paragraph is short, the way a real page breaks.
+            val w = if (i == 3) size.width - pad * 2 - (size.width - pad * 2) * 0.34f else size.width - pad * 2
+            drawRoundRect(
+                color = ink, topLeft = Offset(pad, y),
+                size = Size(w, stroke),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(stroke * 0.5f, stroke * 0.5f),
+            )
+            y += stroke + gap
+            i++
+        }
+    }
+}
+
+/**
+ * The bar, drawn: the first two slots lit and carrying the mark of the tool that is in them, then More.
+ *
+ * The first version lit two pills whichever preset it was asked to draw, which is three pictures of the same thing -
+ * the labels were doing all the work. Each slot now carries its tool's mark, so the three arrangements differ for
+ * the reason they differ in the app: Contents and Search in one, Read aloud and Auto scroll in another.
+ */
+@Composable
+fun BarGlyph(order: List<app.kairn.data.BarItem>, hidden: Set<app.kairn.data.BarItem>, modifier: Modifier = Modifier) {
+    val accent = A.accent
+    val shown = order.filterNot { it in hidden }
+    val slots = shown.take(app.kairn.data.BarItem.MAIN_SLOTS)
+    val more = shown.size - slots.size
+    Canvas(modifier.size(width = 52.dp, height = 40.dp)) {
+        val unit = size.width / 52f
+        val h = 14f * unit
+        val r = h * 0.30f
+        val cy = size.height / 2
+        // The bar itself.
+        drawRoundRect(
+            color = K.line, topLeft = Offset(0f, cy - h / 2), size = Size(size.width, h),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(r, r),
+        )
+        val moreW = if (more > 0) 10f * unit else 0f
+        val slotW = (size.width - 6f * unit - moreW) / slots.size.coerceAtLeast(1)
+        val mark = lerp(K.surf, Color(0xFF000000), 0.55f)
+        var x = 3f * unit
+        slots.forEach { item ->
+            drawRoundRect(
+                color = accent, topLeft = Offset(x, cy - h * 0.40f), size = Size(slotW - 2f * unit, h * 0.80f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(r * 0.7f, r * 0.7f),
+            )
+            drawBarMark(item, Offset(x + (slotW - 2f * unit) / 2, cy), h * 0.30f, unit, mark)
+            x += slotW
+        }
+        // Everything past the two slots waits behind More, and says how much is waiting.
+        if (more > 0) {
+            repeat(minOf(more, 3)) {
+                drawCircle(K.dim, radius = 1.4f * unit, center = Offset(x + 4f * unit, cy + (it - 1) * 3.2f * unit))
+            }
+        }
+    }
+}
+
+/** One mark per tool, small enough to sit inside a 14dp pill and distinct enough to tell the three presets apart. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBarMark(
+    item: app.kairn.data.BarItem,
+    c: Offset,
+    s: Float,
+    unit: Float,
+    ink: Color,
+) {
+    val w = 1.3f * unit
+    when (item) {
+        // Three short lines: a table of contents.
+        app.kairn.data.BarItem.CONTENTS -> repeat(3) {
+            val y = c.y - s * 0.55f + it * s * 0.55f
+            drawLine(ink, Offset(c.x - s * 0.7f, y), Offset(c.x + s * 0.7f, y), w)
+        }
+        // A lens with a handle.
+        app.kairn.data.BarItem.SEARCH -> {
+            drawCircle(ink, radius = s * 0.45f, center = Offset(c.x - s * 0.15f, c.y - s * 0.12f), style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+            drawLine(ink, Offset(c.x + s * 0.2f, c.y + s * 0.2f), Offset(c.x + s * 0.7f, c.y + s * 0.7f), w)
+        }
+        // A speaker: the triangle.
+        app.kairn.data.BarItem.READ_ALOUD -> {
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(c.x - s * 0.6f, c.y - s * 0.30f)
+                lineTo(c.x - s * 0.1f, c.y - s * 0.30f)
+                lineTo(c.x + s * 0.55f, c.y - s * 0.75f)
+                lineTo(c.x + s * 0.55f, c.y + s * 0.75f)
+                lineTo(c.x - s * 0.1f, c.y + s * 0.30f)
+                lineTo(c.x - s * 0.6f, c.y + s * 0.30f)
+                close()
+            }
+            drawPath(path, ink)
+        }
+        // A capital A: two legs and a bar.
+        app.kairn.data.BarItem.DISPLAY -> {
+            drawLine(ink, Offset(c.x - s * 0.6f, c.y + s * 0.6f), Offset(c.x, c.y - s * 0.65f), w)
+            drawLine(ink, Offset(c.x + s * 0.6f, c.y + s * 0.6f), Offset(c.x, c.y - s * 0.65f), w)
+            drawLine(ink, Offset(c.x - s * 0.32f, c.y + s * 0.12f), Offset(c.x + s * 0.32f, c.y + s * 0.12f), w)
+        }
+        // An arrow running down a page.
+        app.kairn.data.BarItem.AUTO_SCROLL -> {
+            drawLine(ink, Offset(c.x, c.y - s * 0.75f), Offset(c.x, c.y + s * 0.5f), w)
+            drawLine(ink, Offset(c.x - s * 0.4f, c.y + s * 0.1f), Offset(c.x, c.y + s * 0.55f), w)
+            drawLine(ink, Offset(c.x + s * 0.4f, c.y + s * 0.1f), Offset(c.x, c.y + s * 0.55f), w)
+        }
+        // A note: a box with a line under it.
+        app.kairn.data.BarItem.NOTES -> {
+            drawRoundRect(
+                ink, topLeft = Offset(c.x - s * 0.6f, c.y - s * 0.6f), size = Size(s * 1.2f, s * 1.05f),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(s * 0.2f, s * 0.2f),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(w),
+            )
+            drawLine(ink, Offset(c.x - s * 0.3f, c.y + s * 0.7f), Offset(c.x + s * 0.5f, c.y + s * 0.7f), w)
+        }
     }
 }

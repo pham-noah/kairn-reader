@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -64,6 +65,7 @@ import app.kairn.data.EpubMeta
 import app.kairn.data.Status
 import app.kairn.data.Store
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -94,8 +96,8 @@ private const val CT_LIST = 1
  */
 @Composable
 private fun PickMark(modifier: Modifier = Modifier) =
-    Box(modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(K.mint), contentAlignment = Alignment.Center) {
-        Icon(Icons.Default.Check, null, tint = K.mintInk, modifier = Modifier.size(16.dp))
+    Box(modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(A.accent), contentAlignment = Alignment.Center) {
+        Icon(Icons.Default.Check, null, tint = A.ink, modifier = Modifier.size(16.dp))
     }
 
 /** Every collection a book can join: the shelves that exist plus any a book already carries. */
@@ -146,7 +148,7 @@ private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: B
             // Picked: a mint ring around the cover, so it reads as "selected" and not as the finished badge.
             if (selected) {
                 val shape = remember { RoundedCornerShape(topStart = 8.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 8.dp) }
-                Box(Modifier.matchParentSize().border(2.dp, K.mint, shape))
+                Box(Modifier.matchParentSize().border(2.dp, A.accent, shape))
                 PickMark(Modifier.align(Alignment.TopEnd).padding(6.dp))
             }
         }
@@ -169,7 +171,7 @@ private fun GridBookCell(b: Book, store: Store, actions: LibActions, selected: B
         }
         // Only where there is one: a series line on every book would be a column of nothing.
         EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
-            Text(label, fontSize = 12.sp, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            Text(label, fontSize = 12.sp, color = A.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -185,7 +187,7 @@ private fun ListBookRow(b: Book, store: Store, actions: LibActions, selected: Bo
             Text(b.title, style = KType.title.copy(fontWeight = FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(b.author, style = KType.small, maxLines = 1, overflow = TextOverflow.Ellipsis)
             EpubMeta.seriesLabel(b.series, b.seriesIndex)?.let { label ->
-                Text(label, style = KType.small, color = K.mint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label, style = KType.small, color = A.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val (t, warn) = when {
                 b.missing -> stringResource(R.string.s_list_file_missing) to true
@@ -333,12 +335,20 @@ fun LibraryScreen(
         // One pick-toggle, shared by taps and long presses while selection mode is on.
         fun pick(b: Book) { picked = if (b.id in picked) picked - b.id else picked + b.id }
         LibActions(
-            open = { b -> if (selecting) pick(b) else if (b.missing || b.broken) problem = b else currentOpen(b) },
+            open = { b ->
+                haptics.tick()
+                if (selecting) pick(b) else if (b.missing || b.broken) problem = b else currentOpen(b)
+            },
             // A long press is the one gesture with no other feedback: the sheet arrives, but only after the
             // finger has waited, so the wait itself gets the bump.
             longPress = { b -> haptics.longPress(); if (selecting) pick(b) else actions = b },
         )
     }
+
+    // Android's type scale goes to 2.0. At 1.0 and 1.3 every row here fits; at 2.0 the count was cut to
+    // "3 b...", the backup nudge to "No back...", and a cover title broke mid-word. Two of those are rows
+    // carrying a caption AND a control, so past 1.5 the control gives up its words and keeps its icon.
+    val bigType = LocalDensity.current.fontScale >= 1.5f
 
     @Composable fun Header() = Column {
         KScreenHeader(stringResource(R.string.tab_library), Modifier.padding(top = 16.dp), leading = { CairnMark(size = 30) }) {
@@ -395,14 +405,12 @@ fun LibraryScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (shelf != null) KChip(shelf, true, { onShelf(null) })
-            // A number on every chip is four counts of four lists you are not looking at, and at 1.3x type it
-            // was the fourth chip that wrapped to a second row. The count now travels with the selection, and
-            // the shelf already says "12 books" about the set you are actually in.
-            KChip(stringResource(R.string.s_all), status == null, { status = null }, count = if (status == null) books.size else null)
-            // Every status that can be set has a chip, so any new value is filterable instead of folding
-            // into Finished.
+            // No "All" chip: the library already opens showing everything, so the only thing a fourth chip could
+            // add was a way back to the state you started in. Tapping the chip that is on turns it off - the row
+            // filters, and it unfilters. With the row down to three chips every one can carry its count again,
+            // which they could not when a fourth pushed them onto a second line at 1.3x type.
             Status.entries.filter { it != Status.NONE }.forEach { s ->
-                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = if (status == s) statusCounts[s] ?: 0 else null)
+                KChip(when (s) { Status.NONE -> stringResource(R.string.s_not_yet); Status.WANT -> stringResource(R.string.s_want); Status.READING -> stringResource(R.string.s_reading); Status.FINISHED -> stringResource(R.string.s_finished) }, status == s, { status = if (status == s) null else s }, count = statusCounts[s] ?: 0)
             }
         }
         // Collections are one tap away instead of two screens: the same chips the sheets use. This row only
@@ -430,7 +438,8 @@ fun LibraryScreen(
                         stringResource(R.string.s_backup_nudge), style = KType.small,
                         modifier = Modifier.padding(start = 10.dp).weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    KButton(stringResource(R.string.s_back_up_now), onBackup, small = true)
+                    if (bigType) KIconButton(Icons.Default.CloudUpload, stringResource(R.string.s_back_up_now), onBackup)
+                    else KButton(stringResource(R.string.s_back_up_now), onBackup, small = true)
                     KIconButton(Icons.Default.Close, stringResource(R.string.s_later), {
                         store.saveSettings { it.copy(lastNudge = System.currentTimeMillis()) }
                     })
@@ -451,7 +460,10 @@ fun LibraryScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box {
                     Row(Modifier.heightIn(min = 48.dp).clickable { sortMenu = true }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
+                        if (bigType) Icon(Icons.Default.Sort, stringResource(sort.label), tint = K.mut)
+                        else {
+                            Text(stringResource(sort.label), color = K.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp); Icon(Icons.Default.ArrowDropDown, null, tint = K.mut)
+                        }
                     }
                     // Reverse used to be its own 48dp button, which left no room at 360dp for the count to be
                     // told in words ("3 bo..."). It is the last line of this menu now, which is where sorting
@@ -499,7 +511,7 @@ fun LibraryScreen(
         } else if (grid) {
             // Adaptive, not fixed: three columns on a phone, more on a tablet, and the cell never gets
             // narrower than a readable width when the font scale grows.
-            LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().statusBarsPadding().imePadding().testTag("library-grid"), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
+            LazyVerticalGrid(GridCells.Adaptive((96 * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)).dp), Modifier.fillMaxSize().statusBarsPadding().imePadding().testTag("library-grid"), contentPadding = PaddingValues(start = Dim.screenPad.dp, end = Dim.screenPad.dp, top = if (selecting) 56.dp else 0.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 item(span = { GridItemSpan(maxLineSpan) }) { Header() }
                 if (shown.isEmpty() && filtering) item(span = { GridItemSpan(maxLineSpan) }) { NoMatches { query = ""; status = null; onShelf(null) } }
@@ -533,10 +545,10 @@ fun LibraryScreen(
                     picked.forEach { id -> store.update(id) { it.copy(status = Status.FINISHED) } }
                     toast.show(ctx.resources.getQuantityString(R.plurals.books_marked_finished, n, n))
                     selecting = false; picked = emptySet()
-                }, tint = K.mint)
+                }, tint = A.accent)
                 // Icons, not labelled buttons: with the label the row overflowed and "Cancel" wrapped to 25dp.
-                KIconButton(Icons.Default.Sell, stringResource(R.string.s_group_tags), { bulkTag = true }, tint = K.mint)
-                KIconButton(Icons.Default.BookmarkAdd, stringResource(R.string.s_add_to_collection), { bulkTo = true }, tint = K.mint)
+                KIconButton(Icons.Default.Sell, stringResource(R.string.s_group_tags), { bulkTag = true }, tint = A.accent)
+                KIconButton(Icons.Default.BookmarkAdd, stringResource(R.string.s_add_to_collection), { bulkTo = true }, tint = A.accent)
                 KIconButton(Icons.Default.Delete, stringResource(R.string.s_remove_from_library), { confirmBulkRemove = true }, tint = K.danger)
                 // An X, not a labelled Cancel: at 360dp the label left the count 16dp wide and it stacked vertically.
                 KIconButton(Icons.Default.Close, stringResource(R.string.s_cancel), { selecting = false; picked = emptySet() })
@@ -653,7 +665,7 @@ private fun ContinueShelf(list: List<Book>, store: Store, onOpen: (Book) -> Unit
     Column(Modifier.padding(top = 18.dp)) {
         Text(
             stringResource(R.string.continue_reading),
-            color = K.mint, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            color = A.accent, fontSize = 14.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 2.dp, bottom = 10.dp),
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

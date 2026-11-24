@@ -22,6 +22,7 @@
     <string name="s_add_folder_or_files">Add folder or files</string>
     <string name="s_add_to_a_collection">Add to a collection</string>
     <string name="s_add_to_collection">Add to collection</string>
+    <string name="s_accent">Accent</string>
     <string name="s_ambient_colour">Ambient colour</string>
     <string name="s_author">Author</string>
     <string name="s_back_up_now">Back up now</string>
@@ -260,6 +261,7 @@
     <string name="s_group_reader_bar">Reader bar</string>
     <string name="s_move_up">Move up</string>
     <string name="s_move_down">Move down</string>
+    <string name="s_drag_to_reorder">Drag to reorder</string>
     <string name="s_group_library">Library</string>
     <string name="s_group_your_data">Your data</string>
     <string name="s_group_about">About</string>
@@ -509,4 +511,11 @@
     <string name="s_apply_to_every_book">Apply to every book</string>
     <string name="s_applied_to_every_book">Every book now uses these settings</string>
     <string name="s_voice_legend_title">The four voices</string>
+    <string name="s_preset_compact">Compact</string>
+    <string name="s_preset_comfortable">Comfortable</string>
+    <string name="s_preset_large">Large print</string>
+    <string name="s_preset_minimal">Minimal</string>
+    <string name="s_preset_standard">Standard</string>
+    <string name="s_preset_voice">Voice</string>
+    <string name="s_preset_from_cover">From the cover</string>
 </resources>

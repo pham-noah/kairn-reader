@@ -2,9 +2,11 @@
 # The three Gradle loops this repo actually uses, in one place.
 #
 #   tools/gate.sh fast            compile only, ~10-50 s        (every edit)
-#   tools/gate.sh shots a [b c]   several shots in ONE Gradle run (~25 s, +8 s each); bare `shots` = all.
-#                                 A separate invocation per shot pays a Gradle start and a Robolectric boot
-#                                 every time, so three shots one-by-one cost about twice the batched run.
+#   tools/gate.sh shots a [b c]   several shots in ONE Gradle run; bare `shots` = all of them.
+#                                 Measured: one Gradle start and one Robolectric boot per *batch* instead of
+#                                 per shot, but the compile dominates either way - 2 shots in one run took
+#                                 1m21, two separate warm runs took 36 s between them. The saving is the
+#                                 invocations, not the seconds; do not quote a speedup you did not measure.
 #   tools/gate.sh test EpubMetaTest   one test class, ~10-60 s   (while iterating)
 #   tools/gate.sh quick           tests only, ~1 min             (the loop; `full` packages the APK)
 #   tools/gate.sh lint            lint alone, ~2 min            (iterate on findings without the suite)

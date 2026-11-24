@@ -55,6 +55,7 @@ import app.kairn.ui.kit.KChevron
 import app.kairn.ui.kit.KCover
 import app.kairn.ui.kit.KRow
 import app.kairn.ui.kit.KSheet
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import java.io.File
@@ -174,7 +175,7 @@ internal fun BookDetailContent(
                 style = KType.body.copy(color = K.mut), modifier = Modifier.padding(top = 2.dp),
             )
             EpubMeta.seriesLabel(book.series, book.seriesIndex)?.let {
-                Text(it, style = KType.small.copy(color = K.mint, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 4.dp))
+                Text(it, style = KType.small.copy(color = A.accent, fontWeight = FontWeight.SemiBold), modifier = Modifier.padding(top = 4.dp))
             }
         }
     }
@@ -184,7 +185,7 @@ internal fun BookDetailContent(
     if (progressText != null) {
         Column(Modifier.padding(top = 16.dp)) {
             Box(Modifier.fillMaxWidth().height(3.dp).background(K.line, RoundedCornerShape(2.dp))) {
-                Box(Modifier.fillMaxWidth(book.progress.coerceIn(0f, 1f)).height(3.dp).background(K.mint, RoundedCornerShape(2.dp)))
+                Box(Modifier.fillMaxWidth(book.progress.coerceIn(0f, 1f)).height(3.dp).background(A.accent, RoundedCornerShape(2.dp)))
             }
             Text(progressText, style = KType.small, modifier = Modifier.padding(top = 6.dp))
         }
@@ -206,7 +207,7 @@ internal fun BookDetailContent(
     if (description != null && description.length > 220) {
         Text(
             if (expanded) stringResource(R.string.s_less) else stringResource(R.string.s_more),
-            style = KType.small.copy(color = K.mint, fontWeight = FontWeight.SemiBold),
+            style = KType.small.copy(color = A.accent, fontWeight = FontWeight.SemiBold),
             modifier = Modifier.padding(top = 6.dp).clickable(onClick = onExpand),
         )
     }

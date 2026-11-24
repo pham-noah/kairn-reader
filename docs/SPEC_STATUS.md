@@ -642,8 +642,8 @@ commit. Tree contents are identical at that point - compared per path, blob by b
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v1.1.0**, published 2026-11-24, asset `Kairn-1.1.0.apk`,
-6,451,927 bytes, sha256 `b703ceb3…`, signer `69086f40…` (1.0.5 was 6,404,119, 1.0.0 6,385,628,
+needed an uninstall and a rescan). Latest: **v1.1.1**, published 2026-11-24, asset `Kairn-1.1.1.apk`,
+6,473,479 bytes, sha256 `5648bb3f…`, signer `69086f40…` (1.1.0 was 6,451,927, 1.0.5 6,404,119, 1.0.0 6,385,628,
 0.9.6 6,325,512, 0.9.4 6,325,388, 0.9.3 6,309,004). `data/Update.kt` compares the tag against `versionName`
 numerically, so 1.1.0 sorts above 0.9.6 - a string compare would put 0.10.0 first.
 
@@ -884,3 +884,40 @@ the notification on a real lock screen, a headset and a car are geometry and Rob
 attached. The 1.0.0 gate still stands: one chapter read aloud with `KairnPerf: tts gap` behind it.
 
 **Still open:** the AGP 9.1 / Readium 3.4 migration (the eight lint warnings), unchanged and still its own task.
+
+## 1.1.1 - released 2026-11-24
+
+Version 27, asset `Kairn-1.1.1.apk`, 6,473,479 bytes, md5 `f980ce2ce21dd76b735c10f2294f08a7`, sha256
+`5648bb3f792e9ffb…`, signer `69086f40…` - the same certificate as every release since 0.8.2, so it installs
+over 1.1.0 in place. Tagged `v1.1.1` in both repositories.
+
+The follow-up to 1.1.0's UI pass: four things off the pre-release list, each of them about the app knowing
+something before the reader has to tell it.
+
+- **Positions at import.** `Library.addBook` measures a book after `store.put` on a scope with
+  `limitedParallelism(1)`, so a folder sweep of two hundred books does not become two hundred zip walks.
+  `ImportPositionsTest` drives the real `addBook` over a real two-chapter EPUB: the cache is empty before and
+  13.058s later parses back into positions. This is the first end-to-end proof that the warm actually lands.
+- **Reading presets** (Compact / Comfortable / Large print) move four numbers in one tap and draw the page
+  they produce. Measured off `reading-defaults.png`: 6, 5 and 4 rules at 5, 6 and 7 px. `ReadingPreset.of()`
+  runs backwards, so nudging any slider deselects the tile instead of lying about it.
+- **Bar presets** (Minimal / Standard / Voice). The first render drew three identical two-pill glyphs - the
+  captions were doing all the work - so each slot now carries its tool's mark.
+- **Accent from the cover.** `CoverAccent` keeps the cover's hue, pins saturation and lightness into the band
+  the five hand-picked accents occupy and derives the ink by the same rule. Measured on the render: pill fill
+  `(153,144,95)`, ink contrast 4.95:1. Sixth swatch is a colour wheel; the shelf uses the last-read book, the
+  reader its own.
+- **A 2.0x defect the shots caught.** Three captions across a phone ellipsised to "Large p...", so both preset
+  rows become full-width tiles above 1.5x type.
+
+**Verified:** 358 JVM tests on debug (320 ran, 38 skipped, 0 failures) and 250 on release (0 skipped, 0
+failures); `lintDebug` clean; `assembleRelease` 19m14s from a deleted `outputs/apk/release/`; translations 464
+keys in parity across six locales. The artifact carries its own proof: `aapt2 dump badging` reads
+`versionCode='27' versionName='1.1.1'`, the resource table holds seven `s_preset_*` entries, and the R8 mapping
+lists `CoverAccent`, `ReadingPreset` and `BarPreset` - the class names are obfuscated in the dex, which is why
+a dex-literal grep finds nothing on a minified release.
+
+**Not measured:** no device pass. The baseline profile still has no `adb` to generate it on, the WebView
+warm-up still has no stopwatch, `CoverAccent`'s single thumbnail decode on the composition thread is a
+reasoned-small cost rather than a timed one, and the presets' real-phone feel is geometry and Robolectric
+until a phone is attached.

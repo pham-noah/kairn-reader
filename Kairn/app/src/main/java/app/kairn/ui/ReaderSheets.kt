@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import app.kairn.R
 import app.kairn.data.*
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.*
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -63,7 +64,7 @@ internal fun RowScope.ReaderTool(icon: ImageVector, label: String, ui: ReaderUi,
         .pressFeedback(interaction)
         .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically)) {
         // A live toggle behind "More" keeps the mint it has in the bar, so a running mode is not lost in there.
-        val ink = if (live) K.mint else ui.chromeText
+        val ink = if (live) A.accent else ui.chromeText
         Icon(icon, label, tint = ink, modifier = Modifier.size(22.dp)); Text(label, color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
@@ -85,7 +86,7 @@ private fun ColourDot(argb: Int, selected: Boolean, label: String, onClick: () -
     Box(
         Modifier.size(28.dp).clip(androidx.compose.foundation.shape.CircleShape)
             .background(Color(argb))
-            .border(if (selected) 2.dp else 1.dp, if (selected) K.mint else Color(0x66FFFFFF), androidx.compose.foundation.shape.CircleShape),
+            .border(if (selected) 2.dp else 1.dp, if (selected) A.accent else Color(0x66FFFFFF), androidx.compose.foundation.shape.CircleShape),
     )
 }
 private val columnModes = listOf(R.string.s_one_page, R.string.s_two_pages)
@@ -328,7 +329,7 @@ internal fun ContentsSheet(pub: Publication?, current: String?, onGo: (Locator) 
             if (i > 0) HorizontalDivider(color = K.line)
             Text(
                 l.title ?: stringResource(R.string.s_untitled),
-                style = if (isHere) KType.title.copy(color = K.mint) else KType.title,
+                style = if (isHere) KType.title.copy(color = A.accent) else KType.title,
                 modifier = Modifier.fillMaxWidth().clickable { pub?.locatorFromLink(l)?.let(onGo) }.padding(start = (16 + d * 16).dp, end = 16.dp, top = 15.dp, bottom = 15.dp),
             )
         }
@@ -371,7 +372,7 @@ internal fun SearchSheet(
                 // A SpanStyle background has no padding of its own, and the block butted straight against the
                 // words either side - "...came off the salt marsh and the bird" read as "thesalt marshand". Two
                 // thin spaces inside the span give the highlight the same breathing room a marker would.
-                withStyle(SpanStyle(background = K.mint.copy(alpha = .3f))) { append(" " + l.text.highlight.orEmpty() + " ") }
+                withStyle(SpanStyle(background = A.accent.copy(alpha = .3f))) { append(" " + l.text.highlight.orEmpty() + " ") }
                 append(l.text.after?.take(40).orEmpty() + "…")
             }, color = K.txt)
             }

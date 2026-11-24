@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.data.Book
 import app.kairn.data.Status
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KFonts
 import app.kairn.ui.theme.coverPalettes
@@ -127,17 +128,17 @@ fun KCover(
             // looked clipped. The track is light instead - 28% white over whatever the cover is - so the meter
             // reads as one strip with a filled end, on navy, brown, olive or a photographed cover alike.
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(5.dp).background(Color.White.copy(alpha = .28f))) {
-                Box(Modifier.fillMaxWidth(book.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
+                Box(Modifier.fillMaxWidth(book.progress.coerceIn(0f, 1f)).fillMaxHeight().background(A.accent))
             }
         }
         if (showBadge && !compact) {
-            val badge = when { book.missing || book.broken -> Icons.Default.ErrorOutline to K.amber; book.status == Status.FINISHED -> Icons.Default.Check to K.mint; else -> null }
+            val badge = when { book.missing || book.broken -> Icons.Default.ErrorOutline to K.amber; book.status == Status.FINISHED -> Icons.Default.Check to A.accent; else -> null }
             // Bottom-end, not top-end: the top corner is where the title starts, and a badge there either ate
             // the end of the name or pushed the whole line down until no two covers in a row shared a baseline.
             // The strip below owns the same corner only while a book is in progress, and a badge only appears on
             // books that are not - so the two never want the space at once.
             if (badge != null) Box(Modifier.align(Alignment.BottomEnd).padding(8.dp).size(22.dp).clip(CircleShape).background(badge.second), contentAlignment = Alignment.Center) {
-                Icon(badge.first, null, tint = if (badge.second == K.amber) Color(0xFF2B1C00) else K.mintInk, modifier = Modifier.size(14.dp))
+                Icon(badge.first, null, tint = if (badge.second == K.amber) Color(0xFF2B1C00) else A.ink, modifier = Modifier.size(14.dp))
             }
         }
     }

@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
 import app.kairn.data.Store
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -81,13 +82,13 @@ fun BackupScreen(
                     }
                     BackupPhase.Running -> KCard(padding = 16) {
                         Text(stringResource(R.string.s_backing_up), fontWeight = FontWeight.Bold, color = K.txt)
-                        Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2B3238))) { Box(Modifier.fillMaxWidth(ui.progress).fillMaxHeight().background(K.mint)) }
+                        Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2B3238))) { Box(Modifier.fillMaxWidth(ui.progress).fillMaxHeight().background(A.accent)) }
                         Text(stringResource(R.string.s_your_books_stay_usable_while_this_runs), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp))
                     }
                     BackupPhase.Done -> {
                         KCard(padding = 16) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-                                Icon(Icons.Default.Check, null, tint = K.mint, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.Check, null, tint = A.accent, modifier = Modifier.size(24.dp))
                                 Column { Text(stringResource(R.string.s_backup_saved), fontWeight = FontWeight.Bold, color = K.txt); Text(ui.fileName, style = KType.small, modifier = Modifier.padding(top = 2.dp)); Text(ui.detail, style = KType.small.copy(color = K.dim)) }
                             }
                         }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.kairn.data.Accent
 import app.kairn.data.Ambient
 import app.kairn.data.Book
 import app.kairn.data.Mark
@@ -76,6 +77,8 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import app.kairn.ui.screens.ReadingDefaults
+import app.kairn.data.CoverAccent
 
 /**
  * The screenshot probe, kept instead of rewritten.
@@ -118,6 +121,9 @@ class Shots {
 
     private fun shoot(
         name: String, width: Int = 822, height: Int = 1782, fontScale: Float = 1f,
+        accent: Accent = Accent.MINT,
+    // Only for Accent.MATCH: the colour the cover being shown would give the app.
+    coverAccent: Int? = null,
         content: @Composable () -> Unit,
     ) {
         // Large type is a setting a reader with tired eyes turns on, and it had never been drawn: every label
@@ -126,7 +132,7 @@ class Shots {
         val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
         activity.setTheme(android.R.style.Theme_Material_NoActionBar)
         activity.setContent {
-            KairnTheme(glass = true, ambient = Ambient.MINT) {
+            KairnTheme(glass = true, ambient = Ambient.MINT, accent = accent, coverAccent = coverAccent) {
                 // The shell paints K.bg behind every screen; a shot that skipped it drew the app's near-white
                 // text (K.txt is #EEF1F3) onto the harness's own white canvas. The Library and Settings titles
                 // measured 1.36:1 in the resulting files and read as missing, which is a defect in the review
@@ -285,6 +291,51 @@ class Shots {
         LibraryScreen(store(true), null, {}, {}, {}, {}, {})
     }
 
+    // The accent is one setting that repaints every control, so it has to be seen on a screen full of controls and
+    // not only on the row of dots that sets it: same library, Ocean instead of Mint.
+    @Test fun library_ocean() = shoot("library-ocean", 822, 1400, accent = Accent.OCEAN) {
+        LibraryScreen(store(true), null, {}, {}, {}, {}, {})
+    }
+
+    // All five, drawn side by side: the point of an accent setting is that the app still looks like itself in each,
+    // and that is a thing to see rather than to assert.
+    // Three drawn pages above the type sliders, and three drawn bars in Settings: a preset has to look like the
+    // page or the bar it gives you, and that is only reviewable as a picture.
+    @Test fun reading_defaults() = shoot("reading-defaults", 822, 1500) {
+        Column(Modifier.fillMaxSize().background(K.bg).padding(16.dp)) {
+            ReadingDefaults(ReaderPrefs()) {}
+        }
+    }
+
+    /**
+     * Accent.MATCH, with the colour the first book's own cover actually yields - so the shot proves the setting
+     * reaches the theme and not just the enum. The sampling itself is a unit test (PresetsTest), because a colour
+     * read out of a bitmap is arithmetic and a rendered chip is not.
+     */
+    // The two new rows at 2.0x: "Comfortable" and "Large print" are the longest labels any preset row carries, and
+    // a three-across row on a phone is exactly where they would clip.
+    @Test fun reading_defaults_huge() = shoot("reading-defaults-huge", 822, 2200, fontScale = 2.0f) {
+        Column(Modifier.fillMaxSize().background(K.bg).padding(16.dp)) {
+            ReadingDefaults(ReaderPrefs()) {}
+        }
+    }
+
+    @Test fun library_cover() {
+        val st = store(true)
+        val book = st.books.value.first()
+        shoot("library-cover", 822, 1400, accent = Accent.MATCH, coverAccent = CoverAccent.of(RuntimeEnvironment.getApplication(), st, book)) {
+            LibraryScreen(store(true), null, {}, {}, {}, {}, {})
+        }
+    }
+
+    @Test fun library_accents() {
+        Accent.entries.forEach { a ->
+            shoot("accent-${a.name.lowercase()}", 822, 1400, accent = a) {
+                LibraryScreen(store(true), null, {}, {}, {}, {}, {})
+            }
+        }
+    }
+
     // Breadth: every shot until now was 411 dp wide. A tablet is 600 dp and three screens lay out differently
     // there - the shelf's grid picks its own columns, settings has room it has never used, and the reader
     // switches to a spread. None of that had been looked at once.
@@ -294,7 +345,7 @@ class Shots {
     }
 
     @Config(qualifiers = "w600dp-h900dp-xhdpi")
-    @Test fun settings_wide() = shoot("settings-wide", 1200, 2400) {
+    @Test fun settings_wide() = shoot("settings-wide", 1200, 5400) {
         SettingsScreen(store(false), {}, {}, {})
     }
 
@@ -317,20 +368,20 @@ class Shots {
         AddBooksScreen(store(true), {}, {}, {}, { _, _ -> })
     }
 
-    @Test fun settings() = shoot("settings", 822, 2600) {
+    @Test fun settings() = shoot("settings", 822, 6200) {
         SettingsScreen(store(false), {}, {}, {})
     }
 
     // The third answer to "switch automatically": a window the reader picks, which the app decides instead of
     // asking the phone where it thinks the sun is.
     // Large type, three tiles: the longest label in the app set is スケジュール in the same width.
-    @Test fun settings_schedule_big() = shoot("settings-schedule-big", 822, 3200, fontScale = 1.3f) {
+    @Test fun settings_schedule_big() = shoot("settings-schedule-big", 822, 8200, fontScale = 1.3f) {
         val st = store(false)
         st.saveSettings { it.copy(autoSwitch = true, autoMode = "SCHEDULE", theme = ThemeId.LIGHT) }
         SettingsScreen(st, {}, {}, {})
     }
 
-    @Test fun settings_schedule() = shoot("settings-schedule", 822, 2700) {
+    @Test fun settings_schedule() = shoot("settings-schedule", 822, 6200) {
         val st = store(false)
         st.saveSettings { it.copy(autoSwitch = true, autoMode = "SCHEDULE") }
         SettingsScreen(st, {}, {}, {})
@@ -389,8 +440,18 @@ class Shots {
         LibraryScreen(store(true), null, {}, {}, {}, {}, {})
     }
 
-    @Test fun settings_big() = shoot("settings-big", 822, 2900, fontScale = 1.3f) {
+    @Test fun settings_big() = shoot("settings-big", 822, 8200, fontScale = 1.3f) {
         SettingsScreen(store(false), {}, {}, {})
+    }
+
+    // 2.0 is the top of Android's type scale, not a hypothetical: a phone set that high renders every row in
+    // this app for the first time here.
+    @Test fun settings_huge() = shoot("settings-huge", 822, 11600, fontScale = 2f) {
+        SettingsScreen(store(false), {}, {}, {})
+    }
+
+    @Test fun library_huge() = shoot("library-huge", 822, 2600, fontScale = 2f) {
+        LibraryScreen(store(true), null, {}, {}, {}, {}, {})
     }
 
     @Test fun book_detail() = shoot("sheet-book", 822, 1500) {

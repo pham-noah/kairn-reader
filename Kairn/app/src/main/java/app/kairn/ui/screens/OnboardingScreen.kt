@@ -25,6 +25,7 @@ import app.kairn.R
 import app.kairn.data.Store
 import app.kairn.data.ThemeId
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.*
 
 /** N-06: three short pages (promise, ways to add books, pick a look). */
@@ -37,7 +38,7 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
         // Skip lives up here with the page dots. Under the primary button it was a grey word 60dp from a
         // thumb already on "Next", for an action that undoes the flow.
         Row(Modifier.fillMaxWidth().padding(bottom = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-            repeat(3) { i -> Box(Modifier.height(8.dp).width(if (i == step) 26.dp else 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == step) K.mint else Color(0xFF313940))) ; Spacer(Modifier.width(8.dp)) }
+            repeat(3) { i -> Box(Modifier.height(8.dp).width(if (i == step) 26.dp else 8.dp).clip(RoundedCornerShape(8.dp)).background(if (i == step) A.accent else Color(0xFF313940))) ; Spacer(Modifier.width(8.dp)) }
             Spacer(Modifier.weight(1f))
             Text(
                 stringResource(if (step < 2) R.string.s_skip else R.string.s_skip_for_now),
@@ -57,7 +58,7 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
                     Column(Modifier.padding(top = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         listOf(R.string.s_bullet_no_account, R.string.s_bullet_airplane, R.string.s_bullet_free).forEach {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Check, null, tint = K.mint, modifier = Modifier.size(20.dp)); Text(stringResource(it), fontWeight = FontWeight.SemiBold, color = K.txt)
+                                Icon(Icons.Default.Check, null, tint = A.accent, modifier = Modifier.size(20.dp)); Text(stringResource(it), fontWeight = FontWeight.SemiBold, color = K.txt)
                             }
                         }
                     }
@@ -98,7 +99,7 @@ fun OnboardingScreen(store: Store, onFinish: (goToAdd: Boolean) -> Unit) {
 private fun Option(icon: ImageVector, title: String, desc: String) {
     val shape = RoundedCornerShape(18.dp)
     Row(Modifier.padding(top = 10.dp).fillMaxWidth().clip(shape).background(K.surf).border(1.dp, K.line, shape).padding(horizontal = 16.dp, vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(K.mint.copy(alpha = .12f)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = K.mint, modifier = Modifier.size(22.dp)) }
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(A.accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = A.accent, modifier = Modifier.size(22.dp)) }
         Column { Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = K.txt); Text(desc, style = KType.small) }
     }
 }

@@ -25,6 +25,7 @@ import app.kairn.R
 import app.kairn.data.Store
 import app.kairn.data.WifiTransfer
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -76,7 +77,7 @@ fun AddBooksScreen(
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(Dim.screenPad.dp).padding(bottom = 24.dp)) {
             KCard(padding = 20) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Wifi, null, tint = K.mint, modifier = Modifier.size(22.dp)); Text(stringResource(R.string.s_send_from_a_computer), style = KType.h2)
+                    Icon(Icons.Default.Wifi, null, tint = A.accent, modifier = Modifier.size(22.dp)); Text(stringResource(R.string.s_send_from_a_computer), style = KType.h2)
                 }
                 if (!running) {
                     Text(stringResource(R.string.s_kairn_shows_an_address_open_it_on_a_comp), style = KType.body.copy(color = K.mut), modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
@@ -106,7 +107,7 @@ fun AddBooksScreen(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(K.bg).border(1.dp, K.line, RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(address ?: stringResource(R.string.s_no_network_address), color = K.mint, fontSize = 20.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Text(address ?: stringResource(R.string.s_no_network_address), color = A.accent, fontSize = 20.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     }
                     code?.let { Text(stringResource(R.string.code_is_the_address, it), style = KType.small.copy(color = K.dim), modifier = Modifier.padding(top = 8.dp)) }
                     Text(

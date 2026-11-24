@@ -43,9 +43,11 @@ import app.kairn.KairnApp
 import app.kairn.R
 import app.kairn.data.*
 import app.kairn.ui.kit.ToastState
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.readerUi
 import app.kairn.ui.theme.KairnTheme
+import app.kairn.ui.theme.accentPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -73,6 +75,7 @@ import org.readium.r2.shared.util.AbsoluteUrl
 import java.util.UUID
 import org.readium.r2.navigator.preferences.Color as RColor
 import org.readium.r2.navigator.preferences.TextAlign as RTextAlign
+import androidx.compose.runtime.remember
 
 /** The navigator, the input events and the debounced save; everything drawn is ReaderScreen. */
 class ReaderActivity : AppCompatActivity(), ReaderActions {
@@ -164,7 +167,18 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
                     if (BarItem.READ_ALOUD in s.barHidden && ui.speech.on) stopTts()
                     if (BarItem.AUTO_SCROLL in s.barHidden) autoScroll.stop()
                 }
-                KairnTheme(glass = s.glass, ambient = s.ambient, haptics = s.haptics) {
+                // Accent.MATCH: the book's own cover, so the chrome and the page belong to the same object. Read
+                // through the reader's own book id rather than the last-opened one - the shelf may have moved on
+                // while this activity is still on screen.
+                val coverAccent = if (s.accent == Accent.MATCH) {
+                    remember(bookId) {
+                        app.store.get(bookId)?.let { CoverAccent.of(this@ReaderActivity, app.store, it) }
+                    }
+                } else null
+                KairnTheme(
+                    glass = s.glass, ambient = s.ambient, haptics = s.haptics, accent = s.accent,
+                    coverAccent = coverAccent,
+                ) {
                     ReaderScreen(
                         ui = ui,
                         colors = readerUi(prefsApplier.theme(ui.prefs), ui.prefs.pageColor, ui.prefs.inkColor),
@@ -665,9 +679,16 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
 
     // ---- ReaderActions: the writes and the navigator, reached from the screen ----
 
+    /** A mark is stored with its colour, so it takes the accent in force when it is made and keeps it afterwards. */
+    private fun accentArgb(): Int {
+        val s = app.store.settings.value
+        val cover = if (s.accent == Accent.MATCH) app.store.get(bookId)?.let { CoverAccent.of(this, app.store, it) } else null
+        return accentPalette(s.accent, cover).color.toArgb()
+    }
+
     /** Notes carry no colour of their own; mint is the colour the Notes list draws for them. */
     override fun saveNote(target: NoteTarget, text: String) {
-        addMarkTo(Mark(UUID.randomUUID().toString(), "note", K.mint.toArgb(), target.quote, text, target.locator, System.currentTimeMillis()))
+        addMarkTo(Mark(UUID.randomUUID().toString(), "note", accentArgb(), target.quote, text, target.locator, System.currentTimeMillis()))
         ui.noteDraft = null
         toast.show(getString(R.string.toast_note_saved))
     }
@@ -691,7 +712,7 @@ class ReaderActivity : AppCompatActivity(), ReaderActions {
         val h = ui.chapterHref ?: return
         if (!bookmarked) {
             val added = getString(R.string.toast_bookmark_added)
-            addMark("bookmark", K.mint.toArgb()) { ok -> if (ok) toast.show(added) }
+            addMark("bookmark", accentArgb()) { ok -> if (ok) toast.show(added) }
         } else {
             writer.removeBookmarksIn(h, ::markHref)
             toast.show(getString(R.string.toast_bookmark_removed))

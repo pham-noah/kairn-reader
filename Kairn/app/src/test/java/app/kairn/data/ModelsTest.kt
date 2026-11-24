@@ -157,6 +157,16 @@ class ModelsTest {
         assertEquals(setOf(BarItem.READ_ALOUD, BarItem.NOTES), after.barHidden)
     }
 
+    @Test fun `the accent survives a round-trip and an unknown one falls back to mint`() {
+        val before = AppSettings(accent = Accent.OCEAN)
+        assertEquals(Accent.OCEAN, AppSettings.from(JSONObject(before.toJson().toString())).accent)
+        // A file written by a build that had an accent this one does not know must not lose every other setting.
+        val odd = JSONObject().put("accent", "ULTRAVIOLET").put("glass", false)
+        val after = AppSettings.from(odd)
+        assertEquals(Accent.MINT, after.accent)
+        assertTrue("the rest of the file is still read", !after.glass)
+    }
+
     @Test fun `an unknown bar item in the file is skipped, not fatal`() {
         val raw = JSONObject().put("barHidden", org.json.JSONArray(listOf("SEARCH", "TELEPATHY")))
         val s = AppSettings.from(raw)

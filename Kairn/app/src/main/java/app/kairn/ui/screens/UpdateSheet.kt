@@ -21,6 +21,7 @@ import app.kairn.ui.NoteBlocks
 import app.kairn.ui.noteBlocks
 import app.kairn.ui.kit.KButtonStyle
 import app.kairn.ui.kit.KSheet
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import java.io.File
@@ -69,7 +70,7 @@ internal fun UpdateContent(ui: UpdateUi, onCheck: () -> Unit, onDownload: () -> 
     Column {
         when {
             ui.checking -> Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(20.dp), color = K.mint, strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(20.dp), color = A.accent, strokeWidth = 2.dp)
                 Text(stringResource(R.string.s_checking_for_updates), style = KType.body, modifier = Modifier.padding(start = 12.dp))
             }
             ui.release != null -> {
@@ -101,7 +102,7 @@ internal fun UpdateContent(ui: UpdateUi, onCheck: () -> Unit, onDownload: () -> 
                                 Modifier.padding(top = 8.dp).fillMaxWidth().height(6.dp)
                                     .clip(RoundedCornerShape(6.dp)).background(K.line),
                             ) {
-                                Box(Modifier.fillMaxWidth(ui.progress.coerceIn(0f, 1f)).fillMaxHeight().background(K.mint))
+                                Box(Modifier.fillMaxWidth(ui.progress.coerceIn(0f, 1f)).fillMaxHeight().background(A.accent))
                             }
                         }
                         ui.apk != null -> Column {

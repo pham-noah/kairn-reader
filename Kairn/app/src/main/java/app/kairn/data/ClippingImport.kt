@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.services.search.search
 import java.util.UUID
+import app.kairn.ui.theme.A
 
 /**
  * Brings Kindle highlights and notes into the library (DS-03). A Kindle location means nothing inside an
@@ -106,7 +107,7 @@ class ClippingImport(
     }
 
     private companion object {
-        /** The mint highlight colour as ARGB: K.mint from the theme, kept here so the data layer has no UI import. */
+        /** The mint highlight colour as ARGB: A.accent from the theme, kept here so the data layer has no UI import. */
         const val MINT = 0xFF7EE0C3.toInt()
     }
 }

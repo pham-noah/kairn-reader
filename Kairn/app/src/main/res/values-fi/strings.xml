@@ -21,6 +21,7 @@
     <string name="s_add_folder_or_files">Lisää kansio tai tiedostoja</string>
     <string name="s_add_to_a_collection">Lisää kokoelmaan</string>
     <string name="s_add_to_collection">Lisää kokoelmaan</string>
+    <string name="s_accent">Korostusväri</string>
     <string name="s_ambient_colour">Hehkuväri</string>
     <string name="s_author">Tekijä</string>
     <string name="s_back_up_now">Varmuuskopioi nyt</string>
@@ -260,6 +261,7 @@
     <string name="s_group_reader_bar">Lukijan palkki</string>
     <string name="s_move_up">Siirrä ylös</string>
     <string name="s_move_down">Siirrä alas</string>
+    <string name="s_drag_to_reorder">Vedä järjestääksesi</string>
     <string name="s_group_library">Kirjasto</string>
     <string name="s_group_your_data">Tietosi</string>
     <string name="s_group_about">Tietoja</string>
@@ -509,4 +511,11 @@
     <string name="s_apply_to_every_book">Käytä kaikkiin kirjoihin</string>
     <string name="s_applied_to_every_book">Kaikki kirjat käyttävät nyt näitä asetuksia</string>
     <string name="s_voice_legend_title">Neljä ääntä</string>
+    <string name="s_preset_compact">Tiivis</string>
+    <string name="s_preset_comfortable">Mukava</string>
+    <string name="s_preset_large">Suuri teksti</string>
+    <string name="s_preset_minimal">Vähän</string>
+    <string name="s_preset_standard">Vakio</string>
+    <string name="s_preset_voice">Ääni</string>
+    <string name="s_preset_from_cover">Kannesta</string>
 </resources>

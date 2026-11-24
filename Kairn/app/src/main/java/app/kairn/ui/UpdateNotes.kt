@@ -14,6 +14,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 
@@ -116,12 +117,13 @@ internal fun noteRuns(text: String): List<NoteRun> {
     return out
 }
 
+@Composable
 internal fun annotated(text: String): AnnotatedString = buildAnnotatedString {
     noteRuns(text).forEach { run ->
         val start = length
         append(run.text)
         if (run.bold) addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, length)
-        if (run.code) addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = K.mint), start, length)
+        if (run.code) addStyle(SpanStyle(fontFamily = FontFamily.Monospace, color = A.accent), start, length)
     }
 }
 
@@ -148,7 +150,7 @@ internal fun NoteBlocks(blocks: List<NoteBlock>, modifier: Modifier = Modifier) 
                 )
 
                 is NoteBlock.Bullet -> Row(Modifier.padding(top = gap)) {
-                    Text("•", style = KType.small.copy(color = K.mint), modifier = Modifier.width(14.dp))
+                    Text("•", style = KType.small.copy(color = A.accent), modifier = Modifier.width(14.dp))
                     Text(annotated(block.text), style = KType.small.copy(color = K.mut))
                 }
 

@@ -1,5 +1,6 @@
 package app.kairn.ui.kit
 
+import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,12 +19,28 @@ import app.kairn.ui.theme.LocalHaptics
  * a buzz in the pocket for a page that merely moved under the finger.
  */
 class Haptics(private val view: android.view.View?, private val enabled: Boolean) {
-    fun tick() = fire(HapticFeedbackConstants.KEYBOARD_TAP)
-    fun toggle() = fire(HapticFeedbackConstants.CLOCK_TICK)
+    // KEYBOARD_TAP and CLOCK_TICK are the two quietest constants Android has, and on most phones they are a
+    // whisper the thumb cannot feel - which reads as "the app has no haptics at all". VIRTUAL_KEY (27+) and
+    // CONFIRM (30+) are the ones the system itself uses for a key press and a landed action.
+    fun tick() = fire(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) HapticFeedbackConstants.VIRTUAL_KEY
+        else HapticFeedbackConstants.KEYBOARD_TAP
+    )
+
+    fun toggle() = fire(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) HapticFeedbackConstants.CONFIRM
+        else HapticFeedbackConstants.CLOCK_TICK
+    )
+
     fun longPress() = fire(HapticFeedbackConstants.LONG_PRESS)
 
+    /**
+     * FLAG_IGNORE_GLOBAL_SETTING on purpose: this app carries its own switch (Settings > Haptics), so the switch
+     * the user can see is the switch that decides. Respecting the system flag as well made the setting a no-op on
+     * any phone with touch feedback turned down.
+     */
     private fun fire(effect: Int) {
-        if (enabled) view?.performHapticFeedback(effect)
+        if (enabled) view?.performHapticFeedback(effect, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING)
     }
 }
 

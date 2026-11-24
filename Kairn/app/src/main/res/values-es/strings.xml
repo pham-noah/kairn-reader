@@ -21,6 +21,7 @@
     <string name="s_add_folder_or_files">Añadir carpeta o archivos</string>
     <string name="s_add_to_a_collection">Añadir a una colección</string>
     <string name="s_add_to_collection">Añadir a colección</string>
+    <string name="s_accent">Color de acento</string>
     <string name="s_ambient_colour">Color ambiental</string>
     <string name="s_author">Autor</string>
     <string name="s_back_up_now">Copia ahora</string>
@@ -236,6 +237,7 @@
     <string name="s_group_reader_bar">Barra del lector</string>
     <string name="s_move_up">Subir</string>
     <string name="s_move_down">Bajar</string>
+    <string name="s_drag_to_reorder">Arrastra para reordenar</string>
     <string name="s_group_library">Biblioteca</string>
     <string name="s_group_your_data">Tus datos</string>
     <string name="s_group_about">Acerca de</string>
@@ -467,4 +469,11 @@
     <string name="s_apply_to_every_book">Aplicar a todos los libros</string>
     <string name="s_applied_to_every_book">Todos los libros usan ahora estos ajustes</string>
     <string name="s_voice_legend_title">Las cuatro voces</string>
+    <string name="s_preset_compact">Compacto</string>
+    <string name="s_preset_comfortable">Cómodo</string>
+    <string name="s_preset_large">Letra grande</string>
+    <string name="s_preset_minimal">Mínimo</string>
+    <string name="s_preset_standard">Estándar</string>
+    <string name="s_preset_voice">Voz</string>
+    <string name="s_preset_from_cover">De la portada</string>
 </resources>

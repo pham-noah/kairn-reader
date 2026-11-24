@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import app.kairn.R
 import app.kairn.data.Mark
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import java.text.DateFormat
@@ -84,7 +85,7 @@ fun AnnotationsContent(bookTitle: String, marks: List<Mark>, onGo: (Mark) -> Uni
                     if (i > 0) HorizontalDivider(color = K.line)
                     // IntrinsicSize.Min: without it the colour bar's fillMaxHeight has no height to fill and stays at its 36dp minimum.
                     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable { onGo(m) }.padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(Modifier.width(4.dp).fillMaxHeight().heightIn(min = 36.dp).clip(RoundedCornerShape(4.dp)).background(if (m.kind == "bookmark") K.mint else Color(m.color)))
+                        Box(Modifier.width(4.dp).fillMaxHeight().heightIn(min = 36.dp).clip(RoundedCornerShape(4.dp)).background(if (m.kind == "bookmark") A.accent else Color(m.color)))
                         Column(Modifier.weight(1f)) {
                             Text(if (m.kind == "bookmark") stringResource(R.string.s_bookmark_label) + if (m.quote.isNotBlank()) ", ${m.quote}" else "" else m.quote, style = KType.quote, maxLines = 5)
                             if (m.note.isNotBlank()) Text(m.note, style = KType.small, modifier = Modifier.padding(top = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(K.bg).clickable { onEditNote(m) }.padding(horizontal = 12.dp, vertical = 9.dp))

@@ -17,18 +17,21 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
 import app.kairn.ui.theme.glassWell
+import app.kairn.ui.theme.solidSurface
+import app.kairn.ui.theme.solidWell
 
 @Composable
 fun KCard(modifier: Modifier = Modifier, padding: Int = 0, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(if (glass) 26.dp else Dim.card.dp)
     val surface = if (glass) modifier.fillMaxWidth().glassSurface(shape)
-                  else modifier.fillMaxWidth().clip(shape).background(K.surf).border(1.dp, K.line, shape)
+                  else modifier.fillMaxWidth().solidSurface(shape)
     Column(surface.padding(padding.dp), content = content)
 }
 
@@ -39,7 +42,7 @@ fun KCard(modifier: Modifier = Modifier, padding: Int = 0, content: @Composable 
  */
 @Composable
 fun Modifier.insetWell(shape: Shape): Modifier =
-    if (glass) glassWell(shape) else clip(shape).background(K.bg).border(1.dp, K.line, shape)
+    if (glass) glassWell(shape) else solidWell(shape)
 
 /** Group: a small bold label above a card or pill group. */
 @Composable
@@ -96,9 +99,9 @@ fun KField(value: String, onChange: (String) -> Unit, modifier: Modifier = Modif
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = if (glass) Color.Transparent else K.bg,
                 unfocusedContainerColor = if (glass) Color.Transparent else K.bg,
-                focusedBorderColor = if (glass) Color.Transparent else K.mint,
+                focusedBorderColor = if (glass) Color.Transparent else A.accent,
                 unfocusedBorderColor = if (glass) Color.Transparent else K.line,
-                cursorColor = K.mint, focusedTextColor = K.txt, unfocusedTextColor = K.txt,
+                cursorColor = A.accent, focusedTextColor = K.txt, unfocusedTextColor = K.txt,
             ),
         )
     }

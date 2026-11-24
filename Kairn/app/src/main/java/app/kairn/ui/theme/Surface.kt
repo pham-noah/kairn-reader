@@ -9,6 +9,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -158,6 +159,33 @@ fun Modifier.glassShadow(elevation: Dp, color: Color = Color.Black, shape: Shape
             )
         }
     }
+
+/**
+ * Solid: the same panel weight as Glass, arrived at the other way. An opaque fill with a vertical fall-off (the top
+ * of a milled panel catches the light, the bottom turns away), a hairline that is brighter at the top edge than at
+ * the bottom, and a tight shadow instead of a soft one. Flat grey plus a 1dp outline was the whole of Solid before,
+ * and it read as a box drawn on the background rather than a surface with weight.
+ */
+fun Modifier.solidSurface(shape: Shape, fill: Color = K.surf, elevation: Dp = 4.dp): Modifier = this
+    .glassShadow(elevation, shape = shape)
+    .clip(shape)
+    .background(
+        Brush.verticalGradient(0f to lerp(fill, Color.White, 0.055f), 0.55f to fill, 1f to lerp(fill, Color.Black, 0.03f)),
+        shape,
+    )
+    .border(
+        1.dp,
+        Brush.verticalGradient(
+            0f to Color(0x26FFFFFF), 0.55f to K.line, 1f to K.line.copy(alpha = 0.55f),
+        ),
+        shape,
+    )
+
+/** The Solid well: darker than the panel and shadowed from the top, so it reads as cut into the card. */
+fun Modifier.solidWell(shape: Shape): Modifier = this
+    .clip(shape)
+    .background(K.bg)
+    .border(1.dp, Brush.verticalGradient(0f to Color(0x38000000), 1f to K.line), shape)
 
 /** A well (inset) surface: fields, segmented tracks - darker than the panel, no shadow. */
 fun Modifier.glassWell(shape: Shape): Modifier = this

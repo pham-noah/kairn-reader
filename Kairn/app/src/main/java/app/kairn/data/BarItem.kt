@@ -28,3 +28,27 @@ enum class BarItem(val isMode: Boolean) {
         val DEFAULT_ORDER: List<BarItem> = entries.toList()
     }
 }
+
+/**
+ * Three arrangements of the same six items, because nobody drags six rows to get a bar they are happy with.
+ *
+ * A preset only sets the order and never touches [AppState]-style hiding: what a reader hid stays hidden, and
+ * nudging a single row by hand simply stops any preset being selected. The first [BarItem.MAIN_SLOTS] of each
+ * list are what the bar draws, so the lists read as "what is in the bar", rest behind More.
+ */
+enum class BarPreset(val order: List<BarItem>) {
+    /** Reading tools only: the two doors that page and search, voice and display behind More. */
+    MINIMAL(listOf(BarItem.CONTENTS, BarItem.SEARCH, BarItem.NOTES, BarItem.READ_ALOUD, BarItem.DISPLAY, BarItem.AUTO_SCROLL)),
+
+    /** What the bar has always drawn: the two live toggles on the front. */
+    STANDARD(BarItem.DEFAULT_ORDER),
+
+    /** Listening: read aloud and the type controls, which is what gets touched mid-chapter while it speaks. */
+    VOICE(listOf(BarItem.READ_ALOUD, BarItem.DISPLAY, BarItem.CONTENTS, BarItem.SEARCH, BarItem.NOTES, BarItem.AUTO_SCROLL)),
+    ;
+
+    companion object {
+        /** Which arrangement this is, or null when the reader has arranged the rows by hand. */
+        fun of(order: List<BarItem>): BarPreset? = entries.firstOrNull { it.order == order }
+    }
+}

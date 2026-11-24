@@ -10,6 +10,12 @@ enum class ThemeId { LIGHT, DARK, SEPIA, BLACK, GRAY }   // appended, so stored 
 /** Ambient wash behind the glass panels. PLAIN turns it off. */
 enum class Ambient { MINT, OCEAN, SUNSET, PLAIN }
 
+/**
+ * The one colour the app puts on the things you press. The ambient wash tints the background; this is the colour of
+ * the button, the switch, the selected chip and the progress bar, and it used to be mint with no way out.
+ */
+enum class Accent { MINT, OCEAN, SUNSET, ROSE, VIOLET, MATCH }
+
 /** A highlight, note or bookmark (A-01). [locator] is Readium Locator JSON. */
 @Immutable
 data class Mark(
@@ -248,6 +254,7 @@ data class AppSettings(
     val lastSweep: Long = 0,                // the last full device sweep; see Library.scan
     val haptics: Boolean = true,            // a tick on a control, a bump when a press becomes a gesture
     val hideBars: Boolean = true,           // the bars fold themselves away after a few seconds of reading
+    val accent: Accent = Accent.MINT,       // the colour of every control you press
 ) {
     fun toJson() = JSONObject().put("theme", theme.name).put("glass", glass).put("ambient", ambient.name).put("autoSwitch", autoSwitch)
         .put("onboarded", onboarded).put("shelves", JSONArray(shelves)).put("extraTags", JSONArray(extraTags))
@@ -262,7 +269,7 @@ data class AppSettings(
         .put("autoBackupFolder", autoBackupFolder).put("autoBackupDays", autoBackupDays)
         .put("autoBackupKeep", autoBackupKeep).put("lastAutoBackup", lastAutoBackup).put("lastSweep", lastSweep)
         .put("haptics", haptics)
-        .put("hideBars", hideBars)
+        .put("hideBars", hideBars).put("accent", accent.name)
         .put("grid", grid).put("sort", sort).put("sortFlipped", sortFlipped)
         .put("autoMode", autoMode).put("nightFrom", nightFrom).put("nightTo", nightTo)
         .put("dailyGoal", dailyGoal)
@@ -321,6 +328,7 @@ data class AppSettings(
                 lastAutoBackup = o.optLong("lastAutoBackup", d.lastAutoBackup),
                 lastSweep = o.optLong("lastSweep", d.lastSweep),
                 haptics = o.optBoolean("haptics", d.haptics),
+                accent = runCatching { Accent.valueOf(o.getString("accent")) }.getOrDefault(d.accent),
             hideBars = o.optBoolean("hideBars", d.hideBars),
                 // mapNotNull + optString: an entry with no usable uri is skipped, not a reason to discard
                 // every other setting.

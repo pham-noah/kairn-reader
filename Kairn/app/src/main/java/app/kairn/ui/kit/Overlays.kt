@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
@@ -151,8 +152,8 @@ fun KMenu(expanded: Boolean, onDismiss: () -> Unit, items: List<Pair<String, Boo
     DropdownMenu(expanded, onDismiss, containerColor = K.surf2, shape = RoundedCornerShape(16.dp)) {
         items.forEachIndexed { i, (label, active) ->
             DropdownMenuItem(
-                text = { Text(label, fontWeight = FontWeight.SemiBold, color = if (active) K.mint else K.txt) },
-                trailingIcon = { if (active) Icon(Icons.Default.Check, null, tint = K.mint) },
+                text = { Text(label, fontWeight = FontWeight.SemiBold, color = if (active) A.accent else K.txt) },
+                trailingIcon = { if (active) Icon(Icons.Default.Check, null, tint = A.accent) },
                 onClick = { onPick(i); onDismiss() },
             )
         }

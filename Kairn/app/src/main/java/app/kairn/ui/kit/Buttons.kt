@@ -23,12 +23,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
+import app.kairn.ui.theme.solidSurface
 
 enum class KButtonStyle { Primary, Secondary, Danger, Ghost }
 
@@ -41,7 +43,7 @@ fun KButton(
 ) {
     val shape = RoundedCornerShape(999.dp)
     val (bg, fg, border) = when (style) {
-        KButtonStyle.Primary -> Triple(K.mint, K.mintInk, null)
+        KButtonStyle.Primary -> Triple(A.accent, A.ink, null)
         KButtonStyle.Secondary -> Triple(if (glass) Color.Transparent else K.surf2, K.txt, if (glass) Glass.hairline else K.line)
         KButtonStyle.Danger -> Triple(K.danger.copy(alpha = .10f), K.danger, K.danger.copy(alpha = .30f))
         KButtonStyle.Ghost -> Triple(Color.Transparent, K.mut, null)
@@ -52,9 +54,10 @@ fun KButton(
         .then(if (small) Modifier.minimumInteractiveComponentSize() else Modifier)
     val surface =
         when {
-            glass && style == KButtonStyle.Primary -> base.glassSurface(shape, fill = K.mint.copy(alpha = .92f), elevation = 10.dp, hairline = Color(0x59FFFFFF))
+            glass && style == KButtonStyle.Primary -> base.glassSurface(shape, fill = A.accent.copy(alpha = .92f), elevation = 10.dp, hairline = Color(0x59FFFFFF))
             glass && style == KButtonStyle.Secondary -> base.glassSurface(shape, fill = Glass.fill, elevation = 5.dp)
             glass && style == KButtonStyle.Danger -> base.glassSurface(shape, fill = K.danger.copy(alpha = .16f), elevation = 5.dp, hairline = K.danger.copy(alpha = .30f))
+            style == KButtonStyle.Secondary -> base.solidSurface(shape, fill = K.surf2, elevation = 4.dp)
             else -> base.clip(shape).background(bg).then(if (border != null) Modifier.border(BorderStroke(1.dp, border), shape) else Modifier)
         }
     val interaction = remember { MutableInteractionSource() }
@@ -93,7 +96,7 @@ fun KIconButton(
             Modifier.size(size.dp).pressFeedback(interaction, pressedScale = 0.90f).clip(CircleShape)
                 .then(
                     if (bordered && glass) Modifier.glassSurface(CircleShape, fill = Glass.fill, elevation = 5.dp)
-                    else if (bordered) Modifier.background(K.surf).border(1.dp, K.line, CircleShape)
+                    else if (bordered) Modifier.solidSurface(CircleShape, elevation = 3.dp)
                     else Modifier
                 )
                 .clickable(

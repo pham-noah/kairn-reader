@@ -51,6 +51,7 @@ import app.kairn.data.ReaderPrefs
 import app.kairn.data.ThemeId
 import app.kairn.ui.kit.*
 import app.kairn.ui.screens.AnnotationsContent
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -204,7 +205,7 @@ internal fun ReaderScreen(
     Box(Modifier.fillMaxSize()) {
         // R-06: warm-light filter is an app-local tint; it never touches system settings.
         if (ui.prefs.warmth > 0f) Box(Modifier.fillMaxSize().background(CColor(0xFFFF9A2E).copy(alpha = ui.prefs.warmth * 0.30f)))
-        if (ui.loading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = K.mint)
+        if (ui.loading) CircularProgressIndicator(Modifier.align(Alignment.Center), color = A.accent)
         // One offset for everything that has to clear the bottom edge: the bar while it is drawn, and the
         // system's navigation inset once it is gone. A fixed value is only right in one of those states.
         val bottomPad = chromeBottomPad(ui.bars)
@@ -238,7 +239,7 @@ internal fun ReaderScreen(
             Column(Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = bottomPad).fillMaxWidth()
                 .onGloballyPositioned { ui.footnoteHeightPx = it.size.height.toFloat() }
                 .clip(RoundedCornerShape(20.dp)).background(K.surf2).padding(16.dp)) {
-                Text(stringResource(R.string.s_footnote), color = K.mint, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                Text(stringResource(R.string.s_footnote), color = A.accent, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                 Text(note, style = KType.small, modifier = Modifier.padding(bottom = 12.dp))
                 KButton(stringResource(R.string.s_close), { ui.footnote = null }, style = KButtonStyle.Secondary, small = true)
             }
@@ -417,9 +418,9 @@ internal fun ReaderScreen(
         ) {
             ui.jumpBack?.let { j ->   // R-08: "Back to where you were"
                 LaunchedEffect(j) { delay(6000); ui.jumpBack = null }
-                Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(K.mint)
+                Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(A.accent)
                     .clickable { act.goTo(j); ui.jumpBack = null }.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, null, tint = K.mintInk, modifier = Modifier.size(20.dp)); Text(stringResource(R.string.s_back_to_where_you_were), color = K.mintInk, fontWeight = FontWeight.ExtraBold)
+                    Icon(Icons.AutoMirrored.Filled.Undo, null, tint = A.ink, modifier = Modifier.size(20.dp)); Text(stringResource(R.string.s_back_to_where_you_were), color = A.ink, fontWeight = FontWeight.ExtraBold)
                 }
             }
             toast.Host(
@@ -487,11 +488,11 @@ private fun ModePill(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val tint = if (live) K.mint else colors.chromeText
+    val tint = if (live) A.accent else colors.chromeText
     val interaction = remember { MutableInteractionSource() }
     Row(
         modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
-            .background(if (live) K.mint.copy(alpha = 0.16f) else CColor.Transparent)
+            .background(if (live) A.accent.copy(alpha = 0.16f) else CColor.Transparent)
             .pressFeedback(interaction)
             .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .padding(horizontal = 10.dp)

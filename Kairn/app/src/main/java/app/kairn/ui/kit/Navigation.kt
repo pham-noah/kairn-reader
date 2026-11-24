@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kairn.R
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.K
 import app.kairn.ui.theme.KType
 import app.kairn.ui.theme.Glass
@@ -58,10 +59,10 @@ fun KNavBar(selected: Tab?, onSelect: (Tab) -> Unit) {
                     // one movement rather than a colour swap and a jump.
                     // 80 ms, not 160: the pill has to arrive with the screen, and the screen now takes 85.
                     val pill by animateColorAsState(
-                        if (on) (if (glass) Color(0x26FFFFFF) else K.mint.copy(alpha = .14f)) else Color.Transparent,
+                        if (on) (if (glass) Color(0x26FFFFFF) else A.accent.copy(alpha = .14f)) else Color.Transparent,
                         tween(80), label = "pill",
                     )
-                    val ink by animateColorAsState(if (on) K.mint else K.mut, tween(80), label = "ink")
+                    val ink by animateColorAsState(if (on) A.accent else K.mut, tween(80), label = "ink")
                     // The tab is a small target that only ever changes a screen, so it sinks like a button.
                     val interaction = remember { MutableInteractionSource() }
                     Column(

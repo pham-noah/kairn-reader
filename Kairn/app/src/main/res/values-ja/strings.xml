@@ -21,6 +21,7 @@
     <string name="s_add_folder_or_files">フォルダまたはファイルを追加</string>
     <string name="s_add_to_a_collection">コレクションに追加</string>
     <string name="s_add_to_collection">コレクションに追加</string>
+    <string name="s_accent">アクセントカラー</string>
     <string name="s_ambient_colour">背景の光</string>
     <string name="s_author">著者</string>
     <string name="s_back_up_now">今すぐバックアップ</string>
@@ -251,6 +252,7 @@
     <string name="s_group_reader_bar">リーダーバー</string>
     <string name="s_move_up">上へ移動</string>
     <string name="s_move_down">下へ移動</string>
+    <string name="s_drag_to_reorder">ドラッグして並べ替え</string>
     <string name="s_group_library">ライブラリ</string>
     <string name="s_group_your_data">データ</string>
     <string name="s_group_about">このアプリについて</string>
@@ -496,4 +498,11 @@
     <string name="s_apply_to_every_book">すべての本に適用</string>
     <string name="s_applied_to_every_book">すべての本がこの設定になりました</string>
     <string name="s_voice_legend_title">4つの声</string>
+    <string name="s_preset_compact">コンパクト</string>
+    <string name="s_preset_comfortable">ゆったり</string>
+    <string name="s_preset_large">大きな文字</string>
+    <string name="s_preset_minimal">最小</string>
+    <string name="s_preset_standard">標準</string>
+    <string name="s_preset_voice">読み上げ</string>
+    <string name="s_preset_from_cover">表紙から</string>
 </resources>

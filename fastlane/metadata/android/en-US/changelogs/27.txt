@@ -1,0 +1,4 @@
+Three reading presets - Compact, Comfortable and Large print - one tap each instead of five sliders.
+An accent colour taken from the book's own cover.
+Three bar presets: Minimal, Standard and Voice, for the tools you actually use.
+Newly added books are measured on import, so the first open no longer waits for the page count.

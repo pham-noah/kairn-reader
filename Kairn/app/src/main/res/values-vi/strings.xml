@@ -21,6 +21,7 @@
     <string name="s_add_folder_or_files">Thêm thư mục hoặc tệp</string>
     <string name="s_add_to_a_collection">Thêm vào bộ sưu tập</string>
     <string name="s_add_to_collection">Thêm vào bộ sưu tập</string>
+    <string name="s_accent">Màu nhấn</string>
     <string name="s_ambient_colour">Màu nền</string>
     <string name="s_author">Tác giả</string>
     <string name="s_back_up_now">Sao lưu ngay</string>
@@ -251,6 +252,7 @@
     <string name="s_group_reader_bar">Thanh trình đọc</string>
     <string name="s_move_up">Di chuyển lên</string>
     <string name="s_move_down">Di chuyển xuống</string>
+    <string name="s_drag_to_reorder">Kéo để sắp xếp lại</string>
     <string name="s_group_library">Thư viện</string>
     <string name="s_group_your_data">Dữ liệu của bạn</string>
     <string name="s_group_about">Giới thiệu</string>
@@ -496,4 +498,11 @@
     <string name="s_apply_to_every_book">Áp dụng cho mọi sách</string>
     <string name="s_applied_to_every_book">Mọi sách giờ dùng các thiết lập này</string>
     <string name="s_voice_legend_title">Bốn giọng đọc</string>
+    <string name="s_preset_compact">Gọn</string>
+    <string name="s_preset_comfortable">Dễ chịu</string>
+    <string name="s_preset_large">Cỡ lớn</string>
+    <string name="s_preset_minimal">Tối giản</string>
+    <string name="s_preset_standard">Chuẩn</string>
+    <string name="s_preset_voice">Giọng đọc</string>
+    <string name="s_preset_from_cover">Theo bìa</string>
 </resources>

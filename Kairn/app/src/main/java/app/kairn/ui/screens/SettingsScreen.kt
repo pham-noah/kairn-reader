@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -45,6 +46,7 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kairn.R
 import app.kairn.data.AUTO_SCHEDULE
+import app.kairn.data.Accent
 import app.kairn.data.Ambient
 import app.kairn.data.BarItem
 import app.kairn.data.ReaderPrefs
@@ -55,6 +57,7 @@ import app.kairn.data.formatMinutes
 import app.kairn.data.minutesOfDay
 import app.kairn.data.usesSchedule
 import app.kairn.ui.kit.*
+import app.kairn.ui.theme.A
 import app.kairn.ui.theme.Dim
 import app.kairn.ui.theme.Glass
 import app.kairn.ui.theme.K
@@ -65,12 +68,41 @@ import app.kairn.ui.theme.ambientWash
 import app.kairn.ui.theme.glass
 import app.kairn.ui.theme.glassSurface
 import app.kairn.ui.theme.readerUi
+import app.kairn.ui.theme.solidSurface
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
+import app.kairn.data.ReadingPreset
+import app.kairn.data.BarPreset
+import app.kairn.ui.kit.KPresetTile
+import app.kairn.ui.kit.PageGlyph
+import app.kairn.ui.kit.BarGlyph
 
 // Built once: .copy() at the call sites re-created these on every recomposition (every toggle).
 private val SectionTitle = KType.title.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+
+/**
+ * Three labelled tiles across a phone hold about six characters at 1.5x and four at 2.0x - "Large print" became
+ * "Large p..." in the shot. Past 1.5x the preset rows become columns of full-width tiles instead of shrinking type.
+ */
+private val PresetColumn: Boolean
+    @Composable get() = LocalDensity.current.fontScale >= 1.5f
+
+/** The three bar arrangements. */
+private val BarPreset.barLabel: Int
+    get() = when (this) {
+        BarPreset.MINIMAL -> R.string.s_preset_minimal
+        BarPreset.STANDARD -> R.string.s_preset_standard
+        BarPreset.VOICE -> R.string.s_preset_voice
+    }
+
+/** The three reading presets' names, in the six locales the app ships. */
+private val ReadingPreset.label: Int
+    get() = when (this) {
+        ReadingPreset.COMPACT -> R.string.s_preset_compact
+        ReadingPreset.COMFORTABLE -> R.string.s_preset_comfortable
+        ReadingPreset.LARGE -> R.string.s_preset_large
+    }
 private val SmallDim = KType.small.copy(color = K.dim)
 // A reorder arrow that cannot move this row: visible enough to read as "there is a control here, it is just spent",
 // rather than at K.line which vanishes into the card and reads as a missing glyph.
@@ -142,6 +174,36 @@ private fun BarRows(
         onOrder(list)
     }
 
+    // The gesture body lives here rather than inside a pointerInput: the grip drags on touch and the rest of the
+    // row drags after a long press, and both have to land in exactly the same list.
+    fun begin(item: BarItem) {
+        dragging = list.indexOf(item)
+        lifted = 0f
+        haptics.longPress()
+    }
+
+    fun dragBy(deltaY: Float) {
+        if (dragging < 0) return
+        lifted += deltaY
+        // Past most of a row, the row trades places and the lift shrinks by the same distance - so the finger
+        // keeps hold of the same row instead of it running away.
+        val step = if (lifted > rowPx * 0.55f) 1 else if (lifted < -rowPx * 0.55f) -1 else 0
+        val to = dragging + step
+        if (step != 0 && to in list.indices) {
+            val from = dragging
+            list = list.toMutableList().also { it[from] = list[to]; it[to] = list[from] }
+            lifted -= (to - from) * rowPx
+            dragging = to
+            haptics.tick()
+        }
+    }
+
+    fun end() {
+        if (dragging >= 0) onOrder(list)
+        dragging = -1
+        lifted = 0f
+    }
+
     Column {
         list.forEachIndexed { i, item ->
             val held = i == dragging
@@ -149,39 +211,15 @@ private fun BarRows(
                 Modifier.fillMaxWidth().height(BarRowHeight)
                     .zIndex(if (held) 1f else 0f)
                     .graphicsLayer { translationY = if (held) lifted else 0f }
-                    .pointerInput(item, list) {
+                    // Keyed on the ITEM, never on the list: a swap rewrites the list, and a key that watched it
+                    // restarted the gesture on the first swap - the row could be picked up and then went dead
+                    // under the finger, which is the "cannot drag it at all" this fixes.
+                    .pointerInput(item) {
                         detectDragGesturesAfterLongPress(
-                            onDragStart = {
-                                dragging = i
-                                lifted = 0f
-                                haptics.longPress()
-                            },
-                            onDragEnd = {
-                                if (dragging >= 0) onOrder(list)
-                                dragging = -1
-                                lifted = 0f
-                            },
-                            onDragCancel = {
-                                list = order
-                                dragging = -1
-                                lifted = 0f
-                            },
-                            onDrag = { change, delta ->
-                                change.consume()
-                                if (dragging < 0) return@detectDragGesturesAfterLongPress
-                                lifted += delta.y
-                                // Past most of a row, the row trades places and the lift shrinks by the same
-                                // distance - so the finger keeps hold of the same row instead of it running away.
-                                val step = if (lifted > rowPx * 0.55f) 1 else if (lifted < -rowPx * 0.55f) -1 else 0
-                                val to = dragging + step
-                                if (step != 0 && to in list.indices) {
-                                    val from = dragging
-                                    list = list.toMutableList().also { it[from] = list[to]; it[to] = list[from] }
-                                    lifted -= (to - from) * rowPx
-                                    dragging = to
-                                    haptics.tick()
-                                }
-                            },
+                            onDragStart = { begin(item) },
+                            onDragEnd = { end() },
+                            onDragCancel = { end() },
+                            onDrag = { change, delta -> change.consume(); dragBy(delta.y) },
                         )
                     },
             ) {
@@ -198,10 +236,25 @@ private fun BarRows(
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             KSwitch(item !in hidden, onChange = { on -> onShow(item, on) })
-                            Icon(
-                                Icons.Default.DragHandle, null,
-                                tint = if (held) K.mint else K.dim, modifier = Modifier.padding(start = 8.dp).size(20.dp),
-                            )
+                            // The grip is the thing people reach for, so it drags immediately - no half-second
+                            // hold - while the rest of the row stays a long press so a tap still toggles.
+                            Box(
+                                Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp).padding(start = 8.dp)
+                                    .pointerInput(item) {
+                                        detectDragGestures(
+                                            onDragStart = { begin(item) },
+                                            onDragEnd = { end() },
+                                            onDragCancel = { end() },
+                                            onDrag = { change, delta -> change.consume(); dragBy(delta.y) },
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.DragHandle, stringResource(R.string.s_drag_to_reorder),
+                                    tint = if (held) A.accent else K.dim, modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     },
                 )
@@ -209,14 +262,13 @@ private fun BarRows(
         }
     }
 }
-
 /**
  * A swipe as one line: a thumb at the start, a trail, and an arrowhead where the drag has to end. `reach` is where
  * the head lands, so the three tiles differ by the only thing the setting changes.
  */
 @Composable
 private fun SwipePreview(reach: Float, selected: Boolean) {
-    val ink = if (selected) K.mint else K.mut
+    val ink = if (selected) A.accent else K.mut
     Canvas(Modifier.fillMaxWidth().padding(horizontal = 10.dp).height(20.dp)) {
         val cy = size.height / 2f
         val r = 3.5.dp.toPx()
@@ -318,6 +370,15 @@ fun SettingsScreen(
     // Derived, not a parallel literal list: names and values feed the same swatch row, so they cannot drift
     // out of order.
     val ambientNames = remember(ambients) { ambients.map { it.name.lowercase().replaceFirstChar(Char::uppercase) } }
+    val accents = remember { Accent.entries }
+    // Six names cannot sit under six dots on a phone, so the row is dots only and the chosen one is named once
+    // below it - the same shape at 1.0x and at 2.0x, which is also why there is no large-type branch here.
+    val coverName = stringResource(R.string.s_preset_from_cover)
+    val accentNames = remember(accents, coverName) {
+        accents.associateWith {
+            if (it == Accent.MATCH) coverName else it.name.lowercase().replaceFirstChar(Char::uppercase)
+        }
+    }
     val swipeNames = listOf(R.string.s_swipe_short, R.string.s_swipe_medium, R.string.s_swipe_long)
     val swipeVals = remember { listOf(28, 48, 80) }
     // Where the arrow in each swipe tile ends, as a share of the tile: 28 / 48 / 80 dp of a 100dp track.
@@ -343,6 +404,24 @@ fun SettingsScreen(
                         SurfacePreview(glassStyle = false)
                     }
                 }
+                // The accent is the colour of the things you press; the wash below only tints the background. Two
+                // settings, two different jobs, so they sit next to each other and not in one row.
+                Text(stringResource(R.string.s_accent), style = SectionTitle, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
+                // Five names under five dots is fine at 1.0x and collides at 2.0x - "MintOceanSunsetRoseViole/t" in
+                // the huge-type shot. Past 1.5x the dots stay and the chosen name is printed once underneath,
+                // which cannot collide because it is one word on its own line.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    accents.forEach { a ->
+                        KAccentSwatch(
+                            a, accentNames[a] ?: a.name, s.accent == a, { store.saveSettings { it.copy(accent = a) } },
+                            showLabel = false,
+                        )
+                    }
+                }
+                Text(
+                    accentNames[s.accent] ?: s.accent.name, style = KType.small, color = K.mut,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp), textAlign = TextAlign.Center,
+                )
                 // Shown for BOTH styles: Solid keeps the wash at a lower strength, so a flat panel still sits on
                 // colour instead of on flat black.
                 Text(stringResource(R.string.s_ambient_colour), style = SectionTitle, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
@@ -405,7 +484,7 @@ fun SettingsScreen(
                         Text(stringResource(R.string.s_reading_speed), style = KType.title)
                         Text(
                             stringResource(R.string.s_wpm_value, speedDraft.roundToInt()),
-                            style = KType.small.copy(color = K.mint),
+                            style = KType.small.copy(color = A.accent),
                         )
                     }
                     KSlider(
@@ -451,6 +530,32 @@ fun SettingsScreen(
         // What the reader's bar shows, and in what order. Stored as what is HIDDEN plus the arrangement,
         // so a bar item added later still appears for anyone who never touched this.
         KGroup(stringResource(R.string.s_group_reader_bar)) {
+            // Three arrangements, then the strip that shows the current one. The list below is for the fourth
+            // thing - a bar you arranged yourself - and stops any preset being selected the moment it is touched.
+            val barNow = BarPreset.of(s.barOrder)
+            if (PresetColumn) {
+                Column(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BarPreset.entries.forEach { preset ->
+                        KPresetTile(
+                            label = stringResource(preset.barLabel),
+                            selected = barNow == preset,
+                            onClick = { store.saveSettings { it.copy(barOrder = preset.order) } },
+                            modifier = Modifier.fillMaxWidth(), wide = true,
+                        ) { BarGlyph(preset.order, s.barHidden) }
+                    }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BarPreset.entries.forEach { preset ->
+                        KPresetTile(
+                            label = stringResource(preset.barLabel),
+                            selected = barNow == preset,
+                            onClick = { store.saveSettings { it.copy(barOrder = preset.order) } },
+                            modifier = Modifier.weight(1f),
+                        ) { BarGlyph(preset.order, s.barHidden) }
+                    }
+                }
+            }
             // Drawn, so the hint paragraph is gone: the strip IS the sentence "the first two sit in the bar, the
             // rest wait behind More", and it moves as the list moves.
             BarPreview(s.barOrder, s.barHidden)
@@ -535,7 +640,7 @@ fun SettingsScreen(
                         if (tag == null) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tag)
                     )
                     langOpen = false
-                }) { if (tag == currentLang) Text("\u2713", style = KType.title.copy(color = K.mint)) }
+                }) { if (tag == currentLang) Text("\u2713", style = KType.title.copy(color = A.accent)) }
             }
         }
     }
@@ -545,6 +650,32 @@ fun SettingsScreen(
 @Composable
 internal fun ReadingDefaults(defaults: ReaderPrefs, onChange: (ReaderPrefs) -> Unit) =
     Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+        // Three drawn pages above the five sliders: "Large print" is one tap that moves four numbers, and the
+        // sliders underneath then show what that tap did - so the presets describe the sliders and never own them.
+        val current = ReadingPreset.of(defaults)
+        if (PresetColumn) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReadingPreset.entries.forEach { preset ->
+                    KPresetTile(
+                        label = stringResource(preset.label),
+                        selected = current == preset,
+                        onClick = { onChange(preset.appliedTo(defaults)) },
+                        modifier = Modifier.fillMaxWidth(), wide = true,
+                    ) { PageGlyph(preset.fontScale, preset.lineHeight, preset.margins) }
+                }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ReadingPreset.entries.forEach { preset ->
+                    KPresetTile(
+                        label = stringResource(preset.label),
+                        selected = current == preset,
+                        onClick = { onChange(preset.appliedTo(defaults)) },
+                        modifier = Modifier.weight(1f),
+                    ) { PageGlyph(preset.fontScale, preset.lineHeight, preset.margins) }
+                }
+            }
+        }
         KControl(stringResource(R.string.s_text_size), stringResource(R.string.value_percent, (defaults.fontScale * 100).toInt())) {
             KSlider(defaults.fontScale.toFloat(), { v -> onChange(defaults.copy(fontScale = v.toDouble())) }, 0.7f..2.5f)
         }
@@ -580,7 +711,7 @@ private fun SurfacePreview(glassStyle: Boolean) {
         Box(
             Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 12.dp).height(42.dp).then(
                 if (glassStyle) Modifier.glassSurface(shape, elevation = 8.dp)
-                else Modifier.clip(shape).background(K.surf).border(1.dp, K.line, shape),
+                else Modifier.solidSurface(shape, elevation = 4.dp),
             ),
         )
     }
