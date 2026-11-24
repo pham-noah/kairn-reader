@@ -638,13 +638,18 @@ upgrade.
 The mirror's tag `v0.9.0` points at `Kairn 0.9.0` (`a2a1e26`); the development repo's tag points at the version
 commit. Tree contents are identical at that point - compared per path, blob by blob.
 
-## Distribution state (checked 2026-11-04)
+## Distribution state (checked 2026-11-24)
 
 GitHub Releases is the channel the updater points at: `pham-noah/kairn-reader`, one APK asset per release,
 signed with the CN=Kairn key since 0.8.2 (0.8.0 and 0.8.1 were debug-signed, which is why updating those
-needed an uninstall and a rescan). Latest: **v0.9.6**, published 2026-11-09, asset `Kairn-0.9.6.apk`,
-6,325,512 bytes, md5 `8a5d2301…` (0.9.5 was 6,325,512, 0.9.4 6,325,388, 0.9.3 6,309,004, 0.9.2 6,307,888, 0.9.1 6,306,092, 0.9.0 6,306,088). `data/Update.kt` compares the tag against `versionName` numerically, so 0.9.0 sorts above
-0.8.6 - a string compare would put 0.10.0 first.
+needed an uninstall and a rescan). Latest: **v1.1.0**, published 2026-11-24, asset `Kairn-1.1.0.apk`,
+6,451,927 bytes, sha256 `b703ceb3…`, signer `69086f40…` (1.0.5 was 6,404,119, 1.0.0 6,385,628,
+0.9.6 6,325,512, 0.9.4 6,325,388, 0.9.3 6,309,004). `data/Update.kt` compares the tag against `versionName`
+numerically, so 1.1.0 sorts above 0.9.6 - a string compare would put 0.10.0 first.
+
+This section had drifted two releases behind: it still claimed v0.9.6 as latest while 1.0.0 and 1.0.5 were
+published, because the checklist step that updates it ran after the publish and was skipped twice. The
+release itself was unaffected - only the document a future release reads for its numbers.
 
 **Two repositories, and they are not interchangeable.**
 
